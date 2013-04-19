@@ -1,6 +1,6 @@
-// inbix.cpp - In Silico Bioinformatics - Bill White
+// inbix.cpp - Insilico Bioinformatics - Bill White
 //
-// (c) 2013 McKinney In Silico Bioinformatics Lab
+// (c) 2013 McKinney Insilico Bioinformatics Lab
 // The University of Tulsa
 //
 // Code borrowed heavily from the PLINK project
@@ -64,18 +64,15 @@ int main(int argc, char* argv[]) {
 
   /////////////////////////////////////////////////////
   // General class for all haplotype-related functions
-
   P.haplo = new HaploPhase(P);
 
   //////////////////////////
   // Command line arguments
-
   CArgs a(argc, argv);
   getOutputFilename(a);
 
   //////////////////////////
   // Start logging, title
-
   LOG.open(string(par::output_file_name + ".log").c_str());
   P.printLOG("\n"
           "@----------------------------------------------------------@\n"
@@ -117,7 +114,6 @@ int main(int argc, char* argv[]) {
 
   //////////////////////////
   // Some basic definitions
-
   if(par::species_dog) defineDogChromosomes();
   else if(par::species_sheep) defineSheepChromosomes();
   else if(par::species_cow) defineCowChromosomes();
@@ -163,7 +159,6 @@ int main(int argc, char* argv[]) {
 
   // Simulate or read in data:
   // Binary or ASCII format; transposed/long/generic
-
   if(par::dummy) P.dummyLoader();
   else if(par::greport) P.displayGeneReport();
   else if(par::annot_file) P.annotateFile();
@@ -234,7 +229,6 @@ int main(int argc, char* argv[]) {
   /////////////////////////////////////
   // Merge with a secondary data file 
   // List mode
-
   if(par::merge_list)
     P.mergeList();
 

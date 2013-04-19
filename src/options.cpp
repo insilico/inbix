@@ -204,7 +204,7 @@ string par::compress_filename = "";
 bool par::read_ped = false;
 string par::pedfile  = "plink.ped";
 string par::mapfile  = "plink.map";
-string par::fileroot = "plink";
+string par::fileroot = "inbix";
 bool par::ped_from_stdin = false;
 bool par::map3 = false;
 bool par::liability = false;
@@ -217,7 +217,7 @@ bool par::ped_skip_pheno = false;
 bool par::SNP_major = true;
 bool par::out_SNP_major = true;
 
-string par::output_file_name = "plink";
+string par::output_file_name = "inbix";
 bool par::silent = false;
 bool par::gplink = false;
 bool par::cli = false;

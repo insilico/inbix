@@ -1,46 +1,48 @@
-PROGRAM: PLINK
+inbix
+=====
 
-DESCRIPTION: Whole-genome association analysis toolset
+#### Insilico Bioinformatics ####
 
-AUTHOR: Shaun Purcell
+### Description ###
+inbix is a free, open-source bioinformatics tool, designed to perform a 
+range of large-scale analyses in a computationally efficient manner. The inbix
+program integrates many different analyses developed by the McKinney Insilico
+Lab for Bioinformatics and Computational Biology at the University of Tulsa.
 
-CONTACT: plink@chgr.mgh.harvard.edu
+inbix is built upon the PLINK project developed by Shaun Purcell at the 
+Center for Human Genetic Research (CHGR), Massachusetts General Hospital (MGH), 
+and the Broad Institute of Harvard & MIT, with the support of others.
 
-YEAR: 2006, 2007
+For more details, visit the inbix
+[website](http://insilico.utulsa.edu/inbix/)
 
-LICENSE: Released under GNU General Public License, v2 (see
-COPYING.txt)
+### Dependencies ###
+* The libz/zlib compression library is required, but this is installed by default
+on most Unix systems.  In MinGW libz is installed via mingw-get.
 
-DOCUMENTATION: http://pngu.mgh.harvard.edu/purcell/plink/
+* LAPACK is a soft dependency:  not explicitly required, but highly encouraged
+to take advantage of linear algebra routines that have decades of optimization.
 
-INSTALLATION: If you have download a zip or gzipped archive with an
-executable binary, no installation is necessary (except perhaps you
-might want to place the executable in your path, see documentation for
-details). Otherwise, see notes on compilation below.
+* Finally, OpenMP is required to take advantage of the parallelized epistasis
+analysis code.  This is another library typically installed alongside the 
+compiler toolchain.
 
-COMPILATION: You will need a standard C/C++ compiler such as GNU gcc
-(version 3). This is likely available on all Linux/Unix platforms. For
-MS-DOS, DJGPP or MinGW are appropriate choices. To help compiling, see
-documentation (basically, just be sure to select the correct Makefile
-and type make -f Makefile.*)
+### Compilation Environment and Instructions ###
+GNU g++ has been used to successfully compile the code.
 
-USAGE: Type "plink" or "./plink" from the command line followed by the
-options of choice (see documentation)
+We have successfully built and run inbix on:
 
-EXAMPLE DATA: Two example files test.ped and test.map are included in
-the distribution; for example, once PLINK is installed try running:
+* Linux (64-bit)
 
-     plink --file test
+To build inbix, run make, which invokes the Makefile
 
-     plink --file test --freq
+    $ make
 
-     plink --file test --assoc
+### Contributors ###
+See AUTHORS file.
 
-     plink --file test --make-bed
-
-     plink --bfile test --assoc
-
-     etc...
-
-SMP, Aug 2006
-
+### References ###
+Purcell S, Neale B, Todd-Brown K, Thomas L, Ferreira MAR, 
+Bender D, Maller J, Sklar P, de Bakker PIW, Daly MJ & Sham PC (2007) 
+inbix: a toolset for whole-genome association and population-based 
+linkage analysis. American Journal of Human Genetics, 81.

@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2009 Shaun Purcell                  //
@@ -9,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #ifndef __OPTIONS_H__
 #define __OPTIONS_H__
@@ -28,106 +25,88 @@ using namespace std;
 //      static Options dosage_options;
 //
 
-
 class OptionSet {
-  
- public:
-  
-  map<string,vector<string> > val;
+public:
 
-  bool isSet(string s)
-    {
-      return val.find(s) != val.end();
-    }
-  
-  vector<string> getValues(string s)
-    {
-      vector<string> sv;
-      map<string,vector<string> >::iterator i = val.find(s);
-      if ( i == val.end() )
-	return sv;
-      return i->second;
-    }
-  
-  string getValue(string s)
-    {
-      
-      map<string,vector<string> >::iterator i = val.find(s);
-      if ( i == val.end() )
-	return "";
-      if ( i->second.size() > 0 )
-	return i->second[0];
-      else 
-	return "";
-    }
+  map<string, vector<string> > val;
 
-  void display()
-    {
-      map<string,vector<string> >::iterator i = val.begin();
-      while ( i != val.end() )
-	{
-	  cout << i->first;
-	  if ( i->second.size() > 0 )
-	    {
-	      cout << " : ";
-	      for ( int k = 0 ; k < i->second.size(); k++)
-		{
-		  cout << " " << i->second[k]  ;
-		}
-	    }
-	  cout << "\n";
-	  ++i;
-	}
+  bool isSet(string s) {
+    return val.find(s) != val.end();
+  }
+
+  vector<string> getValues(string s) {
+    vector<string> sv;
+    map<string, vector<string> >::iterator i = val.find(s);
+    if (i == val.end())
+      return sv;
+    return i->second;
+  }
+
+  string getValue(string s) {
+
+    map<string, vector<string> >::iterator i = val.find(s);
+    if (i == val.end())
+      return "";
+    if (i->second.size() > 0)
+      return i->second[0];
+    else
+      return "";
+  }
+
+  void display() {
+    map<string, vector<string> >::iterator i = val.begin();
+    while (i != val.end()) {
+      cout << i->first;
+      if (i->second.size() > 0) {
+        cout << " : ";
+        for (int k = 0; k < i->second.size(); k++) {
+          cout << " " << i->second[k];
+        }
+      }
+      cout << "\n";
+      ++i;
     }
+  }
 };
-
 
 class Options {
-  
-  map<string,OptionSet*> opt;
-  
- public:
-  
-  OptionSet * addOption(string s)
-    {
-      map<string,OptionSet*>::iterator i = opt.find(s);
-      if ( i != opt.end() )
-	return i->second;
+  map<string, OptionSet*> opt;
+
+public:
+
+  OptionSet * addOption(string s) {
+    map<string, OptionSet*>::iterator i = opt.find(s);
+    if (i != opt.end())
+      return i->second;
+    OptionSet * o = new OptionSet;
+    opt.insert(make_pair(s, o));
+    return o;
+  }
+
+  ~Options() {
+    map<string, OptionSet*>::iterator i = opt.begin();
+    while (i != opt.end()) {
+      delete i->second;
+      ++i;
+    }
+  }
+
+  OptionSet * getOptions(string s) {
+    map<string, OptionSet*>::iterator i = opt.find(s);
+    if (i != opt.end())
+      return i->second;
+    else {
       OptionSet * o = new OptionSet;
-      opt.insert(make_pair(s,o));
       return o;
     }
-  
-  ~Options()
-    {
-      map<string,OptionSet*>::iterator i = opt.begin();
-      while (i != opt.end() )
-	{
-	  delete i->second;
-	  ++i;
-	}
-    }
-  
-  OptionSet * getOptions(string s)
-    {
-      map<string,OptionSet*>::iterator i = opt.find(s);
-      if ( i != opt.end() )
-	return i->second;
-      else
-	{
-	  OptionSet * o = new OptionSet;
-	  return o;	  
-	}
-    }
+  }
 };
 
-  
 class par {
-  
- public:
+public:
 
   static bool myfunction;
-  
+
   static Options opt;
 
   static bool verbose;
@@ -140,7 +119,7 @@ class par {
   static bool web_check;
   static bool tucc;
   static bool do_not_load_snps;
-  
+
   static const double epsilon;
   static long unsigned int random_seed;
 
@@ -213,7 +192,7 @@ class par {
 
   static bool recode_1234;
   static bool recode_ACGT;
-  
+
   static bool set_reference_allele;
   static string set_reference_allele_file;
   static bool lfile_allele_count;
@@ -236,7 +215,7 @@ class par {
   static string loop_over_label;
   static int loop_counter;
   static string loop_over_filename;
-  static bool list_by_allele; 
+  static bool list_by_allele;
   static bool list_twolocus;
   static string twolocus_snp1;
   static string twolocus_snp2;
@@ -250,7 +229,7 @@ class par {
   static string plist_iid2;
   static bool merge_data;
   static bool merge_force_strand;
-  static int  merge_mode;
+  static int merge_mode;
   static bool merge_binary;
   static bool merge_list;
   static string merge_list_filename;
@@ -286,12 +265,12 @@ class par {
   static bool tfile_input;
 
   static string lpedfile;
-  static string lfamfile;  
+  static string lfamfile;
   static bool lfile_input;
-  
+
   static bool ref_file;
   static string ref_file_name;
-  
+
   static bool gvar;
   static bool gvar_write;
   static bool gvar_to_standard;
@@ -307,7 +286,7 @@ class par {
   static string flip_file;
   static bool flip_subset;
   static string flip_subset_file;
-  
+
 
 
   static bool read_bitfile;
@@ -348,7 +327,7 @@ class par {
   static string out_missing_phenotype;
   static bool missing_genotype_explicit;
   static bool missing_phenotype_explicit;
-  
+
   static bool ignore_missing_sex;
 
   static bool pheno_file;
@@ -366,7 +345,7 @@ class par {
   static string snp_attrib_value;
   static string snp_attrib_file;
   static bool ind_attrib_filter;
-  static string ind_attrib_value;  
+  static string ind_attrib_value;
   static string ind_attrib_file;
 
   static bool multiple_phenotypes;
@@ -379,13 +358,13 @@ class par {
 
   static bool dump_clst;
 
-  static bool clist_selection; 
-  static bool clist_selection_name; 
+  static bool clist_selection;
+  static bool clist_selection_name;
   static bool clist_selection_number;
   static string clist_selection_string;
 
-  static bool plist_selection; 
-  static bool plist_selection_name; 
+  static bool plist_selection;
+  static bool plist_selection_name;
   static bool plist_selection_number;
   static string plist_selection_string;
 
@@ -398,7 +377,7 @@ class par {
   static string filter_value;
 
   static string number_list_string;
-  static bool   number_list_positive;
+  static bool number_list_positive;
 
   static string pheno_filename;
   static string covar_filename;
@@ -421,7 +400,7 @@ class par {
   static bool make_missing_parents;
 
   static bool score_risk;
-  static string score_risk_file;    
+  static string score_risk_file;
   static bool score_risk_ranges;
   static string score_risk_ranges_file;
   static int score_risk_ranges_min;
@@ -435,7 +414,7 @@ class par {
   static bool report_missing;
   static bool test_missing;
   static bool mishap_test;
-  static int  mishap_window;
+  static int mishap_window;
 
   static bool calcFst;
 
@@ -495,20 +474,20 @@ class par {
   static double proxy_r2_filter_B_planB;
   static double proxy_r2_filter_C_planB;
 
-  static bool   greport;
+  static bool greport;
   static string greport_results;
   static string greport_gene_list;
-  static bool   greport_subset;
+  static bool greport_subset;
   static string greport_subset_file;
-  static bool   greport_display_empty;
+  static bool greport_display_empty;
 
-  static bool   annot_file;
+  static bool annot_file;
   static string annot_filename;
-  
-  static bool   meta_analysis;
+
+  static bool meta_analysis;
   static vector<string> meta_files;
 
-  static bool   set_screen;
+  static bool set_screen;
   static string set_screen_resultfile;
 
   static bool gettag_mode;
@@ -523,20 +502,20 @@ class par {
   static bool clumpld_best;
   static string clumpld_results;
   static string clumpld_column;
-  static bool    clumpld_verbose;
-  static bool    clumpld_indep;
-  static int     clumpld_kb;
-  static double  clumpld_r2;
-  static double  clumpld_p1;
-  static double  clumpld_p2;
-  static bool    clumpld_index1;
-  static bool    clumpld_only_show_replications;
-  static bool    clumpld_only_show_replications_list;
-  static bool	 clumpld_annot;
-  static string	 clumpld_annot_fields;
-  static string  clumpld_range_file;
-  static bool    clumpld_range_annotate;
-  static int     clumpld_min;
+  static bool clumpld_verbose;
+  static bool clumpld_indep;
+  static int clumpld_kb;
+  static double clumpld_r2;
+  static double clumpld_p1;
+  static double clumpld_p2;
+  static bool clumpld_index1;
+  static bool clumpld_only_show_replications;
+  static bool clumpld_only_show_replications_list;
+  static bool clumpld_annot;
+  static string clumpld_annot_fields;
+  static string clumpld_range_file;
+  static bool clumpld_range_annotate;
+  static int clumpld_min;
 
   static double min_af;
   static double max_af;
@@ -568,7 +547,7 @@ class par {
   static vector<bool> chr_sex;
   static vector<bool> chr_Y;
   static vector<string> chr_code;
-  static map<string,int> chr_map;
+  static map<string, int> chr_map;
 
   static bool species_dog;
   static bool species_cow;
@@ -601,7 +580,7 @@ class par {
 
   static bool SD;
   static bool CP;
-  static bool affpair;  
+  static bool affpair;
   static bool remove_unaffected_pairs;
   static bool fix_prev;
   static double fixed_prev;
@@ -635,21 +614,21 @@ class par {
   static int haplo_plem_follow_ind;
   static string haplo_plem_follow_fid;
   static string haplo_plem_follow_iid;
-  
+
   static int haplo_plem_likelihood_iter;
   static double haplo_plem_window_prune_phase;
- 
+
   static double haplo_plem_window_tol;
   static double haplo_plem_zero_threshold;
   static bool haplo_plem_nonzero_threshold;
-  
+
   static int haplo_plem_meta_window;
   static double haplo_plem_meta_prune_haplotype;
   static double haplo_plem_meta_prune_phase;
   static int haplo_plem_meta_iter;
   static int haplo_plem_meta_likelihood_iter;
   static double haplo_plem_meta_tol;
- 
+
   static bool test_hap_CC;
   static bool test_hap_TDT;
   static bool test_hap_QTL;
@@ -659,7 +638,7 @@ class par {
   static bool display_phase_probs;
   static bool display_phase_probs_wide;
   static bool weighted_mm;
-  
+
   static bool chap_test;
   static bool chap_sole_variant;
   static bool chap_sole_variant_specific_alleles;
@@ -817,7 +796,7 @@ class par {
 
   static bool dump_gene;
   static string dump_genename;
-  
+
   static bool hotel;
 
   static bool set_test;
@@ -880,7 +859,7 @@ class par {
   static bool epi_caseonly;
   static double epi_caseonly_kb_gap;
   static bool epi_filter;
-  static double epi_alpha1;  
+  static double epi_alpha1;
   static double epi_alpha2;
   static bool set_by_set;
   static bool epi_genebased;
@@ -903,7 +882,7 @@ class par {
   static bool homo_miss_as_hom;
 
   static int homo_windowSize;
-  static int homo_windowKB; 
+  static int homo_windowKB;
   static int homo_windowAllowedHet;
   static int homo_windowAllowedMissing;
   static double homo_threshold;
@@ -982,7 +961,7 @@ class par {
   static int genome_test_min_snp;
   static bool ibs_test;
   static int ibs_test_min_snp;
-  static bool ibs_test_method2; 
+  static bool ibs_test_method2;
   static bool summary_ibd_output;
   static double IBD_threshold;
   static double segment_threshold_start;
@@ -991,8 +970,8 @@ class par {
   static bool bound;
   static bool show_impossible_IBD;
   static bool IBD_within;
-  
-  
+
+
   static bool permute;
   static int replicates;
   static bool perm_count;
@@ -1053,19 +1032,19 @@ class par {
   static bool bmatch_usertype;
   static bool qmatch;
   static string bmatch_filename;
-  static string bmatch_direction_filename;  
+  static string bmatch_direction_filename;
   static string qmatch_filename;
-  static string qmatch_threshold_filename;  
-  
+  static string qmatch_threshold_filename;
+
   static bool include_all_pairs;
-  static double include_all_z1;    
+  static double include_all_z1;
 
   static double MIN_PIHAT;
   static double MAX_PIHAT;
   static double MAX_CORR_PIHAT_PIHAT_G;
   static double MAX_GENO_MISSING;
   static double MAX_IND_MISSING;
-  static int    MAX_LINE_LENGTH;
+  static int MAX_LINE_LENGTH;
 
   static bool remove_indiv;
   static string remove_indiv_list;
@@ -1075,7 +1054,7 @@ class par {
   static bool remove_before_keep;
 
   static bool locked;
-  
+
   static bool af_read;
   static bool af_write;
 
@@ -1087,7 +1066,7 @@ class par {
 
   static string af_file;
   static bool af_count;
-  
+
   static bool inc_write;
   static bool inc_read;
   static string inc_file;
@@ -1095,9 +1074,9 @@ class par {
   static int pp_maxsnp;
   static int pp_maxfid;
   static int pp_maxiid;
-  
+
   static int BATCH_SIZE;
-  
+
   static bool plink;
 
   static bool display_segment_long;
@@ -1162,13 +1141,10 @@ class par {
   static int dosage_hard_call_thresh2;
   static bool dosage_hasMap;
   static bool write_dosage;
-  
-};
 
+};
 
 void setOptions(CArgs &);
 void getOutputFilename(CArgs &);
-
-
 
 #endif
