@@ -182,6 +182,8 @@ class Individual {
     aff=false;
     covar=-9;
     bcovar=false;
+    nlist.resize(0);
+    nlistMissing.resize(0);
     clist.resize(0);
     clistMissing.resize(0);
     plist.resize(0);
@@ -232,6 +234,9 @@ class Individual {
   bool aff;
   double covar;
   bool bcovar;
+
+  vector_t nlist; // multiple numeric attributes
+  vector<bool> nlistMissing;
 
   vector_t clist; // multiple covariates
   vector<bool> clistMissing;
@@ -513,6 +518,7 @@ class Plink
     sample.resize(0);
     locus.resize(0);
     phenotype.resize(0);
+    nlistname.resize(0);
     clistname.resize(0);
     plistname.resize(0);
     m1.resize(0);
@@ -550,6 +556,7 @@ class Plink
 
   // Phenotype names
   string                         phenoLabel;
+  vector<string>                 nlistname;
   vector<string>                 clistname; 
   vector<string>                 plistname;
 
@@ -714,6 +721,7 @@ class Plink
   bool           readPhenoFile();
   bool           readMultiplePhenoFile();
   bool           readCovariateFile();
+  bool           readNumericFile(bool numOnly = false);
   bool           readCovListFile();
   bool           readClusterFile(bool verbose=true);
   void           readConditioningList();           
@@ -1022,7 +1030,9 @@ class Plink
   void           webcheck(CArgs &);
   void           lookup();
   void           lookup2();
+  #ifdef WITH_R_PLUGINS
   void           Rfunc();
+	#endif
   void           cleanUp();
 
 
