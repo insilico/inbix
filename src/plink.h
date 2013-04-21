@@ -721,10 +721,7 @@ class Plink
   bool           readPhenoFile();
   bool           readMultiplePhenoFile();
   bool           readCovariateFile();
-	
-	// added for numeric support - bcw - 4/20/13
-  bool           readNumericFile(bool numOnly);
-	
+  bool           readNumericFile(bool numOnly = false);
   bool           readCovListFile();
   bool           readClusterFile(bool verbose=true);
   void           readConditioningList();           
