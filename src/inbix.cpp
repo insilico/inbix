@@ -45,6 +45,9 @@ Plink * PP;
 map<string, int> Range::groupNames;
 
 int main(int argc, char* argv[]) {
+  // single numeric file without accompayning SNP
+	bool numonly = false;
+
   /////////////////////////
   // Setup, display title
 
@@ -372,6 +375,14 @@ int main(int argc, char* argv[]) {
     {
       if(!P.readCovariateFile())
         error("Problem reading the specified covariate from the covariate file");
+    }
+  }
+
+  //////////////////////////////// 
+  // A numeric file specified?
+  if(par::numeric_file) {
+		if(!P.readNumericFile(numonly)) {
+			error("Problem reading the numeric file");
     }
   }
 

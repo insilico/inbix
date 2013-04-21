@@ -182,6 +182,8 @@ class Individual {
     aff=false;
     covar=-9;
     bcovar=false;
+    nlist.resize(0);
+    nlistMissing.resize(0);
     clist.resize(0);
     clistMissing.resize(0);
     plist.resize(0);
@@ -233,6 +235,9 @@ class Individual {
   double covar;
   bool bcovar;
 
+  vector_t nlist; // multiple numeric attributes
+  vector<bool> nlistMissing;
+
   vector_t clist; // multiple covariates
   vector<bool> clistMissing;
   
@@ -256,8 +261,6 @@ class Individual {
 
   // Generic variant data
   vector<GVariant*> gvar;
-
-  
 
   // Weighted, multi-allelic single marker
   
@@ -513,6 +516,7 @@ class Plink
     sample.resize(0);
     locus.resize(0);
     phenotype.resize(0);
+    nlistname.resize(0);
     clistname.resize(0);
     plistname.resize(0);
     m1.resize(0);
@@ -550,8 +554,11 @@ class Plink
 
   // Phenotype names
   string                         phenoLabel;
-  vector<string>                 clistname; 
   vector<string>                 plistname;
+  // covariate names
+  vector<string>                 clistname; 
+  // numeric names
+  vector<string>                 nlistname;
 
   // number of individuals, pairs
   int n;       // total number of individuals
@@ -714,6 +721,10 @@ class Plink
   bool           readPhenoFile();
   bool           readMultiplePhenoFile();
   bool           readCovariateFile();
+	
+	// added for numeric support - bcw - 4/20/13
+  bool           readNumericFile(bool numOnly);
+	
   bool           readCovListFile();
   bool           readClusterFile(bool verbose=true);
   void           readConditioningList();           
@@ -1022,7 +1033,9 @@ class Plink
   void           webcheck(CArgs &);
   void           lookup();
   void           lookup2();
+  #ifdef WITH_R_PLUGINS
   void           Rfunc();
+	#endif
   void           cleanUp();
 
 

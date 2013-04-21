@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2008 Shaun Purcell                  //
@@ -9,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #ifndef __NLIST_H__
 #define __NLIST_H__
@@ -22,8 +19,8 @@
 #include "options.h"
 
 using namespace std;
-class NList{
-    
+
+class NList {
   vector<string> tokenize(string);
   vector<int> expandNumberList(vector<int> &);
   int maxcat;
@@ -34,33 +31,30 @@ class NList{
 
   char range_char;
   string range_string;
-  
+
   char delimit_char;
-  
- public:
 
-  NList(int n, bool nmode = true )
-    { 
-      range_char = par::range_delimiter[0];
-      range_string = par::range_delimiter;
-      delimit_char = ',';
-      maxcat = n; 
-      negmode = ! nmode;
-    }
-  void setRangeChar(string s)
-    {
-      range_char = s[0];
-      range_string = s;
-    }
+public:
 
-  void setDelimiter(string s)
-    {
-      delimit_char = s[0];
-    }
+  NList(int n, bool nmode = true) {
+    range_char = par::range_delimiter[0];
+    range_string = par::range_delimiter;
+    delimit_char = ',';
+    maxcat = n;
+    negmode = !nmode;
+  }
 
+  void setRangeChar(string s) {
+    range_char = s[0];
+    range_string = s;
+  }
+
+  void setDelimiter(string s) {
+    delimit_char = s[0];
+  }
 
   vector<int> deparseNumberList(string);
-  vector<int> deparseStringList(string, map<string,int> *);
+  vector<int> deparseStringList(string, map<string, int> *);
   vector<string> deparseStringList(string);
 };
 
