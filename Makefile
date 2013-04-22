@@ -40,7 +40,6 @@ CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen
 OUTPUT = inbix
 
 # Some system specific flags
-
 ifeq ($(SYS),WIN)
  CXXFLAGS += -DWIN -static
  CXX = $(CXX_WIN)
@@ -78,7 +77,6 @@ ifdef FORCE_32BIT
 endif
 
 # Flags for web-based version check
-
 ifdef WITH_WEBCHECK
 ifeq ($(SYS),WIN)
  LIB += -lwsock32
@@ -153,3 +151,6 @@ FORCE:
 
 clean:
 	rm -f *.o *~
+
+install:
+	cp inbix /usr/local/bin
