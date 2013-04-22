@@ -202,8 +202,8 @@ bool par::uncompress_file = false;
 string par::compress_filename = "";
 
 bool par::read_ped = false;
-string par::pedfile  = "plink.ped";
-string par::mapfile  = "plink.map";
+string par::pedfile  = "inbix.ped";
+string par::mapfile  = "inbix.map";
 string par::fileroot = "inbix";
 bool par::ped_from_stdin = false;
 bool par::map3 = false;
@@ -223,9 +223,9 @@ bool par::gplink = false;
 bool par::cli = false;
 
 bool par::fast_binary = false;
-string par::bitfilename = "plink.bed";
-string par::famfile = "plink.fam";
-string par::bitfilename_map = "plink.bim";
+string par::bitfilename = "inbix.bed";
+string par::famfile = "inbix.fam";
+string par::bitfilename_map = "inbix.bim";
 
 bool par::write_bitfile = false;
 bool par::read_bitfile = false;
@@ -238,8 +238,12 @@ bool par::clist = false;
 bool par::have_snps = false;
 bool par::have_numerics = false;
 bool par::numeric_file = false;
-string par::numeric_filename = "plink.num";
+string par::numeric_filename = "inbix.num";
 vector<string> par::nlistNames;
+
+// added for reGAIN support - bcw - 4/22/13
+bool par::do_regain = false;
+string par::regain_filename = "inbix.regain";
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

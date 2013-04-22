@@ -377,16 +377,22 @@ int main(int argc, char* argv[]) {
 	}
 
 	//////////////////////////////// 
-	// A numeric file specified?
+	// A numeric file specified? - bcw - 4/20/13
 	if (par::numeric_file) {
 		par::have_snps = par::read_bitfile || par::read_ped ||
 						par::tfile_input || par::lfile_input;
 		if (!P.readNumericFile()) {
 			error("Problem reading the numeric file");
 		}
-		// stop for the moment
-		copy(par::nlistNames.begin(), par::nlistNames.end(), 
-						ostream_iterator<string>(cout, "\n"));
+//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
+//						ostream_iterator<string>(cout, "\n"));
+	}
+
+	//////////////////////////////// 
+	// reGAIN analysis requested - bcw - 4/22/13
+	if(par::do_regain) {
+		P.printLOG("Performing reGAIN analysis\n");
+		// stop inbix processing
 		shutdown();
 	}
 
@@ -689,7 +695,8 @@ int main(int argc, char* argv[]) {
 		if (par::impute_verbose) {
 			P.printLOG("Writing verbose imputation output to [ "
 							+ par::output_file_name + ".phased.out ]\n");
-			P.haplo->HIMPUTE.open((par::output_file_name + ".phased.out").c_str(), ios::out);
+			P.haplo->HIMPUTE.open((par::output_file_name + ".phased.out").c_str(), 
+							ios::out);
 			P.haplo->HIMPUTE.setf(ios::fixed);
 			P.haplo->HIMPUTE.precision(2);
 		}
@@ -1213,7 +1220,6 @@ int main(int argc, char* argv[]) {
 		P.driverSCREEPI();
 		shutdown();
 	}
-
 
 	//////////////////////////////
 	// Genome-wide epistasis tests

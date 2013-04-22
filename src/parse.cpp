@@ -2767,6 +2767,12 @@ void setOptions(CArgs & a) {
 		par::numeric_filename = a.value("--numeric");
 	}	
 	
+	// reGAIN analysis support - bcw - 4/22/13
+	if (a.find("--regain")) {
+		par::do_regain = true;
+		par::regain_filename = a.value("--regain");
+	}	
+	
 	////////////////////////
 	// Reference allele file
 	if (a.find("--reference")) {
@@ -3932,6 +3938,8 @@ void setOptions(CArgs & a) {
 						<< "      --tdt                     Family-based TDT association\n"
 						<< "      --linear                  Linear regression model     \n"
 						<< "      --logistic                Logistic regression model   \n"
+						<< "\n"
+						<< "      --regain                  Perform a reGAIN analysis   \n"
 						<< "\n"
 						<< "      --perm                    Apaptive permutations       \n"
 						<< "      --mperm {1000}            max(T) permutations         \n"

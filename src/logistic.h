@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2009 Shaun Purcell                  //
@@ -9,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #ifndef __LOGISTIC_H__
 #define __LOGISTIC_H__
@@ -21,36 +18,32 @@
 using namespace std;
 
 class LogisticModel : public Model {
+public:
 
- public:
+	LogisticModel(Plink *);
 
-  LogisticModel(Plink *);
-  ~LogisticModel() { };
+	~LogisticModel() {
+	};
 
-  void setDependent();
-  
-  void fitLM();
-  void fitUnivariateLM() { };
-  void reset();
-  void pruneY();
-  vector_t getCoefs();
-  vector_t getVar();
-  vector_t getSE();
-  void displayResults(ofstream &, Locus *);
-  double getLnLk();
-  vector_t getPVals();
-  double getPValue();
-  void HuberWhite();
-
-  
- private:
- 
-  vector_t p; 
-  vector<int> Y;
-  vector_t V; // diagonal p(1-p)
-  double chisq;
-
+	void setDependent();
+	void fitLM();
+	void fitUnivariateLM() {
+	};
+	void reset();
+	void pruneY();
+	vector_t getCoefs();
+	vector_t getVar();
+	vector_t getSE();
+	void displayResults(ofstream &, Locus *);
+	double getLnLk();
+	vector_t getPVals();
+	double getPValue();
+	void HuberWhite();
+private:
+	vector_t p;
+	vector<int> Y;
+	vector_t V; // diagonal p(1-p)
+	double chisq;
 };
-
 
 #endif
