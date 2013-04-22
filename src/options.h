@@ -331,16 +331,19 @@ public:
 	static bool clist;
 	
 	// added for numeric support - bcw - 4/20/13
+	static bool have_snps;
+	static bool have_numerics;
 	static bool numeric_file;
-	
+	static string numeric_filename;
+  static vector<string> nlistNames;
+
 	static bool no_show_covar;
 	static bool dump_covar;
 	static bool dump_covar_with_phenotype;
 	static bool dump_covar_dummy_coding;
 	static bool filter_on_covar;
 	static int clist_number;
-  static int nlist_number;
-	static int plist_number;
+  static int plist_number;
 
 	static bool snp_attrib_filter;
 	static string snp_attrib_value;
@@ -364,11 +367,6 @@ public:
 	static bool clist_selection_number;
 	static string clist_selection_string;
 
-	static bool nlist_selection;
-	static bool nlist_selection_name;
-	static bool nlist_selection_number;
-	static string nlist_selection_string;
-
 	static bool plist_selection;
 	static bool plist_selection_name;
 	static bool plist_selection_number;
@@ -388,7 +386,6 @@ public:
 	static string pheno_filename;
 	static string covar_filename;
 	static string clist_filename;
-	static string numeric_filename;
 	static string filter_filename;
 
 	static bool cm_map;

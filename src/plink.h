@@ -184,6 +184,7 @@ class Individual {
     bcovar=false;
     nlist.resize(0);
     nlistMissing.resize(0);
+		bnumeric = false;
     clist.resize(0);
     clistMissing.resize(0);
     plist.resize(0);
@@ -235,7 +236,9 @@ class Individual {
   double covar;
   bool bcovar;
 
-  vector_t nlist; // multiple numeric attributes
+	// numeric attributes - bcw - 4/22/13
+	bool bnumeric;
+  vector_t nlist; 
   vector<bool> nlistMissing;
 
   vector_t clist; // multiple covariates
@@ -263,7 +266,6 @@ class Individual {
   vector<GVariant*> gvar;
 
   // Weighted, multi-allelic single marker
-  
   WMLocus wmlocus;
 
   // For QFAM, within and total scores (temporary variables)
@@ -721,7 +723,7 @@ class Plink
   bool           readPhenoFile();
   bool           readMultiplePhenoFile();
   bool           readCovariateFile();
-  bool           readNumericFile(bool numOnly = false);
+  bool           readNumericFile();
   bool           readCovListFile();
   bool           readClusterFile(bool verbose=true);
   void           readConditioningList();           

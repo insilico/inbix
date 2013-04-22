@@ -1,6 +1,3 @@
-
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2009 Shaun Purcell                  //
@@ -10,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #include <iostream>
 #include <string>
@@ -26,7 +22,6 @@ void getOutputFilename(CArgs & a) {
 
 	////////////////////////////////////////
 	// Insert commands from a file
-
 	if (a.find("--script")) {
 		string f = a.value("--script");
 		a.fromScript(f);
@@ -37,14 +32,8 @@ void getOutputFilename(CArgs & a) {
 		a.fromPriorLog(f);
 	}
 
-
 	////////////////////////////////////////////////////
 	// Start processing commands
-
-
-
-
-
 	if (a.find("--out")) {
 		par::output_file_name = a.value("--out");
 	}
@@ -74,7 +63,6 @@ void setOptions(CArgs & a) {
 
 	/////////////////////////////////////
 	// Web-based functions
-
 	if (a.find("--noweb")) par::web_check = false;
 
 	if (a.find("--lookup")) {
@@ -126,8 +114,6 @@ void setOptions(CArgs & a) {
 		par::lookup_gene = true;
 		par::lookup2_cmd = a.value("--lookup-gene2");
 	}
-
-
 
 	if (a.find("--id-dict")) {
 		par::idhelp = true;
@@ -208,7 +194,6 @@ void setOptions(CArgs & a) {
 		par::idhelp_match_string = a.varValue("--id-match");
 	}
 
-
 	if (a.find("--R")) {
 		par::run_R_script = true;
 		par::R_script = a.value("--R");
@@ -234,7 +219,6 @@ void setOptions(CArgs & a) {
 
 	////////////////////////////////////////
 	// A data-generation option? 
-
 	bool makedata = false;
 
 	if (a.find("--recode")) {
@@ -331,7 +315,6 @@ void setOptions(CArgs & a) {
 		if (!a.find("--mind")) par::MAX_IND_MISSING = 1;
 	}
 
-
 	if (a.find("--recodeA")) {
 		makedata = true;
 		par::recode_AD = true;
@@ -359,7 +342,6 @@ void setOptions(CArgs & a) {
 		if (!a.find("--mind")) par::MAX_IND_MISSING = 1;
 	}
 
-
 	//////////////////////////////////////////////
 	// Modifiers of main data generation commands
 
@@ -385,12 +367,10 @@ void setOptions(CArgs & a) {
 		par::recode_delimit = "\t";
 	}
 
-
 	////////////////////////////////////////////////////
 	// Convenience functions and obligatory missingness
 
 	// Zero out genotypes for a particular SNP / cluster
-
 	if (a.find("--zero-cluster")) {
 		if (!a.find("--within"))
 			error("You must specify --within with --zero-cluster");
@@ -401,7 +381,6 @@ void setOptions(CArgs & a) {
 
 	// Perform genotyping rate calculations, but allow for 
 	// obligatory missingness
-
 	if (a.find("--oblig-missing")) {
 		if (!a.find("--oblig-clusters"))
 			error("You must specify --oblig-clusters with --oblig-missing");
@@ -418,7 +397,6 @@ void setOptions(CArgs & a) {
 	}
 
 	// Multiple category phenotype
-
 	if (a.find("--loop-assoc")) {
 		if (a.find("--within"))
 			error("You cannot specify --within with --loop-assoc");
@@ -430,8 +408,6 @@ void setOptions(CArgs & a) {
 		par::include_cluster_filename = a.value("--loop-assoc");
 		checkFileExists(par::include_cluster_filename);
 	}
-
-
 
 	////////////////////////////////////////
 	// TODO list
@@ -448,10 +424,8 @@ void setOptions(CArgs & a) {
 		exit(0);
 	}
 
-
 	///////////////////////////////////////
 	// Output options
-
 	if (a.find("--flag")) par::flag = true;
 
 	if (a.find("--verbose")) par::verbose = true;
@@ -465,7 +439,6 @@ void setOptions(CArgs & a) {
 
 	///////////////////////////////////////
 	// IBD analyses, output options
-
 	if (a.find("--multi")) par::multi_output = true;
 
 	if (a.find("--gmulti")) par::gmulti_output = true;
@@ -556,16 +529,11 @@ void setOptions(CArgs & a) {
 		par::replicates = 100000;
 	}
 
-
 	if (a.find("--segment-match-snp"))
 		par::genome_test_min_snp = a.value_int("--segment-match-snp");
 
-
-
-
 	///////////////////////////////////////////
 	// WGAS main options: summary stats and QC
-
 
 	if (a.find("--missing")) {
 		par::report_missing = true;
@@ -642,7 +610,6 @@ void setOptions(CArgs & a) {
 
 	}
 
-
 	////////////////////////////////////////////////////////////////
 	// Proxy association methods
 
@@ -656,7 +623,6 @@ void setOptions(CArgs & a) {
 		if (a.find("--proxy-glm"))
 			par::proxy_glm = true;
 	}
-
 
 	if (a.find("--proxy-drop")) {
 		if (a.find("--proxy-impute"))
@@ -700,7 +666,6 @@ void setOptions(CArgs & a) {
 
 	if (a.find("--proxy-error")) par::proxy_error = true;
 
-
 	if (a.find("--proxy-impute-threshold"))
 		par::proxy_impute_threshold = a.value_double("--proxy-impute-threshold");
 
@@ -725,12 +690,10 @@ void setOptions(CArgs & a) {
 		// --hap-miss option is below this one
 
 		par::hap_missing_geno = 0.9;
-
 	}
 
 	if (a.find("--proxy-verbose"))
 		par::proxy_full_report = true;
-
 
 	if (a.find("--proxy-flanking")) {
 		if (par::proxy_all)
@@ -747,7 +710,6 @@ void setOptions(CArgs & a) {
 		par::proxy_all_list = true;
 		par::proxy_all_list_file = a.value("--proxy-list");
 	}
-
 
 	if (a.find("--proxy-sub-r2"))
 		par::proxy_r2 = a.value_double("--proxy-sub-r2");
@@ -795,7 +757,6 @@ void setOptions(CArgs & a) {
 	if (a.find("--proxy-kb"))
 		par::proxy_kb_planA = a.value_double("--proxy-kb");
 
-
 	// And plan B
 
 	if (a.find("--proxy-b-threshold"))
@@ -817,9 +778,6 @@ void setOptions(CArgs & a) {
 
 	if (a.find("--proxy-b-kb"))
 		par::proxy_kb_planB = a.value_double("--proxy-b-kb");
-
-
-
 
 	////////////////////////////////////////
 	// Segmental options
@@ -859,10 +817,8 @@ void setOptions(CArgs & a) {
 	//  --read-segment
 	//  --read-segment-minimal
 
-
 	//////////////////////////
 	// CNV/other segment types
-
 	if (a.find("--cnv-list")) {
 		par::cnv_list = true;
 		par::cnv_listname = a.value("--cnv-list");
@@ -991,7 +947,6 @@ void setOptions(CArgs & a) {
 			par::cnv_freq_include_cnt = a.value_int("--cnv-freq-exclude-exact");
 		}
 
-
 		if (a.find("--cnv-unique")) {
 			par::cnv_unique = true;
 		}
@@ -1010,9 +965,6 @@ void setOptions(CArgs & a) {
 			par::cnv_intersect_writeback = true;
 			par::cnv_intersect_writeback_verbose = true;
 		}
-
-
-
 
 		if (a.find("--cnv-overlap")) {
 			par::cnv_defined_overlap = true;
@@ -1277,7 +1229,6 @@ void setOptions(CArgs & a) {
 		par::miss_run_level = a.value_double("--miss-run-level");
 	}
 
-
 	///////////////////////////
 	// Segmental sharing tests
 
@@ -1414,10 +1365,8 @@ void setOptions(CArgs & a) {
 		par::segment_threshold_finish = getDouble(s[1], "--segment-thresholds");
 	}
 
-
 	//////////////////////////
 	// Misc, external functions
-
 	if (a.find("--elf-test")) {
 		vector<string> s = a.value("--elf-test", 2);
 		par::rarer_maf_threshold = getDouble(s[0], "--elf-test");
@@ -1470,7 +1419,6 @@ void setOptions(CArgs & a) {
 
 	//////////////////////////
 	// Association testing
-
 	if (a.find("--assoc")) {
 		par::assoc_test = true;
 		if (a.find("--counts"))
@@ -1683,8 +1631,6 @@ void setOptions(CArgs & a) {
 
 	}
 
-
-
 	if (a.find("--fisher")) {
 		par::assoc_test = true;
 		par::fisher_test = true;
@@ -1809,7 +1755,6 @@ void setOptions(CArgs & a) {
 		par::disp_r_window_kb = a.value_int("--ld-window-kb") * 1000;
 	}
 
-
 	if (a.find("--ld-window-r2")) {
 		par::disp_r2 = true;
 		if (a.find("--matrix"))
@@ -1831,7 +1776,6 @@ void setOptions(CArgs & a) {
 		if (!(a.find("--matrix") || a.find("--inter-chr")))
 			par::disp_r_window = true;
 	}
-
 
 	if (a.find("--flip-scan")) {
 		par::flip_scan = true;
@@ -2016,10 +1960,8 @@ void setOptions(CArgs & a) {
 		par::drop_sets = false;
 	}
 
-
 	//////////////////////////
 	// Impute tagged SNPs
-
 	if (a.find("--hap-impute")) {
 		par::impute_tags = true;
 		par::phase_snps = true;
@@ -2077,8 +2019,6 @@ void setOptions(CArgs & a) {
 		par::segment_haplotrack_iid2 = s[3];
 	}
 
-
-
 	/////////////////////////////////
 	// EM Phasing options 
 
@@ -2118,8 +2058,6 @@ void setOptions(CArgs & a) {
 		else
 			par::haplo_plem_nonzero_threshold = true;
 	}
-
-
 
 	//////////////////////////
 	// Meta EM parameters
@@ -2237,8 +2175,7 @@ void setOptions(CArgs & a) {
 				error("Cannot use --independent-effect and other --chap options");
 			par::chap_independent_effect = true;
 			par::chap_entity = a.value("--independent-effect");
-		}
-		else if (a.find("--specific-haplotype")) {
+		} else if (a.find("--specific-haplotype")) {
 			if (par::chap_specified_groups ||
 							par::chap_specified_snps)
 				error("Cannot use --specific-haplotype and other --chap options");
@@ -2306,7 +2243,6 @@ void setOptions(CArgs & a) {
 
 	//////////////////////////
 	// Epistasis
-
 	if (a.find("--epistasis")) {
 		if (a.find("--set") || a.find("--make-set"))
 			par::set_test = true;
@@ -2382,7 +2318,6 @@ void setOptions(CArgs & a) {
 	} else if (makedata) {
 		par::ignore_missing_sex = true;
 	}
-
 
 	if (a.find("--read-freq")) {
 		par::af_read = true;
@@ -2634,11 +2569,8 @@ void setOptions(CArgs & a) {
 		par::inc_file = a.value("--read-include");
 	}
 
-
-
 	////////////////////////////////
 	// Genotype quality score files
-
 	if (a.find("--qual-scores")) {
 		par::read_snp_qual = true;
 		par::snp_qual_file = a.value("--qual-scores");
@@ -2679,11 +2611,8 @@ void setOptions(CArgs & a) {
 	//   // i.e. need at least 1 affected "1A"
 	//   if (a.find("--1aff")) { par::remove_unaffected_pairs = true; }
 
-
-
 	///////////////////////////
 	// Some basic filters
-
 	if (a.find("--prune"))
 		par::ignore_phenotypes = false;
 	if (a.find("--filter-cases"))
@@ -2722,7 +2651,6 @@ void setOptions(CArgs & a) {
 
 	/////////////////////////////////
 	// Basic input file processing 
-
 	if (a.find("--dummy")) {
 		vector<string> s = a.value("--dummy", 2);
 		par::dummy = true;
@@ -2765,7 +2693,6 @@ void setOptions(CArgs & a) {
 	if (a.find("--simulate-prevalence"))
 		par::simul_prevalence = a.value_double("--simulate-prevalence");
 
-
 	////////////////////////////////////////////////////
 	// Main file input options
 	if (a.find("--compress")) {
@@ -2785,6 +2712,7 @@ void setOptions(CArgs & a) {
 		par::fileroot = a.value("--file");
 		par::pedfile = par::fileroot + ".ped";
 		par::mapfile = par::fileroot + ".map";
+		par::have_snps = true;
 	}
 
 	if (a.find("--tfile")) {
@@ -2795,6 +2723,7 @@ void setOptions(CArgs & a) {
 		par::fileroot = a.value("--tfile");
 		par::tpedfile = par::fileroot + ".tped";
 		par::tfamfile = par::fileroot + ".tfam";
+		par::have_snps = true;
 	}
 
 	if (a.find("--tped")) {
@@ -2802,11 +2731,13 @@ void setOptions(CArgs & a) {
 		if (par::tpedfile == "-")
 			par::ped_from_stdin = true;
 		par::tfile_input = true;
+		par::have_snps = true;
 	}
 
 	if (a.find("--tfam")) {
 		par::tfamfile = a.value("--tfam");
 		par::tfile_input = true;
+		par::have_snps = true;
 	}
 
 	// Long file format
@@ -2819,6 +2750,7 @@ void setOptions(CArgs & a) {
 		par::lpedfile = par::fileroot + ".lgen";
 		par::famfile = par::fileroot + ".fam";
 		par::mapfile = par::fileroot + ".map";
+		par::have_snps = true;
 	}
 
 	if (a.find("--lgen")) {
@@ -2826,8 +2758,15 @@ void setOptions(CArgs & a) {
 		if (par::lpedfile == "-")
 			par::ped_from_stdin = true;
 		par::lfile_input = true;
+		par::have_snps = true;
 	}
 
+	// numeric attribute file support - bcw - 4/22/13
+	if (a.find("--numeric")) {
+		par::numeric_file = true;
+		par::numeric_filename = a.value("--numeric");
+	}	
+	
 	////////////////////////
 	// Reference allele file
 	if (a.find("--reference")) {
@@ -3647,10 +3586,8 @@ void setOptions(CArgs & a) {
 			par::write_dosage = true;
 	}
 
-
 	//////////////////////////////////
 	// IBS clustering
-
 	if (a.find("--cluster")) {
 		par::cluster = true;
 		if (a.find("--within"))
@@ -3661,15 +3598,11 @@ void setOptions(CArgs & a) {
 		}
 	}
 
-
-
 	if (a.find("--euclidean")) {
 		if (!a.find("--cluster"))
 			error("Cannot specify --euclidean without --cluster");
 		par::cluster_euclidean = true;
 	}
-
-
 
 	if (a.find("--pick1")) {
 		par::cluster_selcon = true;
@@ -3758,8 +3691,6 @@ void setOptions(CArgs & a) {
 			error("Cannot specify --mc N and/or --cc as well as --mcc N1 N2\n");
 	}
 
-
-
 	/////////////////////////////////
 	// External criteria to match on
 
@@ -3801,11 +3732,8 @@ void setOptions(CArgs & a) {
 		par::qmatch_filename = a.value("--qmatch");
 	}
 
-
-
 	//////////////////////////
 	// Permutation clustering
-
 	if (a.find("--family")) {
 		par::sol_family = true;
 		par::permute_within_sol = true;
@@ -3825,10 +3753,8 @@ void setOptions(CArgs & a) {
 		par::mult_clst = a.value_int("--mwithin");
 	}
 
-
 	//////////////////////////////////
 	// Specific scan region selected
-
 	if (!a.find("--from")) {
 
 		// Specify a specific chromosome
@@ -3863,9 +3789,9 @@ void setOptions(CArgs & a) {
 		par::snp_include_from_cl = true;
 		par::snp_include_range = a.value("--snps");
 
-		if (a.find("--snp") || a.find("--window") || a.find("--extract") || a.find("--exclude"))
+		if (a.find("--snp") || a.find("--window") || a.find("--extract") || 
+						a.find("--exclude"))
 			error("Cannot specify multiple SNP-selection options with --snps");
-
 	}
 
 	if (a.find("--d")) {
@@ -3901,7 +3827,6 @@ void setOptions(CArgs & a) {
 		par::position_window = true;
 	}
 
-
 	if (a.find("--to-bp")) {
 		if (!a.find("--from-bp")) error("Must specify --from-bp with --to-bp");
 		par::to_window = a.value_int("--to-bp");
@@ -3926,11 +3851,8 @@ void setOptions(CArgs & a) {
 		if (!a.find("--chr"))
 			error("You must specify which chromosome (--chr N) also");
 
-
-
 	////////////////////////////////////////////
 	// General warnings
-
 	if (a.find("--assoc") && a.find("--covar"))
 		error("Cannot specify --covar with --assoc");
 
@@ -3952,11 +3874,8 @@ void setOptions(CArgs & a) {
 	if (a.find("--model") && a.find("--assoc"))
 		error("Cannot specify --model with --assoc");
 
-
 	/////////////////////////////////////////////
 	//  Help -- display all options
-
-
 	if (a.find("--help") || a.find("-h")) {
 
 		cout << "\n"
@@ -3967,6 +3886,7 @@ void setOptions(CArgs & a) {
 
 		cout << "plink --file {fileroot}         Specify .ped and .map files \n"
 						<< "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
+						<< "      --numeric {numeric file}  Specify .num file           \n"
 						<< "\n"
 						<< "      --out {fileroot}          Specify output root filename\n"
 						<< "\n"
@@ -4031,16 +3951,13 @@ void setOptions(CArgs & a) {
 		shutdown();
 	}
 
-
 	// By default, most tests are SNP major
-
 	par::SNP_major = true;
 
 	// Exceptions are:
 	//  TDT  ( family structure confuses things)
 	//  Whole genome / IBS clustering 
 	//  PLINK
-
 	if (par::TDT_test ||
 					par::MENDEL_test ||
 					par::MENDEL_report ||
@@ -4052,13 +3969,11 @@ void setOptions(CArgs & a) {
 	if (a.find("--ind"))
 		par::SNP_major = false;
 
-
 	// If recoding data, the default will be not to set heterozygous
 	// haploid genotypes to missing. Likewise for Mendel errors. Merge
 	// operations will also specify a recode/make-bed, so they are also
 	// captured here. The one special case where we want to allow to
 	// preserve males hets on the X is the --check-sex
-
 
 	if (par::check_sex)
 		par::preserve_all_genotypes = true;
@@ -4084,7 +3999,6 @@ void setOptions(CArgs & a) {
 			par::preserve_mendel_errors = true;
 
 	}
-
 
 }
 
