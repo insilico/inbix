@@ -35,6 +35,7 @@
 #include "stats.h"
 #include "idhelp.h"
 #include "zed.h"
+#include "regain.h"
 
 using namespace std;
 
@@ -157,6 +158,19 @@ int main(int argc, char* argv[]) {
 
 	//////////////////////////////////////////////////
 	// Main Input files
+
+	////////////////////////////////////////////
+	// A numeric file specified? - bcw - 4/20/13
+	if (par::numeric_file) {
+		par::have_snps = par::read_bitfile || par::read_ped ||
+						par::tfile_input || par::lfile_input;
+		if (!P.readNumericFile()) {
+			error("Problem reading the numeric file");
+		}
+		par::have_numerics = true;
+//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
+//						ostream_iterator<string>(cout, "\n"));
+	}
 
 	// Simulate or read in data:
 	// Binary or ASCII format; transposed/long/generic
@@ -376,22 +390,15 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	//////////////////////////////// 
-	// A numeric file specified? - bcw - 4/20/13
-	if (par::numeric_file) {
-		par::have_snps = par::read_bitfile || par::read_ped ||
-						par::tfile_input || par::lfile_input;
-		if (!P.readNumericFile()) {
-			error("Problem reading the numeric file");
-		}
-//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
-//						ostream_iterator<string>(cout, "\n"));
-	}
-
-	//////////////////////////////// 
+	////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {
 		P.printLOG("Performing reGAIN analysis\n");
+		P.SNP2Ind();
+		Regain* regain = new Regain(false, 0.00001, par::have_numerics, false, false);
+		regain->run();
+		regain->writeRegain(false, false);
+		delete regain;
 		// stop inbix processing
 		shutdown();
 	}
@@ -1104,7 +1111,6 @@ int main(int argc, char* argv[]) {
 	if (par::phase_snps || par::mishap_test || par::proxy_assoc) {
 
 		// Read in list of tests, or make sliding window?
-
 		if (par::phase_snps) {
 			if (par::sliding_window)
 				P.haplo->makeSlidingWindow(par::sliding_window_size);
@@ -1131,7 +1137,6 @@ int main(int argc, char* argv[]) {
 						+ dbl2str(par::hap_missing_geno) + " \n");
 
 		// Count number of founders
-
 		P.haplo->cnt_f = 0;
 		vector<Individual*>::iterator person = P.sample.begin();
 		while (person != P.sample.end()) {

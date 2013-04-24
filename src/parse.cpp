@@ -1483,7 +1483,8 @@ void setOptions(CArgs & a) {
 						a.find("--hap-logistic") ||
 						a.find("--elf-test") ||
 						a.find("--chap")))
-			error("Can only use --condition with --linear, --logistic, --proxy-glm, --chap, --elf-test, --hap-linear or --hap-logistic");
+			error("Can only use --condition with --linear, --logistic, --proxy-glm, "
+							"--chap, --elf-test, --hap-linear or --hap-logistic");
 
 		par::conditioning_snp_single = true;
 		par::conditioning_snps = true;
@@ -2770,7 +2771,6 @@ void setOptions(CArgs & a) {
 	// reGAIN analysis support - bcw - 4/22/13
 	if (a.find("--regain")) {
 		par::do_regain = true;
-		par::regain_filename = a.value("--regain");
 	}	
 	
 	////////////////////////
@@ -3939,7 +3939,7 @@ void setOptions(CArgs & a) {
 						<< "      --linear                  Linear regression model     \n"
 						<< "      --logistic                Logistic regression model   \n"
 						<< "\n"
-						<< "      --regain                  Perform a reGAIN analysis   \n"
+						<< "      --regain {regain file}    Perform a reGAIN analysis   \n"
 						<< "\n"
 						<< "      --perm                    Apaptive permutations       \n"
 						<< "      --mperm {1000}            max(T) permutations         \n"

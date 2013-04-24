@@ -85,7 +85,8 @@ else
  CXXFLAGS += -DSKIP
 endif
 
-SRC = inbix.cpp plink.cpp options.cpp input.cpp binput.cpp tinput.cpp genome.cpp	\
+SRC = inbix.cpp plink.cpp options.cpp input.cpp binput.cpp tinput.cpp \
+genome.cpp \
 helper.cpp stats.cpp filters.cpp locus.cpp multi.cpp crandom.cpp	\
 cluster.cpp mds.cpp output.cpp informative.cpp assoc.cpp epi.cpp	\
 prephap.cpp phase.cpp trio.cpp tdt.cpp sharing.cpp genepi.cpp sets.cpp	\
@@ -99,12 +100,12 @@ clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp	\
 nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
 flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
 tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
-metaanal.cpp 
+metaanal.cpp regain.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
 fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
-gvar.h cnv.h cfamily.h idhelp.h zed.h 
+gvar.h cnv.h cfamily.h idhelp.h zed.h regain.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS
@@ -114,7 +115,7 @@ ifeq ($(SYS),MAC)
 LIB += -ldl
 endif
 ifeq ($(SYS),UNIX)
-LIB += -ldl -lcrypt
+LIB += -ldl -lcrypt -lgsl
 endif
 endif
 

@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2009 Shaun Purcell                  //
@@ -9,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #ifndef __HELPER_H__
 #define __HELPER_H__
@@ -41,7 +38,6 @@ inline const T SIGN(const T &a, const T &b)
 template<class T>
 inline void SWAP(T &a, T &b)
         {T dum=a; a=b; b=dum;}
-
 
 class Plink;
 class Individual;
@@ -96,8 +92,6 @@ vector<string> parse2str(string);
 vector<int> parse2int(string);
 string searchAndReplace(string,string,string);
 vector<string> commaParse(string);
-
-
 
 template <class T>
 bool from_string(T& t, 
@@ -177,7 +171,6 @@ std::string sw(int i , int n);
 
 std::string itoa(int, int);
 
-
 void checkFileExists(string);
 void checkFileExists(vector<string>);
 bool doesFileExist(string);
@@ -218,6 +211,7 @@ void mapRangesToSNPs(string,
 		     map<int,set<Range*> > & snp2range);
 
 
-map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, string filename);
+map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, 
+				string filename);
 
 #endif

@@ -1123,8 +1123,8 @@ bool Plink::readNumericFile() {
 		// parse header if not parsed already
 		if(!readHeader) {
 			// save numeric attribute names = tokens minus FID and IID
-			par::nlistNames.resize(tokens.size() - 2);
-			copy(tokens.begin() + 2, tokens.end(), par::nlistNames.begin());
+			nlistname.resize(tokens.size() - 2);
+			copy(tokens.begin() + 2, tokens.end(), nlistname.begin());
 			readHeader= true;
 			numNumerics = tokens.size() - 2;
 			continue;
@@ -1154,7 +1154,7 @@ bool Plink::readNumericFile() {
 			Individual* person = ii->second;
 
 			// Track individual numeric attribute missing status
-			person->nlistMissing.resize(par::nlistNames.size());
+			person->nlistMissing.resize(nlistname.size());
 
 			// Store original missingness status for this person
 			originalPersonMissingStatus.insert(make_pair(person, person->missing));
@@ -1213,6 +1213,9 @@ bool Plink::readNumericFile() {
 		personIt++;
 	}
 
+	// let PLINK know how many individuals remain after all matching and checking
+	n = nvalid;
+	
 	// happy lights
 	printLOG("Read "
 					+ int2str(numNumerics)

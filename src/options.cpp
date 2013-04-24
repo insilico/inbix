@@ -239,11 +239,9 @@ bool par::have_snps = false;
 bool par::have_numerics = false;
 bool par::numeric_file = false;
 string par::numeric_filename = "inbix.num";
-vector<string> par::nlistNames;
 
 // added for reGAIN support - bcw - 4/22/13
 bool par::do_regain = false;
-string par::regain_filename = "inbix.regain";
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

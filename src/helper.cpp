@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2009 Shaun Purcell                  //
@@ -9,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #include <iostream>
 #include <iomanip>
@@ -361,16 +358,13 @@ double getDouble(string s, string a) {
 void CArgs::check_unused_options(Plink & P) {
 
 	// Any unused options get added as options
-
 	string cmd = "";
 
 	bool okay = true;
 
 	for (int i = 1; i < n; i++) // argv[0] is command line
 	{
-
 		// Is this a command? 
-
 		if (a[i].substr(0, 2) == "--")
 			cmd = a[i];
 
@@ -398,7 +392,6 @@ void CArgs::check_unused_options(Plink & P) {
 
 	if (!okay) error("Problem parsing the command line arguments.");
 
-
 	// Otherwise, all is okay, but print a record of the options used to CERR
 	// All options always start with "--"
 	P.printLOG("Options in effect:");
@@ -422,7 +415,8 @@ void checkDupes(Plink & P) {
 	while (person != P.sample.end()) {
 		string str = (*person)->fid + "_" + (*person)->iid;
 		if (people.find(str) != people.end())
-			errmsg += "Duplicate individual found: [ " + (*person)->fid + " " + (*person)->iid + " ]\n";
+			errmsg += "Duplicate individual found: [ " + (*person)->fid + " " + 
+							(*person)->iid + " ]\n";
 		else
 			people.insert(str);
 		person++;
@@ -451,7 +445,6 @@ void checkDupes(Plink & P) {
 	}
 
 	markers.clear();
-
 }
 
 void error(string msg) {
@@ -471,7 +464,6 @@ void error(string msg) {
 }
 
 void shutdown() {
-
 	time_t curr = time(0);
 	string tdstamp = ctime(&curr);
 
@@ -534,9 +526,9 @@ void summaryBasics(Plink & P) {
 			if (P.sample[i]->missing)
 				nmissing++;
 
-		P.printLOG("After filtering, " + int2str(P.sample.size() - nmissing) + " individuals with non-missing status\n");
+		P.printLOG("After filtering, " + int2str(P.sample.size() - nmissing) + 
+		" individuals with non-missing status\n");
 	}
-
 
 	// Display sex counts
 	int nmale = 0;
@@ -559,7 +551,6 @@ void summaryBasics(Plink & P) {
 
 }
 
-
 #define MISSING1(i,l) ( P.SNP[l]->one[i] && ( ! P.SNP[l]->two[i] ) ) 
 #define MISSING2(i,l) ( P.sample[i]->one[l] && ( ! P.sample[i]->two[l] ) ) 
 
@@ -577,8 +568,7 @@ double genotypingRate(Plink & P, int l) {
 	if (par::SNP_major) {
 		for (int i = 0; i < P.sample.size(); i++)
 			if (MISSING1(i, l)) m++;
-	}
-	else {
+	} else {
 		for (int i = 0; i < P.sample.size(); i++)
 			if (MISSING2(i, l)) m++;
 	}
@@ -630,7 +620,6 @@ vector<string> listPossibleHaplotypes(Plink & P, vector<int> S) {
 
 		// Consider next haplotype
 		h++;
-
 	}
 
 	for (int h = 0; h < hap.size(); h++) {
@@ -642,7 +631,6 @@ vector<string> listPossibleHaplotypes(Plink & P, vector<int> S) {
 		str.push_back(hstr);
 	}
 	return str;
-
 }
 
 bool readString(FILE * fp, string & s) {
@@ -688,8 +676,12 @@ void geno2matrix(vector<int> & snps, matrix_t & g, boolmatrix_t & m, bool dom) {
 
 	for (int s = 0; s < snps.size(); s++) {
 		for (int p = 0; p < PP->n; p++) {
-			bool s1 = par::SNP_major ? PP->SNP[snps[s]]->one[p] : PP->sample[p]->one[snps[s]];
-			bool s2 = par::SNP_major ? PP->SNP[snps[s]]->two[p] : PP->sample[p]->two[snps[s]];
+			bool s1 = par::SNP_major ? 
+				PP->SNP[snps[s]]->one[p] : 
+				PP->sample[p]->one[snps[s]];
+			bool s2 = par::SNP_major ? 
+				PP->SNP[snps[s]]->two[p] : 
+				PP->sample[p]->two[snps[s]];
 
 			if ((!s1) && (!s2)) {
 				++g[p][s] = dom ? 1 : 2;
@@ -775,7 +767,6 @@ string genotype(Plink & P, Individual * person, int l) {
 void permute(vector<long int> &a) {
 	// generate random permutation of 0..n-1
 	// where n is a.size();
-
 	const long int n = a.size();
 
 	for (long int i = 0; i < n; i++)
@@ -791,10 +782,8 @@ void permute(vector<long int> &a) {
 }
 
 void permute(vector<int> &a) {
-
 	// Generate a random permutation of 0 
 	// to n-1 where n is a.size();
-
 	const int n = a.size();
 
 	for (int i = 0; i < n; i++)
@@ -956,7 +945,9 @@ std::string sw(double d, int n) {
 }
 
 std::string sw(double d, int f, int n) {
-	std::string s = realnum(d) ? (f < 0 ? dbl2str(d, -f) : dbl2str_fixed(d, f)) : "NA";
+	std::string s = realnum(d) ? 
+		(f < 0 ? dbl2str(d, -f) : 
+			dbl2str_fixed(d, f)) : "NA";
 	int l = n - s.size();
 	if (l < 1) return " " + s;
 	s.insert(s.begin(), l, ' ');
@@ -1009,9 +1000,7 @@ std::string itoa(int value, int base) {
 }
 
 void checkFileExists(string f) {
-
 	ifstream inp;
-
 	inp.open(f.c_str(), ifstream::in);
 	if (inp.fail()) {
 		inp.clear(ios::failbit);
@@ -1021,7 +1010,6 @@ void checkFileExists(string f) {
 	}
 	inp.close();
 	return;
-
 }
 
 void checkFileExists(vector<string> f) {
@@ -1031,9 +1019,7 @@ void checkFileExists(vector<string> f) {
 }
 
 bool doesFileExist(string f) {
-
 	ifstream inp;
-
 	inp.open(f.c_str(), ifstream::in);
 	if (inp.fail()) {
 		inp.clear(ios::failbit);
@@ -1042,7 +1028,6 @@ bool doesFileExist(string f) {
 	}
 	inp.close();
 	return true;
-
 }
 
 bool compressed(string s) {
@@ -1098,11 +1083,9 @@ bool Plink::missingGenotype(int i, int l) {
 }
 
 void Plink::prettyPrintLengths() {
-
 	par::pp_maxfid = 4;
 	par::pp_maxiid = 4;
 	par::pp_maxsnp = 4;
-
 	for (int i = 0; i < n; i++) {
 		if (sample[i]->fid.length() > par::pp_maxfid)
 			par::pp_maxfid = sample[i]->fid.length() + 2;
@@ -1110,15 +1093,13 @@ void Plink::prettyPrintLengths() {
 		if (sample[i]->iid.length() > par::pp_maxiid)
 			par::pp_maxiid = sample[i]->iid.length() + 2;
 	}
-
-
 	for (int l = 0; l < nl_all; l++)
 		if (locus[l]->name.length() > par::pp_maxsnp)
 			par::pp_maxsnp = locus[l]->name.length() + 2;
-
 }
 
-vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> & varcode) {
+vector<bool> vif_prune(vector<vector<double> > m, double threshold, 
+				vector<int> & varcode) {
 
 	// Number of variables
 	int p = m.size();
@@ -1140,7 +1121,6 @@ vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> 
 	// Number of excluded items
 	int it = 0;
 
-
 	// Any SNPs with zero variance should be automatically excluded
 	for (int i = 0; i < p; i++)
 		if (r[i][i] == 0 || !realnum(r[i][i])) {
@@ -1148,11 +1128,8 @@ vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> 
 			it++;
 		}
 
-
 	// For any pair of perfectly correlated SNPs, exclude 1
-
 	while (1) {
-
 		bool done = true;
 		for (int i = 0; i < p - 1; i++) {
 			if (cur[i]) {
@@ -1190,12 +1167,9 @@ vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> 
 
 	// Calculate r^2 for each element versus all others
 	// considering only the current non-pruned elements
-
 	while (1) {
-
 		// Build correlation matrix all included items
 		vector<vector<double> > u;
-
 		for (int i = 0; i < p; i++) {
 			if (cur[i]) {
 				vector<double> mt;
@@ -1207,7 +1181,6 @@ vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> 
 				u.push_back(mt);
 			}
 		}
-
 
 		// Check enough markers left  
 		if (u.size() < 2) break;
@@ -1226,7 +1199,6 @@ vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> 
 		// Get inverse
 		bool flag = true;
 		u = svd_inverse(u, flag);
-
 
 		// Calculate VIFs
 		double maxVIF = 0;
@@ -1266,7 +1238,6 @@ vector<bool> vif_prune(vector<vector<double> > m, double threshold, vector<int> 
 	}
 
 	return cur;
-
 }
 
 vector<vector<double> > calcSetCovarianceMatrix(vector<int> & nSNP) {
@@ -1300,7 +1271,6 @@ string leftWindowEdge(Plink & P, int chr, int bp) {
 	// Get nearest SNP 
 	Locus * marker = NULL;
 	int distance = -1;
-
 	vector<Locus*>::iterator loc = P.locus.begin();
 	while (loc != P.locus.end()) {
 		if ((*loc)->chr == chr)
@@ -1316,15 +1286,12 @@ string leftWindowEdge(Plink & P, int chr, int bp) {
 		error("Could not place marker for left window edge");
 
 	return marker->name;
-
 }
 
 string rightWindowEdge(Plink & P, int chr, int bp) {
-
 	// Get nearest SNP 
 	Locus * marker = NULL;
 	int distance = -1;
-
 	vector<Locus*>::iterator loc = P.locus.begin();
 	while (loc != P.locus.end()) {
 		if ((*loc)->chr == chr)
@@ -1348,7 +1315,8 @@ void Plink::setMarkerRange() {
 	if (par::run_chr > 0 && !par::position_window) {
 		// Get first and last markers on this chromosome
 		vector<int> m = getChromosomeMarkerRange((*this), par::run_chr);
-		if (m[0] == -1 || m[1] == -1) error("--chr {chromosome} not found:" + int2str(par::run_chr));
+		if (m[0] == -1 || m[1] == -1) 
+			error("--chr {chromosome} not found:" + int2str(par::run_chr));
 		par::run_start = m[0];
 		par::run_end = m[1];
 	} else if (par::position_window) {
@@ -1375,9 +1343,11 @@ void Plink::setMarkerRange() {
 		}
 
 
-		if (getMarkerChromosome((*this), par::m1) != getMarkerChromosome((*this), par::m2)) {
+		if (getMarkerChromosome((*this), par::m1) != 
+						getMarkerChromosome((*this), par::m2)) {
 			string msg = "--from {marker} and --to {marker} must lie on same chromosome";
-			msg += "\nwhereas these lie on chromosomes " + int2str(getMarkerChromosome((*this), par::m1));
+			msg += "\nwhereas these lie on chromosomes " + 
+							int2str(getMarkerChromosome((*this), par::m1));
 			msg += " and " + int2str(getMarkerChromosome((*this), par::m2));
 			error(msg);
 		}
@@ -1395,13 +1365,10 @@ void Plink::setMarkerRange() {
 					+ " from [ " + locus[par::run_start]->name
 					+ " ] to [ " + locus[par::run_end]->name
 					+ " ]\n");
-
 }
 
 void defineHorseChromosomes() {
-
 	// 31 autosomes + X + Y + etc
-
 	par::chr_haploid.resize(31 + 2 + 1);
 	par::chr_sex.resize(31 + 2 + 1);
 	par::chr_Y.resize(31 + 2 + 1);
@@ -1431,10 +1398,8 @@ void defineHorseChromosomes() {
 }
 
 void defineSheepChromosomes() {
-
 	// 2n = 54 
 	// 26 autosomes + X + Y + etc
-
 	par::chr_haploid.resize(26 + 2 + 1);
 	par::chr_sex.resize(26 + 2 + 1);
 	par::chr_Y.resize(26 + 2 + 1);
@@ -1464,9 +1429,7 @@ void defineSheepChromosomes() {
 }
 
 void defineRiceChromosomes() {
-
 	// 12 haploid chromosomes (+ 0 dummy code)
-
 	par::chr_haploid.resize(12 + 1);
 	par::chr_sex.resize(12 + 1);
 	par::chr_Y.resize(12 + 1);
@@ -1478,13 +1441,10 @@ void defineRiceChromosomes() {
 		par::chr_code[i] = int2str(i);
 		par::chr_map.insert(make_pair(int2str(i), i));
 	}
-
 }
 
 void defineDogChromosomes() {
-
 	// 38 autosomes + X + Y + XY + 0 missing code
-
 	par::chr_haploid.resize(38 + 3 + 1);
 	par::chr_sex.resize(38 + 3 + 1);
 	par::chr_Y.resize(38 + 3 + 1);
@@ -1519,13 +1479,10 @@ void defineDogChromosomes() {
 	par::chr_map.insert(make_pair("XY", 41));
 	par::chr_map.insert(make_pair("xy", 41));
 	par::chr_map.insert(make_pair("41", 41));
-
 }
 
 void defineMouseChromosomes() {
-
 	// 19 autosomes + X + Y + 0 missing code
-
 	par::chr_haploid.resize(19 + 2 + 1);
 	par::chr_sex.resize(19 + 2 + 1);
 	par::chr_Y.resize(19 + 2 + 1);
@@ -1552,13 +1509,10 @@ void defineMouseChromosomes() {
 	par::chr_map.insert(make_pair("Y", 21));
 	par::chr_map.insert(make_pair("y", 21));
 	par::chr_map.insert(make_pair("21", 21));
-
 }
 
 void defineCowChromosomes() {
-
 	// 29 autosomes + X + Y + 0 missing code
-
 	par::chr_haploid.resize(29 + 2 + 1);
 	par::chr_sex.resize(29 + 2 + 1);
 	par::chr_Y.resize(29 + 2 + 1);
@@ -1588,9 +1542,7 @@ void defineCowChromosomes() {
 }
 
 void defineHumanChromosomes() {
-
 	// 22 autosomes + X + Y + XY + M + 0 missing code
-
 	par::chr_haploid.resize(22 + 2 + 2 + 1);
 	par::chr_sex.resize(22 + 2 + 2 + 1);
 	par::chr_Y.resize(22 + 2 + 2 + 1);
@@ -1670,7 +1622,6 @@ void sizeTable(table_t & m, int r, int c) {
 //
 // Written by Jan Wigginton
  */
-
 double SNPHWE(int obs_hets, int obs_hom1, int obs_hom2) {
 
 	if (obs_hom1 + obs_hom2 + obs_hets == 0) return 1;
@@ -1688,7 +1639,8 @@ double SNPHWE(int obs_hets, int obs_hom1, int obs_hom2) {
 	int rare_copies = 2 * obs_homr + obs_hets;
 	int genotypes = obs_hets + obs_homc + obs_homr;
 
-	double * het_probs = (double *) malloc((size_t) (rare_copies + 1) * sizeof (double));
+	double * het_probs = (double *) malloc((size_t) (rare_copies + 1) * 
+	sizeof (double));
 	if (het_probs == NULL)
 		error("Internal error: SNP-HWE: Unable to allocate array");
 
@@ -1714,7 +1666,8 @@ double SNPHWE(int obs_hets, int obs_hom1, int obs_hom2) {
 						/ (4.0 * (curr_homr + 1.0) * (curr_homc + 1.0));
 		sum += het_probs[curr_hets - 2];
 
-		/* 2 fewer heterozygotes for next iteration -> add one rare, one common homozygote */
+		/* 2 fewer heterozygotes for next iteration -> add one rare, 
+		 * one common homozygote */
 		curr_homr++;
 		curr_homc++;
 	}
@@ -1727,7 +1680,8 @@ double SNPHWE(int obs_hets, int obs_hom1, int obs_hom2) {
 						/ ((curr_hets + 2.0) * (curr_hets + 1.0));
 		sum += het_probs[curr_hets + 2];
 
-		/* add 2 heterozygotes for next iteration -> subtract one rare, one common homozygote */
+		/* add 2 heterozygotes for next iteration -> subtract one rare, 
+		 * one common homozygote */
 		curr_homr--;
 		curr_homc--;
 	}
@@ -1762,11 +1716,7 @@ double SNPHWE(int obs_hets, int obs_hom1, int obs_hom2) {
 	return p_hwe;
 }
 
-
-
-
 // Convert dataset from Individual-major format to SNP-major
-
 void Plink::Ind2SNP() {
 	printLOG("Converting data to SNP-major format\n");
 
@@ -1820,7 +1770,6 @@ void Plink::Ind2SNP() {
 }
 
 // Convert dataset from SNP-major format to Individual-major
-
 void Plink::SNP2Ind() {
 
 	printLOG("Converting data to Individual-major format\n");
@@ -1836,14 +1785,10 @@ void Plink::SNP2Ind() {
 
 	///////////////////////////////
 	// Iterate over SNPs
-
 	vector<CSNP*>::iterator s = SNP.begin();
-
 	while (s != SNP.end()) {
-
 		/////////////////////////////
 		// Iterate over individuals
-
 		vector<bool>::iterator i1 = (*s)->one.begin();
 		vector<bool>::iterator i2 = (*s)->two.begin();
 		vector<Individual*>::iterator person = sample.begin();
@@ -1934,18 +1879,14 @@ int Plink::keepIndividuals(set<Individual*> & pset) {
 }
 
 int Plink::deleteSNPs(vector<bool> & del) {
-
-
 	// Remove SNPs that have T in vector 'del'
 	// We expect this vector to be same length
 	// current number of SNPs
-
 	int original = SNP.size();
 
 
 	//////////////////////////////////////////////
 	// SNP-major mode
-
 	if (par::SNP_major) {
 
 		vector<CSNP*>::iterator s1 = SNP.begin();
@@ -1969,11 +1910,9 @@ int Plink::deleteSNPs(vector<bool> & del) {
 
 		// Then erase the remaining SNPs
 		SNP.erase(s2, SNP.end());
-
 	} else {
 		// Individual major-mode
 		// copy remaining SNPs to a new list
-
 		vector<Individual*>::iterator person = sample.begin();
 		while (person != sample.end()) {
 
@@ -1986,19 +1925,15 @@ int Plink::deleteSNPs(vector<bool> & del) {
 
 			vector<bool>::iterator d = del.begin();
 
-
 			while (one1 != (*person)->one.end()) {
-
 				// Keep this marker
 				if (! * d) {
 					*one2 = *one1;
 					*two2 = *two1;
-
 					// Advance next saved SNP
 					one2++;
 					two2++;
 				}
-
 				// Advance to next to-be-checked SNP
 				one1++;
 				two1++;
@@ -2014,16 +1949,13 @@ int Plink::deleteSNPs(vector<bool> & del) {
 		}
 	}
 
-
 	///////////////////////////////////////////////////
 	// Second, remove deleted SNPs from the locus list
-
 	vector<Locus*>::iterator loc1 = locus.begin();
 	vector<Locus*>::iterator loc2 = locus.begin();
 	vector<bool>::iterator d = del.begin();
 
 	while (loc1 != locus.end()) {
-
 		// Should we keep this SNP?
 		if (! *d) {
 			*loc2 = *loc1;
@@ -2033,9 +1965,7 @@ int Plink::deleteSNPs(vector<bool> & del) {
 
 		loc1++;
 		d++;
-
 	}
-
 
 	// Then erase the remaining SNPs
 	// and the storage
@@ -2046,21 +1976,16 @@ int Plink::deleteSNPs(vector<bool> & del) {
 
 	// Return the number of SNPs we chucked
 	return original - nl_all;
-
 }
 
 int Plink::deleteIndividuals(vector<bool> & del) {
-
-
 	// Remove SNPs that have T in vector 'del'
 	// We expect this vector to be same length
 	// current number of SNPs
-
 	int original = sample.size();
 
 	//////////////////////////////////////////////
 	// SNP-major mode
-
 	if (par::SNP_major) {
 
 		// Erase genotype data (SNP-major order)
@@ -2105,7 +2030,6 @@ int Plink::deleteIndividuals(vector<bool> & del) {
 	/////////////////////////////////////////////
 	// Whether SNP-major or individual-major
 	// we still need to take care of the sample[]
-
 	vector<Individual*>::iterator person1 = sample.begin();
 	vector<Individual*>::iterator person2 = sample.begin();
 
@@ -2153,7 +2077,6 @@ void Plink::filterOnCovariate() {
 
 
 	// Swap q-match filename as covariate file
-
 	string tmp_covar_file = par::include_cluster_filename;
 	int tmp_mult_covar = par::mult_clst;
 
@@ -2170,7 +2093,6 @@ void Plink::filterOnCovariate() {
 
 	// Screen-based on covariate
 	// vector to record which individuals to be deleted
-
 	vector<bool> indel(sample.size(), false);
 	int n_removed1 = 0;
 	for (int i = 0; i < sample.size(); i++) {
@@ -2197,7 +2119,6 @@ void Plink::filterOnCovariate() {
 	// And now remove these individuals, so that 
 	// SNP-based statistics are calculated with 
 	// these samples already excluded
-
 	int n_removed = deleteIndividuals(indel);
 
 	if (n_removed != n_removed1)
@@ -2212,7 +2133,6 @@ void Plink::filterOnCovariate() {
 	nk = 1;
 	kname.resize(0);
 	kmap.clear();
-
 }
 
 void Plink::filterOnCase() {
@@ -2231,7 +2151,6 @@ void Plink::filterOnCase() {
 	// Reset number of individuals
 	n = sample.size();
 	np = (int) ((double) (n * (n - 1)) / (double) 2);
-
 }
 
 void Plink::filterOnControl() {
@@ -2250,7 +2169,6 @@ void Plink::filterOnControl() {
 	// Reset number of individuals
 	n = sample.size();
 	np = (int) ((double) (n * (n - 1)) / (double) 2);
-
 }
 
 void Plink::filterOnMale() {
@@ -2268,7 +2186,6 @@ void Plink::filterOnMale() {
 	// Reset number of individuals
 	n = sample.size();
 	np = (int) ((double) (n * (n - 1)) / (double) 2);
-
 }
 
 void Plink::filterOnFemale() {
@@ -2286,7 +2203,6 @@ void Plink::filterOnFemale() {
 	// Reset number of individuals
 	n = sample.size();
 	np = (int) ((double) (n * (n - 1)) / (double) 2);
-
 }
 
 void Plink::filterOnFounder() {
@@ -2304,7 +2220,6 @@ void Plink::filterOnFounder() {
 	// Reset number of individuals
 	n = sample.size();
 	np = (int) ((double) (n * (n - 1)) / (double) 2);
-
 }
 
 void Plink::filterOnNonFounder() {
@@ -2322,7 +2237,6 @@ void Plink::filterOnNonFounder() {
 	// Reset number of individuals
 	n = sample.size();
 	np = (int) ((double) (n * (n - 1)) / (double) 2);
-
 }
 
 void Plink::attribFilterSNP() {
@@ -2385,7 +2299,6 @@ void Plink::attribFilterSNP() {
 				exclude = true;
 		}
 
-
 		// Keep this SNP?
 		if ((match || (!posMatch)) &&
 						((!exclude) || (!negMatch)))
@@ -2398,7 +2311,6 @@ void Plink::attribFilterSNP() {
 
 	par::range_delimiter = tmp;
 	return;
-
 }
 
 void Plink::attribFilterInd() {
@@ -2531,13 +2443,10 @@ void Plink::dummyLoader() {
 		person->sexcode = "2";
 		sample.push_back(person);
 	}
-
 }
 
 void Plink::alleleRecoding() {
-
 	vector<Locus*>::iterator loc = locus.begin();
-
 	while (loc != locus.end()) {
 
 		if (par::recode_1234) {
@@ -2581,7 +2490,6 @@ void Plink::alleleRecoding() {
 
 		loc++;
 	}
-
 }
 
 vector<string> commaParse(string s) {
@@ -2625,23 +2533,18 @@ void smoother(Plink & P,
 	if (input.size() != P.nl_all)
 		error("Problem in smoother()\n");
 
-
 	output1.resize(P.nl_all);
 	output2.resize(P.nl_all);
 	count.resize(P.nl_all);
 
-
 	for (int l = 0; l < P.nl_all; l++) {
-
 		double x1 = input[l];
 		double c1 = n - x1;
 
 		int involved = 1;
 
 		// pick this SNP, move forwards and backwards
-
 		Locus * loc1 = P.locus[l];
-
 
 		int l2 = l;
 		while (true) {
@@ -2680,12 +2583,9 @@ void smoother(Plink & P,
 }
 
 map<string, set<Range> > readRange(string filename) {
-
-
 	// Format: CHR BP1 BP2 (NAME) (GROUP)
-
 	// If same named range read twice, take largest range
-
+	
 	checkFileExists(filename);
 	ifstream IN(filename.c_str(), ios::in);
 	IN.clear();
@@ -2888,7 +2788,6 @@ int2 mapSNPs2Range(Plink & P, const Range * range) {
 
 	////////////////////
 	// Adjust start 
-
 	while (1) {
 
 		if (P.locus[guess_start]->bp == range->start)
@@ -2912,10 +2811,8 @@ int2 mapSNPs2Range(Plink & P, const Range * range) {
 		}
 	}
 
-
 	////////////////////
 	// Adjust stop 
-
 	while (1) {
 
 		if (P.locus[guess_stop]->bp == range->stop)
@@ -2941,8 +2838,6 @@ int2 mapSNPs2Range(Plink & P, const Range * range) {
 		}
 	}
 
-
-
 	if (P.locus[guess_start]->bp > range->stop ||
 					P.locus[guess_stop]->bp < range->start)
 		return int2(-1, -1);
@@ -2965,7 +2860,6 @@ void makeScaffold(Plink & P) {
 
 		// Have we seen this chromosome before? If not, 
 		// add this to the list.
-
 		if (P.scaffold.find(chr) == P.scaffold.end()) {
 			CInfo ci;
 			ci.lstart = l;
@@ -2975,7 +2869,6 @@ void makeScaffold(Plink & P) {
 
 		// Is this the end of this chromosome? If so, 
 		// also record that.
-
 		if (l == lastSNP ||
 						chr != P.locus[l + 1]->chr) {
 			map<int, CInfo>::iterator i = P.scaffold.find(chr);
@@ -2997,7 +2890,6 @@ void mapRangesToSNPs(string filename,
 	// Consider each range
 	map<string, set<Range> >::iterator r = ranges.begin();
 	int rc = 0;
-
 
 	while (r != ranges.end()) {
 
@@ -3042,8 +2934,6 @@ void mapRangesToSNPs(string filename,
 	//     rangeLabels.push_back( thisRange->name );
 	//     ++r;
 	//   }
-
-
 
 	PP->printLOG(int2str(rc) + " ranges with at least 1 marker\n");
 	PP->printLOG("Assigned "
@@ -3098,11 +2988,9 @@ string relType(Individual *a, Individual * b) {
 		return "PO";
 
 	return "OT";
-
 }
 
 void Plink::outputPermedPhenotypes(Perm & perm) {
-
 
 	// Dummy test statistic
 	perm.setTests(1);
@@ -3135,7 +3023,8 @@ void Plink::outputPermedPhenotypes(Perm & perm) {
 	} // next permutation
 
 	ofstream PPHE;
-	printLOG("Writing permuted phenotype file to [ " + par::output_file_name + ".pphe ]\n");
+	printLOG("Writing permuted phenotype file to [ " + par::output_file_name + 
+					".pphe ]\n");
 	PPHE.open((par::output_file_name + ".pphe").c_str(), ios::out);
 	for (int i = 0; i < n; i++) {
 		PPHE << sample[i]->fid << "\t"
@@ -3149,8 +3038,6 @@ void Plink::outputPermedPhenotypes(Perm & perm) {
 }
 
 vector<vector<int> > two_locus_table(int l1, int l2) {
-
-
 	//   0 1 2 tot
 	// 0 a b c d 
 	// 1 e f g h
@@ -3159,7 +3046,6 @@ vector<vector<int> > two_locus_table(int l1, int l2) {
 	// tot
 
 	// i.e. so t[4][4] contains # non-missing individuals
-
 	vector< vector<int> > t(5);
 	for (int i = 0; i < 5; i++)
 		t[i].resize(5, 0);
@@ -3241,7 +3127,8 @@ vector<vector<int> > two_locus_table(int l1, int l2) {
 	return t;
 }
 
-map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, string filename) {
+map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, 
+				string filename) {
 	set<string> isubset;
 	set<string> inotfound;
 
@@ -3256,7 +3143,6 @@ map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, string 
 			continue;
 		isubset.insert(gname);
 	}
-
 
 	// Copy over extracted set to here
 	map<string, set<Range> > newRanges;
@@ -3275,10 +3161,12 @@ map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, string 
 		++i;
 	}
 
-	PP->printLOG("Extracted " + int2str(newRanges.size()) + " ranges from this list\n");
+	PP->printLOG("Extracted " + int2str(newRanges.size()) + 
+	" ranges from this list\n");
 	if (inotfound.size() > 0) {
 		PP->printLOG("Was unable to find " + int2str(inotfound.size()) + " ranges\n");
-		PP->printLOG("Writing this list of not-found genes to [ " + par::output_file_name + ".notfound ]\n");
+		PP->printLOG("Writing this list of not-found genes to [ " + 
+		par::output_file_name + ".notfound ]\n");
 		ofstream O2;
 		O2.open((par::output_file_name + ".notfound").c_str(), ios::out);
 		set<string>::iterator i1 = inotfound.begin();

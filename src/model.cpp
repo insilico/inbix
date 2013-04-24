@@ -128,6 +128,7 @@ void Model::addAdditiveSNP(int a) {
 	else
 		haploid.push_back(false);
 
+	//cout << "addAdditiveSNP: " << a << ", " << additive.size() - 1  << endl;
 	type.push_back(ADDITIVE);
 	order.push_back(additive.size() - 1);
 }
@@ -137,21 +138,26 @@ void Model::addDominanceSNP(int d) {
 		error("Cannot add SNP to thie MODEL");
 
 	dominance.push_back(d);
-
 	type.push_back(DOMDEV);
 	order.push_back(dominance.size() - 1);
 }
 
 void Model::addCovariate(int c) {
 	covariate.push_back(c);
-
 	type.push_back(COVARIATE);
 	order.push_back(covariate.size() - 1);
 }
 
+void Model::addNumeric(int n)
+{
+  numeric.push_back(n);      
+  type.push_back(NUMERIC);
+	// cout << "addNumeric: " << n << ", " << numeric.size() - 1  << endl;
+  order.push_back(numeric.size() - 1);
+}
+
 void Model::addHaplotypeDosage(set<int> & h) {
 	haplotype.push_back(h);
-
 	type.push_back(HAPLOTYPE);
 	order.push_back(haplotype.size() - 1);
 }
@@ -161,7 +167,6 @@ void Model::addInteraction(int a, int b) {
 	i.p1 = a;
 	i.p2 = b;
 	interaction.push_back(i);
-
 	type.push_back(INTERACTION);
 	order.push_back(interaction.size() - 1);
 }
@@ -187,12 +192,14 @@ void Model::buildDesignMatrix() {
 					+ dominance.size()
 					+ haplotype.size()
 					+ covariate.size()
+					+ numeric.size()
 					+ interaction.size();
 
 	// Sex effect?
-	if (sex_effect)
+	if (sex_effect) {
 		np++;
-
+	}
+	
 	// QFAM variables
 	//  if (par::QFAM_total) np++;
 	//  else if (par::QFAM_between || par::QFAM_within1 || par::QFAM_within2) np +=2;
@@ -202,11 +209,12 @@ void Model::buildDesignMatrix() {
 					|| par::QFAM_within1
 					|| par::QFAM_within2) {
 		np++;
-
 		type.push_back(QFAM);
 		order.push_back(0);
 	}
 
+	// cout << "buildDesignMatrix, number of parameters: " << np << endl;
+	
 	///////////////////////////
 	// Consider each individual
 	for (int i = 0; i < P->n; i++) {
@@ -224,6 +232,7 @@ void Model::buildDesignMatrix() {
 		// 4) Covariates
 		// 5) Interactions of the above
 		// 6) QFAM variables
+		// 7) Numeric attributes
 
 		// Populate this vector with terms for this
 		// individual
@@ -235,6 +244,7 @@ void Model::buildDesignMatrix() {
 		for (int p = 0; p < np; p++) {
 
 			int pType = type[p];
+			// cout << "Parameter index: " << p << ", type: " << pType << endl;
 
 			switch (pType) {
 				case INTERCEPT:
@@ -261,7 +271,9 @@ void Model::buildDesignMatrix() {
 				case QFAM:
 					trow[p] = buildQFAM(person);
 					break;
-
+				case NUMERIC :
+					trow[p] = buildNumeric(person, order[p]);
+					break;
 			}
 		}
 
@@ -302,11 +314,8 @@ void Model::buildDesignMatrix() {
 
 		// For each individual
 		for (int i = 0; i < X.size(); i++) {
-
 			vector_t X2(1);
-
 			X2[0] = 1;
-
 			for (int j = 0; j < par::parameter_list.size(); j++) {
 				if (par::parameter_list[j] >= 1
 								&& par::parameter_list[j] < np2) {
@@ -331,7 +340,6 @@ void Model::buildDesignMatrix() {
 		display(X);
 		cout << "\n";
 	}
-
 }
 
 vector<bool> Model::validParameters() {
@@ -414,7 +422,6 @@ double Model::linearHypothesis(matrix_t & H, vector_t & h) {
 		outer[r] -= h[r];
 
 	// 2. Calculate HVH'
-
 	matrix_t tmp;
 	sizeMatrix(tmp, nc, np);
 
@@ -662,6 +669,15 @@ double Model::buildCovariate(Individual * person, int j) {
 	/////////////
 	// Covariates
 	return person->clist[covariate[j]];
+}
+
+double Model::buildNumeric(Individual * person, int j)
+{
+  /////////////////////
+  // Numeric attributes
+//	cout << "buildNumeric: " << j << ", " << numeric[j] << ", " 
+//					<< person->nlist[numeric[j]] << endl;
+  return person->nlist[numeric[j]];
 }
 
 double Model::buildInteraction(Individual * person, int j, vector_t & trow) {

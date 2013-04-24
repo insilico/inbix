@@ -335,11 +335,9 @@ public:
 	static bool have_numerics;
 	static bool numeric_file;
 	static string numeric_filename;
-  static vector<string> nlistNames;
 
 	// added for reGAIN support - bcw - 4/22/13
 	static bool do_regain;
-	static string regain_filename;
 	
 	static bool no_show_covar;
 	static bool dump_covar;
