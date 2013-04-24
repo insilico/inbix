@@ -118,7 +118,11 @@ public:
 	static bool web_check;
 	static bool tucc;
 	static bool do_not_load_snps;
-
+	
+	// bcw - 4/24/13
+	static const int logistic_model_iterations;
+	static const double logistic_tolerance_epsilon;
+	
 	static const double epsilon;
 	static long unsigned int random_seed;
 
@@ -338,6 +342,12 @@ public:
 
 	// added for reGAIN support - bcw - 4/22/13
 	static bool do_regain;
+	static bool regainCompress;
+	static bool regainComponents;
+	static double regainFdr;
+	static bool regainFdrPrune;
+	static bool regainSifFilter;
+	static double regainSifThreshold;
 	
 	static bool no_show_covar;
 	static bool dump_covar;

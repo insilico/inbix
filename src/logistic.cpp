@@ -61,15 +61,17 @@ void LogisticModel::fitLM() {
 	coef.resize(np);
 	sizeMatrix(S, np, np);
 
-	if (np == 0 || nind == 0 || !all_valid)
+	if (np == 0 || nind == 0 || !all_valid) {
 		return;
-
+	}
+	
 	if (par::verbose) {
 		for (int i = 0; i < nind; i++) {
 			cout << i << "\t"
 							<< Y[i] << "\t";
-			for (int j = 0; j < np; j++)
+			for (int j = 0; j < np; j++) {
 				cout << X[i][j] << "\t";
+			}
 			cout << "\n";
 		}
 	}
@@ -78,32 +80,35 @@ void LogisticModel::fitLM() {
 	// Newton-Raphson to fit logistic model
 	bool converge = false;
 	int it = 0;
-
-	while (!converge && it < 20) {
+	
+	// added parameter for logistic model iterations - bcw - 4/24/13
+	while (!converge && it < par::logistic_model_iterations) {
+		// while (!converge && it < 20) {
 
 		// Determine p and V
 		for (int i = 0; i < nind; i++) {
 			double t = 0;
-			for (int j = 0; j < np; j++)
+			for (int j = 0; j < np; j++) {
 				t += coef[j] * X[i][j];
+			}
 			p[i] = 1 / (1 + exp(-t));
 			V[i] = p[i] * (1 - p[i]);
 		}
 
 		// Update coefficients
 		// b <- b +  solve( t(X) %*% V %*% X ) %*% t(X) %*% ( y - p ) 
-
 		matrix_t T;
 		sizeMatrix(T, np, np);
-
-		for (int j = 0; j < np; j++)
+		for (int j = 0; j < np; j++) {
 			for (int k = j; k < np; k++) {
 				double sum = 0;
-				for (int i = 0; i < nind; i++)
+				for (int i = 0; i < nind; i++) {
 					sum += X[i][j] * V[i] * X[i][k];
+				}
 				T[j][k] = T[k][j] = sum;
 			}
-
+		}
+		
 		bool flag = true;
 		T = svd_inverse(T, flag);
 		if (!flag) {
@@ -116,47 +121,54 @@ void LogisticModel::fitLM() {
 		sizeMatrix(T2, np, nind);
 
 		// note implicit transpose of X
-		for (int i = 0; i < np; i++)
-			for (int j = 0; j < nind; j++)
-				for (int k = 0; k < np; k++)
+		for (int i = 0; i < np; i++) {
+			for (int j = 0; j < nind; j++) {
+				for (int k = 0; k < np; k++) {
 					T2[i][j] += T[i][k] * X[j][k];
+				}
+			}
+		}
 
 		vector_t t3(nind);
-		for (int i = 0; i < nind; i++)
+		for (int i = 0; i < nind; i++) {
 			t3[i] = Y[i] - p[i];
-
+		}
+		
 		vector_t ncoef(np);
-		for (int j = 0; j < np; j++)
-			for (int i = 0; i < nind; i++)
+		for (int j = 0; j < np; j++) {
+			for (int i = 0; i < nind; i++) {
 				ncoef[j] += T2[j][i] * t3[i];
+			}
+		}
 
-		// Update coefficients, and check for 
-		// convergence
+		// Update coefficients, and check for convergence
 		double delta = 0;
 		for (int j = 0; j < np; j++) {
 			delta += abs(ncoef[j]);
 			coef[j] += ncoef[j];
 		}
 
-		if (delta < 1e-6)
+		// added parameter for logistic tolerance epsilon - bcw - 4/24/13
+		if (delta < par::logistic_tolerance_epsilon) {
+			//if (delta < 1e-6)
 			converge = true;
-
+		}
+		
 		// Next iteration
 		it++;
 	}
 
-
 	/////////////////////////////////////////
 	// Obtain covariance matrix of estimates
-
 	// S <- solve( t(X) %*% V %*% X )    
-
 	// Transpose X and multiple by diagonal V
 	matrix_t Xt;
 	sizeMatrix(Xt, np, nind);
-	for (int i = 0; i < nind; i++)
-		for (int j = 0; j < np; j++)
+	for (int i = 0; i < nind; i++) {
+		for (int j = 0; j < np; j++) {
 			Xt[j][i] = X[i][j] * V[i];
+		}
+	}
 
 	multMatrix(Xt, X, S);
 	bool flag = true;
@@ -165,9 +177,11 @@ void LogisticModel::fitLM() {
 		all_valid = false;
 		return;
 	}
-	if (cluster)
+	
+	if (cluster) {
 		HuberWhite();
-
+	}
+	
 	if (par::verbose) {
 		cout << "beta\n";
 		display(coef);
@@ -175,6 +189,10 @@ void LogisticModel::fitLM() {
 		display(S);
 		cout << "\n";
 	}
+
+	// update model fitting information - bcw - 4/24/13
+	converged = converge;
+	numIterations = it;
 }
 
 vector_t LogisticModel::getCoefs() {
@@ -183,15 +201,17 @@ vector_t LogisticModel::getCoefs() {
 
 vector_t LogisticModel::getVar() {
 	vector_t var(np);
-	for (int i = 0; i < np; i++)
+	for (int i = 0; i < np; i++) {
 		var[i] = S[i][i];
+	}
 	return var;
 }
 
 vector_t LogisticModel::getSE() {
 	vector_t var(np);
-	for (int i = 0; i < np; i++)
+	for (int i = 0; i < np; i++) {
 		var[i] = sqrt(S[i][i]);
+	}
 	return var;
 }
 
@@ -206,11 +226,11 @@ void LogisticModel::reset() {
 }
 
 void LogisticModel::displayResults(ofstream & OUT, Locus * loc) {
-
 	vector_t var;
 
-	if (all_valid)
+	if (all_valid) {
 		var = getVar();
+	}
 	else {
 		var.clear();
 		var.resize(np, 0);
@@ -235,16 +255,16 @@ void LogisticModel::displayResults(ofstream & OUT, Locus * loc) {
 		if ((!par::pfilter) || pvalue <= par::pfvalue) {
 
 			// Skip covariates?
-			if (par::no_show_covar && p != testParameter)
+			if (par::no_show_covar && p != testParameter) {
 				continue;
-
+			}
+			
 			OUT << setw(4) << loc->chr << " "
 							<< setw(par::pp_maxsnp) << loc->name << " "
 							<< setw(10) << loc->bp << " "
 							<< setw(4) << loc->allele1 << " "
 							<< setw(10) << label[p] << " "
 							<< setw(8) << Y.size() << " ";
-
 			if (okay) {
 				if (par::return_beta)
 					OUT << setw(10) << coef[p] << " ";
@@ -262,7 +282,6 @@ void LogisticModel::displayResults(ofstream & OUT, Locus * loc) {
 						<< setw(8) << exp(coef[p] + par::ci_zt * se) << " ";
 
 				}
-
 				OUT << setw(12) << Z << " "
 								<< setw(12) << pvalue;
 			} else {
@@ -276,7 +295,6 @@ void LogisticModel::displayResults(ofstream & OUT, Locus * loc) {
 				OUT << setw(12) << "NA" << " "
 								<< setw(12) << "NA";
 			}
-
 			OUT << "\n";
 		}
 	}
@@ -284,20 +302,26 @@ void LogisticModel::displayResults(ofstream & OUT, Locus * loc) {
 
 double LogisticModel::getPValue() {
 	vector_t var = getVar();
-	bool okay = var[testParameter] < 1e-20 || !realnum(var[testParameter]) ? false : all_valid;
+	// okay is set, but is it used? doesn't appear to be - bcw - 4/24/13
+	bool okay = var[testParameter] < 1e-20 || 
+	!realnum(var[testParameter]) ? false : all_valid;
 
 	if (all_valid) {
 		double se = sqrt(var[testParameter]);
 		double Z = coef[testParameter] / se;
 		return chiprobP(Z*Z, 1);
-	} else return 1;
+	} 
+	else {
+		return 1;
+	}
 }
 
 vector_t LogisticModel::getPVals() {
 	int tmp = testParameter;
 	vector_t res;
-	for (testParameter = 1; testParameter < np; testParameter++)
+	for (testParameter = 1; testParameter < np; testParameter++) {
 		res.push_back(getPValue());
+	}
 	testParameter = tmp;
 	return res;
 }
@@ -305,9 +329,7 @@ vector_t LogisticModel::getPVals() {
 double LogisticModel::getLnLk() {
 	// Return -2 * sample log-likelihood
 	// We assume the model is fit, and all Y's are either 0 or 1
-
 	double lnlk = 0;
-
 	for (int i = 0; i < nind; i++) {
 		double t = 0;
 		for (int j = 0; j < np; j++)
@@ -319,34 +341,34 @@ double LogisticModel::getLnLk() {
 }
 
 void LogisticModel::HuberWhite() {
-
 	// Calculate sandwich variance estimators, potentially allowing for
 	// clustered data
-
 	// Works to update the S matrix, variance/covariance matrix
-
 	// Originally, S will contain this, uncorrected
 
 	// Calcuate S = (XtX)^-1
 	matrix_t S0 = S;
 
 	vector<vector_t> sc(nc);
-	for (int i = 0; i < nc; i++)
+	for (int i = 0; i < nc; i++) {
 		sc[i].resize(np, 0);
+	}
 
 	for (int i = 0; i < nind; i++) {
 		double err = Y[i] - p[i];
-		for (int j = 0; j < np; j++)
+		for (int j = 0; j < np; j++) {
 			sc[clst[i]][j] += err * X[i][j];
+		}
 	}
 
 	matrix_t meat;
 	sizeMatrix(meat, np, np);
 	for (int k = 0; k < nc; k++) {
-		for (int i = 0; i < np; i++)
-			for (int j = 0; j < np; j++)
+		for (int i = 0; i < np; i++) {
+			for (int j = 0; j < np; j++) {
 				meat[i][j] += sc[k][i] * sc[k][j];
-
+			}
+		}
 	}
 
 	matrix_t tmp1;

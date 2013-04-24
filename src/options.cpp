@@ -33,6 +33,10 @@ bool   par::web_check = true;
 bool   par::tucc = false;
 bool   par::do_not_load_snps = false;
 
+// bcw - 4/24/13 to match R default glm.control parameters
+int const par::logistic_model_iterations = 25;
+double const par::logistic_tolerance_epsilon = 1e-8;
+
 double const par::epsilon = 1e-12;
 
 long unsigned int par::random_seed = 0;
@@ -240,8 +244,14 @@ bool par::have_numerics = false;
 bool par::numeric_file = false;
 string par::numeric_filename = "inbix.num";
 
-// added for reGAIN support - bcw - 4/22/13
+// added for reGAIN support - bcw - 4/22/13, 4/24/13
 bool par::do_regain = false;
+bool par::regainCompress = false;
+bool par::regainComponents = false;
+double par::regainFdr = 0.5;
+bool par::regainFdrPrune = false;
+bool par::regainSifFilter = false;
+double par::regainSifThreshold = 0.05;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

@@ -2773,6 +2773,32 @@ void setOptions(CArgs & a) {
 		par::do_regain = true;
 	}	
 	
+	if (a.find("--regain-compress")) {
+		par::regainCompress = true;
+	}	
+
+	if (a.find("--regain-comonents")) {
+		par::regainComponents = true;
+	}	
+
+	if (a.find("--regain-fdr-prune")) {
+		par::regainFdrPrune = true;
+	}	
+
+	if (a.find("--regain-fdr")) {
+		par::regainFdrPrune = true;
+		par::regainFdr = a.value_double("--regain-fdr");
+	}	
+
+	if (a.find("--regain-sif-filter")) {
+		par::regainSifFilter = true;
+	}	
+
+	if (a.find("--regain-sif-threshold")) {
+		par::regainSifFilter = true;
+		par::regainSifThreshold = a.value_double("--regain-sif-threshold");
+	}	
+
 	////////////////////////
 	// Reference allele file
 	if (a.find("--reference")) {
@@ -3940,6 +3966,12 @@ void setOptions(CArgs & a) {
 						<< "      --logistic                Logistic regression model   \n"
 						<< "\n"
 						<< "      --regain {regain file}    Perform a reGAIN analysis   \n"
+						<< "      --regain-compress         Compress reGAIN output      \n"
+						<< "      --regain-components       Write reGAIN components     \n"
+						<< "      --regain-fdr {rate}       Set reGAIN FDR              \n"
+						<< "      --regain-fdr-prune        Perform reGAIN FDR pruning  \n"
+						<< "      --regain-sif-filter       Perform a reGAIN analysis   \n"
+						<< "      --regain-sif-threshold {threshold}  Filter reGAIN SIF \n"
 						<< "\n"
 						<< "      --perm                    Apaptive permutations       \n"
 						<< "      --mperm {1000}            max(T) permutations         \n"

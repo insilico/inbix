@@ -85,6 +85,10 @@ public:
 
 	// Independent variables (can be directly manipulated...)
 	vector<vector<double> > X;
+	
+	// get model fitting information - bcw - 4/24/13
+	bool fitConverged();
+	int fitNumIterations();
 protected:
 	Plink * P;
 
@@ -162,6 +166,10 @@ protected:
 	bool cluster;
 	vector<int> clst;
 	int nc;
+	
+	// new variables for model fitting information - bcw - 4/24/13
+	bool converged;
+	int numIterations;
 };
 
 #endif

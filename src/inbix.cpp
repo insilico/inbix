@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
 
 	//////////////////////////////////////////////////
 	// Main Input files
-
+	
 	////////////////////////////////////////////
 	// A numeric file specified? - bcw - 4/20/13
 	if (par::numeric_file) {
@@ -395,9 +395,19 @@ int main(int argc, char* argv[]) {
 	if(par::do_regain) {
 		P.printLOG("Performing reGAIN analysis\n");
 		P.SNP2Ind();
-		Regain* regain = new Regain(false, 0.00001, par::have_numerics, false, false);
+		Regain* regain = new Regain(
+						par::regainCompress, 
+						par::regainSifThreshold, 
+						par::have_numerics, 
+						par::regainComponents, 
+						par::regainFdrPrune);
 		regain->run();
-		regain->writeRegain(false, false);
+		if (par::regainFdrPrune){
+			regain->writeRegain(false);
+			regain->fdrPrune(par::regainFdr);
+		}
+		regain->writeRegain(false, par::regainFdrPrune);
+		regain->writeRegain(true);
 		delete regain;
 		// stop inbix processing
 		shutdown();

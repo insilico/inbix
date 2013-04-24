@@ -49,6 +49,10 @@ Model::Model() {
 		mA = 0;
 		mB = 1;
 	}
+	
+	// fitting information
+	converged = false;
+	numIterations = 0;
 }
 
 void Model::setDominant() {
@@ -728,4 +732,12 @@ void Model::noCluster() {
 	cluster = false;
 	clst.clear();
 	nc = 0;
+}
+
+bool Model::fitConverged() {
+	return converged;
+}
+
+int Model::fitNumIterations() {
+	return numIterations;
 }
