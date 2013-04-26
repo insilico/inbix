@@ -214,9 +214,18 @@ void Regain::mainEffect(int e1, bool numeric) {
 	lm_main_effect->testParameter = tp; // single variable main effect
 	vector_t b_main_effect = lm_main_effect->getCoefs();
 	vector_t b_p_values = lm_main_effect->getPVals();
+	vector_t lm_se = lm_main_effect->getSE();
 
-	// set main effect (diagonal) beta coefficient and corresponding p-value
-	regainMatrix[e1][e1] = b_main_effect[tp];
+	double mainEffectValue = 0;
+	if(par::regainUseBetaValues) {
+		mainEffectValue = b_main_effect[b_main_effect.size() - 1];
+	}
+	else {
+		mainEffectValue = b_main_effect[b_main_effect.size() - 1] / 
+						lm_se[lm_se.size() - 1];
+	}
+	regainMatrix[e1][e1] = mainEffectValue;
+
 	// p-values don't include intercept term
 	regainPMatrix[e1][e1] = b_p_values[tp - 1];
 
@@ -331,9 +340,6 @@ void Regain::interactionEffect(int e1, bool numeric1, int e2, bool numeric2) {
 		vector_t beta_p = lm->getPVals();
 		//	cout << "pvals vector:" << endl;
 		//	copy(beta_p.begin(), beta_p.end(), ostream_iterator<double>(cout, "\n"));
-
-		regainMatrix[e1][e2] = b[b.size() - 1];
-		regainMatrix[e2][e1] = b[b.size() - 1];
 		regainPMatrix[e1][e2] = beta_p[beta_p.size() - 1];
 		regainPMatrix[e2][e1] = beta_p[beta_p.size() - 1];
 
@@ -342,28 +348,33 @@ void Regain::interactionEffect(int e1, bool numeric1, int e2, bool numeric2) {
 		//	cout << "SE vector:" << endl;
 		//	copy(lm_se.begin(), lm_se.end(), ostream_iterator<double>(cout, "\n"));
 
-		// create a new value for the reGAIN matrix from beta/SE
+		// calculate statistical test value from beta/SE (t-test or z-test)
 		vector_t::const_iterator bIt = b.begin();
 		vector_t::const_iterator sIt = lm_se.begin();
-		vector_t tTestValues;
+		vector_t regressTestStatValues;
 		for (; bIt != b.end(); ++bIt, ++sIt) {
-			tTestValues.push_back(*bIt / *sIt);
+			regressTestStatValues.push_back(*bIt / *sIt);
 		}
-		//	cout << "new betas:" << endl;
-		//	copy(tTestValues.begin(), tTestValues.end(), 
+		//	cout << "regression statistic values:" << endl;
+		//	copy(regressionTestStatValues.begin(), regressionTestStatValues.end(), 
 		//					ostream_iterator<double>(cout, "\n"));
 
-//		double interactionValue = tTestValues[b.size() - 1];
-//		regainMatrix[e1][e2] = interactionValue;
-//		regainMatrix[e2][e1] = interactionValue;
+		double interactionValue = 0;
+		if(par::regainUseBetaValues) {
+			interactionValue = b[b.size() - 1];
+		}
+		else {
+			interactionValue = regressTestStatValues[regressTestStatValues.size() -1];
+		}
+		regainMatrix[e1][e2] = interactionValue;
+		regainMatrix[e2][e1] = interactionValue;
+
 		// degrees or freedom = numSamples - 3
-//		unsigned int numSamples = PP->sample.size();
+		// unsigned int numSamples = PP->sample.size();
 		// cout << numSamples << " samples for " << (numSamples-3) 
 		// << " degrees of freedom" << endl;
-//		double gslPval = gsl_cdf_tdist_P(abs(interactionValue), numSamples - 3);
-//		double pValue = 2 * (1 - gslPval);
-//		regainPMatrix[e1][e2] = pValue;
-//		regainPMatrix[e2][e1] = pValue;
+		//		double gslPval = gsl_cdf_tdist_P(abs(interactionValue), numSamples - 3);
+		//		double pValue = 2 * (1 - gslPval);
 
 		//	cout << "DEBUG info (" << e1 << ", " << e2 << ")" 
 		//					<< ", beta = " << setw(10) << b[b.size() - 1] 
@@ -374,23 +385,12 @@ void Regain::interactionEffect(int e1, bool numeric1, int e2, bool numeric2) {
 		//					<< " => New interaction value: " << setw(10) << tTestValues[3] 
 		//					<< " p = " << setw(10) << pValue 
 		//					<< endl;
-//		cout << setprecision(3);
-//		cout << fixed;
-//		cout << (lm->isValid() ? "TRUE" : "FALSE")
-//						<< "\t(" << label1 << ", " << label2 << ")"
-//						<< ", beta = " << setw(12) << b[3]
-//						<< ", p = " << setw(6) << beta_p[2]
-//						<< ", S.E. = " << setw(12) << lm_se[3]
-//						<< "\t => " << setw(6) << tTestValues[3]
-//						<< " p = " << setw(6) << pValue
-//						<< endl;
 		cout << (lm->fitConverged() ? "TRUE" : "FALSE")
 						<< "\t" << label1 << "\t" << label2 
 						<< "\t" << setw(12) << b[3]
 						<< "\t" << setw(6) << beta_p[2]
 						<< "\t" << setw(12) << lm_se[3]
 						<< "\t" << setw(12) << b[3] / lm_se[3]
-						<< "\t" << setw(12) << lm_stat
 						<< endl;
 
 		// store p-value along with (e1, e2) location of

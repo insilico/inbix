@@ -256,7 +256,6 @@ void LinearModel::fitLM() {
 	sizeMatrix(v, np, np);
 
 	//  Perform "svdfit(C,Y,sig,b,u,v,w,chisq,function)"
-
 	int i, j;
 	const double TOL = 1.0e-13;
 	double wmax, tmp, thresh, sum;
@@ -271,7 +270,6 @@ void LinearModel::fitLM() {
 	}
 
 	bool flag = svdcmp(u, w, v);
-
 	if (!flag) {
 		all_valid = false;
 		return;
@@ -322,7 +320,6 @@ void LinearModel::fitLM() {
 	// j <- ( t( y- m %*% t(b) ) %*% ( y - m %*% t(b) ) ) / ( N - p ) 
 	// print( sqrt(kronecker( solve( t(m) %*% m ) , j )  ))
 
-
 	////////////////////////////////////////////////
 	// OLS variance estimator = s^2 * ( X'X )^-1
 	// where s^2 = (1/(N-k)) \sum_i=1^N e_i^2
@@ -370,7 +367,6 @@ void LinearModel::fitLM() {
 
 	///////////////////////////
 	// Robust-cluster variance
-
 	if (cluster) {
 		vector<vector_t> sc(nc);
 		for (int i = 0; i < nc; i++)
@@ -392,7 +388,6 @@ void LinearModel::fitLM() {
 			for (int i = 0; i < np; i++)
 				for (int j = 0; j < np; j++)
 					meat[i][j] += sc[k][i] * sc[k][j];
-
 		}
 
 		matrix_t tmp1;
@@ -407,6 +402,9 @@ void LinearModel::fitLM() {
 		display(S);
 		cout << "\n";
 	}
+	
+	// update model fitting information - bcw - 4/26/13
+	converged = true;
 }
 
 void LinearModel::fitUnivariateLM() {

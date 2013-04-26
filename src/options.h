@@ -348,6 +348,7 @@ public:
 	static bool regainFdrPrune;
 	static bool regainSifFilter;
 	static double regainSifThreshold;
+	static bool regainUseBetaValues;
 	
 	static bool no_show_covar;
 	static bool dump_covar;

@@ -252,6 +252,7 @@ double par::regainFdr = 0.5;
 bool par::regainFdrPrune = false;
 bool par::regainSifFilter = false;
 double par::regainSifThreshold = 0.05;
+bool par::regainUseBetaValues = false;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

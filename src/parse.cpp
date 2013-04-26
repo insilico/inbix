@@ -2773,6 +2773,10 @@ void setOptions(CArgs & a) {
 		par::do_regain = true;
 	}	
 	
+	if (a.find("--regain-use-beta-values")) {
+		par::regainUseBetaValues = true;
+	}	
+	
 	if (a.find("--regain-compress")) {
 		par::regainCompress = true;
 	}	
@@ -3966,6 +3970,7 @@ void setOptions(CArgs & a) {
 						<< "      --logistic                Logistic regression model   \n"
 						<< "\n"
 						<< "      --regain {regain file}    Perform a reGAIN analysis   \n"
+						<< "      --regain-use-beta-values  Use betas in reGAIN output  \n"
 						<< "      --regain-compress         Compress reGAIN output      \n"
 						<< "      --regain-components       Write reGAIN components     \n"
 						<< "      --regain-fdr {rate}       Set reGAIN FDR              \n"
