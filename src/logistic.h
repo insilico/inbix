@@ -11,7 +11,8 @@
 #ifndef __LOGISTIC_H__
 #define __LOGISTIC_H__
 
-#include<vector>
+#include <vector>
+
 #include "plink.h"
 #include "model.h"
 
@@ -19,26 +20,25 @@ using namespace std;
 
 class LogisticModel : public Model {
 public:
-
 	LogisticModel(Plink *);
-
 	~LogisticModel() {
 	};
 
 	void setDependent();
 	void fitLM();
-	void fitUnivariateLM() {
-	};
+	void fitUnivariateLM() {	};
+	
 	void reset();
 	void pruneY();
 	vector_t getCoefs();
 	vector_t getVar();
 	vector_t getSE();
 	void displayResults(ofstream &, Locus *);
-	double getLnLk();
 	vector_t getPVals();
 	double getPValue();
 	void HuberWhite();
+	
+	double getLnLk();
 private:
 	vector_t p;
 	vector<int> Y;

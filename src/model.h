@@ -49,7 +49,7 @@ public:
 	void addSexEffect();
 	bool isSexInModel();
 	void addCovariate(int);
-  void addNumeric(int);
+	void addNumeric(int);
 	void addInteraction(int, int);
 	void buildDesignMatrix();
 	bool checkVIF();
@@ -73,30 +73,39 @@ public:
 	void setValid() {
 		all_valid = true;
 	}
-	
-	vector<string> label;
-	vector<int> order;
-	vector<int> type;
-	int testParameter;
 
 	void noCluster();
 	void setCluster();
 	virtual void HuberWhite() = 0;
 
-	// Independent variables (can be directly manipulated...)
-	vector<vector<double> > X;
-	
 	// get model fitting information - bcw - 4/24/13
 	bool fitConverged();
 	int fitNumIterations();
+
+	/////////////////////////////////////////////////////////////////////////
+	// WHY ARE THESE PUBLIC MEMBERS? bcw - 4/29/13
+	/////////////////////////////////////////////////////////////////////////
+
+	// Independent variables (can be directly manipulated...)
+	vector<vector<double> > X;
+
+	// publicly accessible parameter meta data
+	vector<string> label;
+	vector<int> order;
+	vector<int> type;
+
+	// index of the parameter to perform statistical tests
+	int testParameter;
 protected:
 	Plink * P;
 
 	// Missing flag
 	vector<bool> miss;
 
+	// number of individuals
 	int nind;
-	int np; // Main effects + interaction + intercept
+	// number of parameters/coefficients: intercept + main effects + interaction
+	int np; 
 
 	bool has_snps;
 
@@ -108,8 +117,10 @@ protected:
 	vector<bool> valid;
 	bool all_valid;
 
-	vector_t coef; // beta
-	matrix_t S; // Sigma
+	// beta coefficients for each term/parameter in the model
+	vector_t coef; 
+	// Sigma? TODO: define this! bcw - 4/29/13
+	matrix_t S; 
 
 	// Term types
 	enum terms {
@@ -152,8 +163,8 @@ protected:
 	// List of covariates (clist)
 	vector<int> covariate;
 
-  // List of numeric attributes
-  vector<int> numeric;
+	// List of numeric attributes - added for inbix - bcw - 4/20/13
+	vector<int> numeric;
 
 	// List of pairwise interactions
 	// ( indexing previously specified components, 1,2,..)
@@ -166,7 +177,7 @@ protected:
 	bool cluster;
 	vector<int> clst;
 	int nc;
-	
+
 	// new variables for model fitting information - bcw - 4/24/13
 	bool converged;
 	int numIterations;
