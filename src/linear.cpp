@@ -613,7 +613,7 @@ void LinearModel::displayResults(ofstream & OUT, Locus * loc) {
 				}
 				OUT << setw(12) << Z << " "
 								<< setw(12) << pvalue;
-			} else S{
+			} else {
 				OUT << setw(10) << "NA" << " ";
 
 				if(par::display_ci) {

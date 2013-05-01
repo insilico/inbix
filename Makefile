@@ -115,7 +115,7 @@ ifeq ($(SYS),MAC)
 LIB += -ldl
 endif
 ifeq ($(SYS),UNIX)
-LIB += -ldl -lcrypt -lgsl
+LIB += -ldl -lcrypt
 endif
 endif
 
@@ -155,3 +155,6 @@ clean:
 
 install:
 	cp inbix /usr/local/bin
+
+dist:
+	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*

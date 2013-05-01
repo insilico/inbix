@@ -15,8 +15,7 @@
 #include <cmath>
 #include <algorithm>
 #include <iterator>
-
-#include "gsl/gsl_cdf.h"
+#include <sstream>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -38,21 +37,26 @@ extern Plink* PP;
 Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 				bool fdrpr) {
 	// set class vars to passed args
-	compressed = compr;
-	sif_thresh = sifthr;
-	intregain = integrative;
-	component = compo;
-	fdrprune = fdrpr;
+	writeCompressedFormat = compr;
+	sifThresh = sifthr;
+	integratedAttributes = integrative;
+	writeComponents = compo;
+	doFdrPrune = fdrpr;
 
 	// set integrative/normal regain vars
 	// additional ext for integrative
-	string ext = intregain ? ".block" : "";
+	string ext = integratedAttributes ? ".block" : "";
 	// header in betas files
-	string hdr = intregain ? "attr" : "SNP";
+	string hdr = integratedAttributes ? "attr" : "SNP";
 
 	// total number of attributes
-	numattr = intregain ? PP->nl_all + PP->nlistname.size() : PP->nl_all;
-	PP->printLOG("Total number of attributes: " + int2str(numattr) + "\n");
+	numAttributes = 0;
+  if(integratedAttributes) {
+    numAttributes = PP->nl_all + PP->nlistname.size();
+  } else  {
+    numAttributes = PP->nl_all;
+  }
+	PP->printLOG("Total number of attributes [ " + int2str(numAttributes) + " ]\n");
 
 	// initialize matrices and open output files
 	string beta_f = par::output_file_name + ext + ".betas";
@@ -85,7 +89,7 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 	SIF.open(sif_f.c_str(), ios::out);
 	PP->printLOG("Writing Cytoscape network file (SIF) to [ " + sif_f + " ]\n");
 	SIF.precision(6);
-	if(component) {
+	if(writeComponents) {
 		string snp_sif_f = par::output_file_name + ".snp.sif";
 		string num_sif_f = par::output_file_name + ".num.sif";
 		string int_sif_f = par::output_file_name + ".int.sif";
@@ -103,17 +107,61 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 		INT_SIF.precision(6);
 	}
 
-	regainMatrix = new double*[numattr];
-	regainPMatrix = new double*[numattr];
+	regainMatrix = new double*[numAttributes];
+	regainPMatrix = new double*[numAttributes];
 	// allocate reGAIN matrix
-	for(int i = 0; i < numattr; ++i) {
-		regainMatrix[i] = new double[numattr];
+	for(int i = 0; i < numAttributes; ++i) {
+		regainMatrix[i] = new double[numAttributes];
 	}
 	// allocate reGAIN p-value matrix
-	for(int i = 0; i < numattr; ++i) {
-		regainPMatrix[i] = new double[numattr];
+	for(int i = 0; i < numAttributes; ++i) {
+		regainPMatrix[i] = new double[numAttributes];
 	}
 
+  useOutputThreshold = false;
+  outputThreshold = 0.0;
+  outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
+  outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
+}
+
+bool Regain::setOutputThreshold(double threshold) {
+  useOutputThreshold = true;
+  outputThreshold = threshold;
+  return true;
+}
+
+bool Regain::setOutputFormat(RegainOutputFormat format) {
+  outputFormat = format;
+  return true;
+}
+
+bool Regain::setOutputTransform(RegainOutputTransform transform) {
+  outputTransform = transform;
+  return true;
+}
+
+void Regain::logOutputOptions() {
+  stringstream ss;
+  switch(outputTransform) {
+    case REGAIN_OUTPUT_TRANSFORM_ABS:
+      PP->printLOG("Output transform [ absolute value ]\n");
+      break;
+    case REGAIN_OUTPUT_TRANSFORM_NONE:
+      break;
+    case REGAIN_OUTPUT_TRANSFORM_THRESH:
+      ss << "Output transform [ threshold values < " << outputThreshold
+              << " => 0 ]\n";
+      PP->printLOG(ss.str());
+      break;
+  }
+  switch(outputFormat) {
+    case REGAIN_OUTPUT_FORMAT_UPPER:
+      PP->printLOG("Output format [ upper triangular matrix ]\n");
+      break;
+    case REGAIN_OUTPUT_FORMAT_FULL:
+      PP->printLOG("Output format [ full matrix ]\n");
+      break;
+  }
 }
 
 Regain::~Regain() {
@@ -122,130 +170,178 @@ Regain::~Regain() {
 	SIF.close();
 
 	// free regain matrix memory
-	for(int i = 0; i < numattr; ++i) {
+	for(int i = 0; i < numAttributes; ++i) {
 		delete [] regainMatrix[i];
 	}
 	delete [] regainMatrix;
 
 	// free regain p-value matrix memory
-	for(int i = 0; i < numattr; ++i) {
+	for(int i = 0; i < numAttributes; ++i) {
 		delete [] regainPMatrix[i];
 	}
 	delete [] regainPMatrix;
 }
 
 void Regain::run() {
-	int e1, e2;
+	int varIndex1, varIndex2;
+  // reset the warnings list
+  warnings.resize(0);
 #ifdef _OPENMP
 	// OpenMP parallelization of this outer loop
 	int numThreads = omp_get_num_threads();
 	int numProcs = omp_get_num_procs();
 	cout << "\t\t" << numThreads << " OpenMP threads available" << endl;
 	cout << "\t\t" << numProcs << " OpenMP processors available" << endl;
-#pragma omp parallel for schedule(dynamic, 1) private(e1, e2)
+#pragma omp parallel for schedule(dynamic, 1) private(varIndex1, varIndex2)
 #endif
-	for(e1 = 0; e1 < numattr; e1++) {
-		for(e2 = 0; e2 < numattr; e2++) {
+	for(varIndex1 = 0; varIndex1 < numAttributes; varIndex1++) {
+		for(varIndex2 = 0; varIndex2 < numAttributes; varIndex2++) {
 			// We've already performed this test, since the matrix is symmetric
-			if(e1 > e2) continue;
+			if(varIndex1 > varIndex2) continue;
 
 			// main effect of SNP/numeric attribute 1 - diagonal of the reGAIN matrix
-			if(e1 == e2) {
+			if(varIndex1 == varIndex2) {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-				mainEffect(e1, e1 >= PP->nl_all);
+				mainEffect(varIndex1, varIndex1 >= PP->nl_all);
 			} else {
-				interactionEffect(e1, e1 >= PP->nl_all, e2, e2 >= PP->nl_all);
+				interactionEffect(varIndex1, varIndex1 >= PP->nl_all, 
+                varIndex2, varIndex2 >= PP->nl_all);
 			}
 		}
 	} // Next pair of SNPs/numeric attributes
+  
+  // report warnings to stdout - bcw - 4/30/13
+  if(warnings.size()) {
+    cout << "WARNINGS in regression models:" << endl;
+  }
+  for(vector<string>::const_iterator wIt = warnings.begin();
+          wIt != warnings.end(); ++wIt) {
+    cout << *wIt << endl;
+  }
 }
 
-void Regain::mainEffect(int e1, bool numeric) {
-	Model *lm_main_effect;
+void Regain::mainEffect(int varIndex, bool varIsNumeric) {
+	Model *mainEffectModel;
 
 	// logisic regression for binary phenotypes (traits), linear otherwise
 	if(par::bt) {
-		LogisticModel * m = new LogisticModel(PP);
-		lm_main_effect = m;
+		LogisticModel* m = new LogisticModel(PP);
+		mainEffectModel = m;
 	} else {
-		LinearModel * m = new LinearModel(PP);
-		lm_main_effect = m;
+		LinearModel* m = new LinearModel(PP);
+		mainEffectModel = m;
 	}
 
 	// Set missing data
-	lm_main_effect->setMissing();
+	mainEffectModel->setMissing();
 
-	// label in regression model
-	string label = numeric ? PP->nlistname[e1 - PP->nl_all] : PP->locus[e1]->name;
+	// label for regression model
+	string coefLabel = "";
+  if(varIsNumeric) {
+    coefLabel = PP->nlistname[varIndex - PP->nl_all];
+  } else {
+    coefLabel = PP->locus[varIndex]->name;
+  }
 
 	// Main effect of SNP/numeric attribute
-	if(numeric) {
-		lm_main_effect->addNumeric(e1 - PP->nl_all);
+	if(varIsNumeric) {
+		mainEffectModel->addNumeric(varIndex - PP->nl_all);
 	} else {
-		lm_main_effect->addAdditiveSNP(e1);
+		mainEffectModel->addAdditiveSNP(varIndex);
 	}
-	lm_main_effect->label.push_back(label);
+	mainEffectModel->label.push_back(coefLabel);
 
 	// add covariates if specified
 	if(par::covar_file) {
-		addCovariates(*lm_main_effect);
+		addCovariates(*mainEffectModel);
 	}
 
 	// Build design matrix
-	lm_main_effect->buildDesignMatrix();
+	mainEffectModel->buildDesignMatrix();
 
 	// Fit linear model
-	lm_main_effect->fitLM();
+	int tp = 1; 
+	mainEffectModel->testParameter = tp; // single variable main effect
+	mainEffectModel->fitLM();
 
-	// Did model fit okay?
-	if(!lm_main_effect->isValid()) {
-		PP->printLOG("\nERROR: Invalid main effect regression fit for variable " +
-						label + ")\n");
+	// Was the model fitting method successful?
+	if(!mainEffectModel->isValid()) {
+		PP->printLOG("\nERROR: Invalid main effect regression fit for variable [" +
+						coefLabel + "]\n");
+    vector<bool> vp = mainEffectModel->validParameters();
+    cout << "Parameter flags (0=false, 1=true):" << endl;
+    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
+    cout << endl;
 		shutdown();
 	}
 
-	lm_main_effect->validParameters();
+	// Obtain estimates and statistics
+	vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+	// p-values don't include intercept term
+	vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+  double mainEffectPval = betaMainEffectCoefPvals[tp - 1];
+	vector_t mainEffectModelSE = mainEffectModel->getSE();
 
-	// Obtain estimates and statistic
-	int tp = 1; // always use first coefficient after intercept as main effect term
-	lm_main_effect->testParameter = tp; // single variable main effect
-	vector_t b_main_effect = lm_main_effect->getCoefs();
-	vector_t b_p_values = lm_main_effect->getPVals();
-	vector_t lm_se = lm_main_effect->getSE();
-
+  // always use first coefficient after intercept as main effect term
 	double mainEffectValue = 0;
 	if(par::regainUseBetaValues) {
-		mainEffectValue = b_main_effect[b_main_effect.size() - 1];
+		mainEffectValue = betaMainEffectCoefs[betaMainEffectCoefs.size() - 1];
+    // report large p-value of coefficient as a warning
+    if(mainEffectPval > par::regainLargeCoefPvalue) {
+      stringstream ss;
+      ss << "Large p-value [" << mainEffectPval 
+              << "] on coefficient for variable [" << coefLabel << "]";
+      warnings.push_back(ss.str());
+    }
 	} else {
-		mainEffectValue = b_main_effect[b_main_effect.size() - 1] /
-						lm_se[lm_se.size() - 1];
+		mainEffectValue = betaMainEffectCoefs[betaMainEffectCoefs.size() - 1] /
+						mainEffectModelSE[mainEffectModelSE.size() - 1];
+    // report large t-test value of coefficient as a warning
+    if(mainEffectValue > par::regainLargeCoefTvalue) {
+      stringstream ss;
+      ss << "Large test statistic value [" << mainEffectValue 
+              << "] on coefficient for variable ["  << coefLabel << "]";
+      warnings.push_back(ss.str());
+    }
 	}
-	regainMatrix[e1][e1] = mainEffectValue;
-
-	// p-values don't include intercept term
-	regainPMatrix[e1][e1] = b_p_values[tp - 1];
+  double mainEffectValueTransformed = mainEffectValue;
+  switch(outputTransform) {
+    case REGAIN_OUTPUT_TRANSFORM_NONE:
+      break;
+    case REGAIN_OUTPUT_TRANSFORM_THRESH:
+      if(mainEffectValue < outputThreshold) {
+        mainEffectValueTransformed = 0.0;
+      }
+      break;
+    case REGAIN_OUTPUT_TRANSFORM_ABS:
+      mainEffectValueTransformed = abs(mainEffectValue);
+      break;
+  }
+	regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
+	regainPMatrix[varIndex][varIndex] = mainEffectPval;
 
 	// update main effect betas file
-	if(numeric) {
-		MEBETAS << PP->nlistname[e1 - PP->nl_all];
+	if(varIsNumeric) {
+		MEBETAS << PP->nlistname[varIndex - PP->nl_all];
 	} else {
-		MEBETAS << PP->locus[e1]->name;
+		MEBETAS << PP->locus[varIndex]->name;
 	}
-	for(unsigned int i = 0; i < b_main_effect.size(); ++i) {
+	for(unsigned int i = 0; i < betaMainEffectCoefs.size(); ++i) {
 		// B0 coefficient doesn't have pval
 		if(i == 0) {
-			MEBETAS << "\t" << b_main_effect[i];
+			MEBETAS << "\t" << betaMainEffectCoefs[i];
 		} else {
 			// adjust pvals index since there's no B0 pval
-			MEBETAS << "\t" << b_main_effect[i] << "\t" << b_p_values[i - 1];
+			MEBETAS << "\t" << betaMainEffectCoefs[i] 
+              << "\t" << betaMainEffectCoefPvals[i - 1];
 		}
 	}
 	MEBETAS << endl;
 
 	// free model memory
-	delete lm_main_effect;
+	delete mainEffectModel;
 }
 
 void Regain::addCovariates(Model &m) {
@@ -256,64 +352,61 @@ void Regain::addCovariates(Model &m) {
 	}
 }
 
-void Regain::interactionEffect(int e1, bool numeric1, int e2, bool numeric2) {
-	Model * lm;
+void Regain::interactionEffect(int varIndex1, bool var1IsNumeric, 
+        int varIndex2, bool var2IsNumeric) {
+	Model* interactionModel;
 
 	// logistic regression for binary phenotypes (traits), linear otherwise
 	if(par::bt) {
-		LogisticModel * m = new LogisticModel(PP);
-		lm = m;
+		LogisticModel* m = new LogisticModel(PP);
+		interactionModel = m;
 	} else {
-		LinearModel * m = new LinearModel(PP);
-		lm = m;
+		LinearModel* m = new LinearModel(PP);
+		interactionModel = m;
 	}
 
 	// Set missing data
-	lm->setMissing();
+	interactionModel->setMissing();
 
 	// labels in regression model
-	string label1 = numeric1 ? PP->nlistname[e1 - PP->nl_all] : PP->locus[e1]->name;
-	string label2 = numeric2 ? PP->nlistname[e2 - PP->nl_all] : PP->locus[e2]->name;
+	string coef1Label = "";
+  if(var1IsNumeric) {
+    coef1Label = PP->nlistname[varIndex1 - PP->nl_all];
+  } else {
+    coef1Label = PP->locus[varIndex1]->name;
+  }
+	string coef2Label = "";
+  if(var2IsNumeric) {
+    coef2Label = PP->nlistname[varIndex2 - PP->nl_all];
+  } else {
+    coef2Label = PP->locus[varIndex2]->name;
+  }
 
 	// Main effect of SNP/numeric attribute 1
-	if(numeric1) {
-		lm->addNumeric(e1 - PP->nl_all);
+	if(var1IsNumeric) {
+		interactionModel->addNumeric(varIndex1 - PP->nl_all);
 	} else {
-		lm->addAdditiveSNP(e1);
+		interactionModel->addAdditiveSNP(varIndex1);
 	}
-	lm->label.push_back(label1);
+	interactionModel->label.push_back(coef1Label);
 
 	// Main effect of SNP/numeric attribute 2
-	if(numeric2) {
-		lm->addNumeric(e2 - PP->nl_all);
+	if(var2IsNumeric) {
+		interactionModel->addNumeric(varIndex2 - PP->nl_all);
 	} else {
-		lm->addAdditiveSNP(e2);
+		interactionModel->addAdditiveSNP(varIndex2);
 	}
-	lm->label.push_back(label2);
+	interactionModel->label.push_back(coef2Label);
 
 	// add covariates if specified
-	if(par::covar_file) addCovariates(*lm);
+	if(par::covar_file) addCovariates(*interactionModel);
 
 	// interaction
-	lm->addInteraction(1, 2);
-	lm->label.push_back("EPI");
+	interactionModel->addInteraction(1, 2);
+	interactionModel->label.push_back("EPI");
 
 	// Build design matrix
-	lm->buildDesignMatrix();
-
-	// Fit linear model
-	lm->fitLM();
-
-	// Did model fit okay?
-	//	if(!lm->isValid()) {
-	//		PP->printLOG("\nWARNING: Invalid regression fit for interaction variables (" + 
-	//						label1 + ", " + label2 + ")\n");
-	//		vector<bool> vp = lm->validParameters();
-	//		cout << "valid parameters?" << endl;
-	//		copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
-	//		cout << endl;
-	//		// shutdown();
-	//	}
+	interactionModel->buildDesignMatrix();
 
 	// set test parameters for interaction regressions
 	// TODO: change this when considering main effects in model or not
@@ -322,151 +415,146 @@ void Regain::interactionEffect(int e1, bool numeric1, int e2, bool numeric2) {
 	if(par::covar_file) {
 		tp += par::clist_number;
 	}
-	lm->testParameter = tp; // interaction
+	interactionModel->testParameter = tp; // interaction
+
+	// fit linear model coefficients
+	interactionModel->fitLM();
+
+	// Was the model fitting method successful?
+  if(!interactionModel->isValid()) {
+    PP->printLOG("\nWARNING: Invalid regression fit for interaction "
+      "variables [" + coef1Label + "], [" + coef2Label + "]\n");
+    vector<bool> vp = interactionModel->validParameters();
+    cout << "Parameter flags (0=false, 1=true):" << endl;
+    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
+    cout << endl;
+    shutdown();
+  }
 
 #ifdef _OPENMP
 #pragma omp critical
 	{
 #endif
-		vector_t b = lm->getCoefs();
-		//		cout << "beta vector:" << endl;
-		//		copy(b.begin(), b.end(), ostream_iterator<double>(cout, "\n"));
-
-		vector_t beta_p = lm->getPVals();
-		//	cout << "pvals vector:" << endl;
-		//	copy(beta_p.begin(), beta_p.end(), ostream_iterator<double>(cout, "\n"));
-		regainPMatrix[e1][e2] = beta_p[beta_p.size() - 1];
-		regainPMatrix[e2][e1] = beta_p[beta_p.size() - 1];
-
-		double lm_stat = lm->getStatistic();
-		vector_t lm_se = lm->getSE();
-		//	cout << "SE vector:" << endl;
-		//	copy(lm_se.begin(), lm_se.end(), ostream_iterator<double>(cout, "\n"));
-
+		vector_t betaInteractionCoefs = interactionModel->getCoefs();
+		vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+    double interactionPval = 
+      betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+		vector_t interactionModelSE = interactionModel->getSE();
 		// calculate statistical test value from beta/SE (t-test or z-test)
-		vector_t::const_iterator bIt = b.begin();
-		vector_t::const_iterator sIt = lm_se.begin();
+		vector_t::const_iterator bIt = betaInteractionCoefs.begin();
+		vector_t::const_iterator sIt = interactionModelSE.begin();
 		vector_t regressTestStatValues;
-		for(; bIt != b.end(); ++bIt, ++sIt) {
+		for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
 			regressTestStatValues.push_back(*bIt / *sIt);
 		}
-		//	cout << "regression statistic values:" << endl;
-		//	copy(regressionTestStatValues.begin(), regressionTestStatValues.end(), 
-		//					ostream_iterator<double>(cout, "\n"));
 
 		double interactionValue = 0;
 		if(par::regainUseBetaValues) {
-			interactionValue = b[b.size() - 1];
+			interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+      if(interactionPval > par::regainLargeCoefPvalue) {
+        stringstream ss;
+        ss << "Large p-value [" << interactionPval 
+                << "] on coefficient for interaction variables [" 
+                << coef1Label << "][" << coef2Label << "]";
+        warnings.push_back(ss.str());
+      }
 		} else {
 			interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
+      if(interactionValue > par::regainLargeCoefTvalue) {
+        stringstream ss;
+        ss << "Large test statistic value [" << interactionValue 
+                << "] on coefficient for interaction variables [" 
+                << coef1Label << "][" << coef2Label << "]";
+        warnings.push_back(ss.str());
+      }
 		}
-		regainMatrix[e1][e2] = interactionValue;
-		regainMatrix[e2][e1] = interactionValue;
+    double interactionValueTransformed = interactionValue;
+    switch(outputTransform) {
+      case REGAIN_OUTPUT_TRANSFORM_NONE:
+        break;
+      case REGAIN_OUTPUT_TRANSFORM_THRESH:
+        if(interactionValue < outputThreshold) {
+          interactionValueTransformed = 0.0;
+        }
+        break;
+      case REGAIN_OUTPUT_TRANSFORM_ABS:
+        interactionValueTransformed = abs(interactionValue);
+        break;
+    }
+		regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
+		regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+		regainPMatrix[varIndex1][varIndex2] = interactionPval;
+		regainPMatrix[varIndex2][varIndex1] = interactionPval;
 
-		// degrees or freedom = numSamples - 3
-		// unsigned int numSamples = PP->sample.size();
-		// cout << numSamples << " samples for " << (numSamples-3) 
-		// << " degrees of freedom" << endl;
-		//		double gslPval = gsl_cdf_tdist_P(abs(interactionValue), numSamples - 3);
-		//		double pValue = 2 * (1 - gslPval);
-
-		//	cout << "DEBUG info (" << e1 << ", " << e2 << ")" 
-		//					<< ", beta = " << setw(10) << b[b.size() - 1] 
-		//					<< ", p = " << setw(10) << beta_p[beta_p.size() - 1] 
-		//					<< ", x^2 = " << setw(10) << lm_stat
-		//					<< ", is valid? " << (lm->isValid()? "TRUE": "FALSE")
-		//					<< ", VIF check? " << (lm->checkVIF()? "TRUE": "FALSE")
-		//					<< " => New interaction value: " << setw(10) << tTestValues[3] 
-		//					<< " p = " << setw(10) << pValue 
-		//					<< endl;
-		cout << (lm->fitConverged() ? "TRUE" : "FALSE")
-						<< "\t" << label1 << "\t" << label2
-						<< "\t" << setw(12) << b[3]
-						<< "\t" << setw(6) << beta_p[2]
-						<< "\t" << setw(12) << lm_se[3]
-						<< "\t" << setw(12) << b[3] / lm_se[3]
-						<< endl;
-
-		// store p-value along with (e1, e2) location of
+    // !!!!! DEBUGGING RAW VALUES !!!!!
+    if(par::verbose) {
+      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+              << "\t" << coef1Label << "\t" << coef2Label
+              << "\t" << setw(12) << betaInteractionCoefs[3]
+              << "\t" << setw(6) << betaInteractionCoefPVals[2]
+              << "\t" << setw(12) << interactionModelSE[3]
+              << "\t" << setw(12) 
+              << betaInteractionCoefs[3] / interactionModelSE[3]
+              << endl;
+    }
+    
+		// store p-value along with (varIndex1, varIndex2) location of
 		// item.  This is used later for FDR pruning
-		if(fdrprune) {
-			pair<int, int> p = make_pair(e1, e2);
-			mat_el Pint = make_pair(beta_p[beta_p.size() - 1], p);
-			// mat_el Pint = make_pair(pValue, p);
-			gainPint.push_back(Pint);
+		if(doFdrPrune) {
+			pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
+			matrixElement interactionPvalElement = 
+              make_pair(interactionPval, indexPair);
+			gainIntPvals.push_back(interactionPvalElement);
 		}
 
-		// update BETAS and SIF files
-
-		// numeric attributes or SNPs
-		if(numeric1) {
-			BETAS << PP->nlistname[e1 - PP->nl_all] << "\t";
-		} else {
-			BETAS << PP->locus[e1]->name << "\t";
-		}
-		if(numeric2) {
-			BETAS << PP->nlistname[e2 - PP->nl_all];
-		} else {
-			BETAS << PP->locus[e2]->name;
-		}
-
-		for(unsigned int i = 0; i < b.size(); ++i) {
+		// update BETAS file
+    BETAS << coef1Label << "\t" << coef2Label;
+		for(unsigned int i = 0; i < betaInteractionCoefs.size(); ++i) {
 			// B0 coefficient doesn't have pval
 			if(i == 0) {
-				BETAS << "\t" << b[i];
+				BETAS << "\t" << betaInteractionCoefs[i];
 			} else {
 				// adjust pvals index since there's no B0 pval
-				BETAS << "\t" << b[i] << "\t" << beta_p[i - 1];
+				BETAS << "\t" << betaInteractionCoefs[i] 
+                << "\t" << betaInteractionCoefPVals[i - 1];
 			}
 		}
 		BETAS << endl;
 
-		// add to SIF if interaction >= threshold
-		if(abs(b[b.size() - 1]) >= sif_thresh) {
-			if(numeric1) {
-				SIF << PP->nlistname[e1 - PP->nl_all] << "\t" << abs(b[b.size() - 1])
-								<< "\t";
-			} else {
-				SIF << PP->locus[e1]->name << "\t" << abs(b[b.size() - 1]) << "\t";
-			}
-			if(numeric2) {
-				SIF << PP->nlistname[e2 - PP->nl_all] << endl;
-			} else {
-				SIF << PP->locus[e2]->name << endl;
-			}
-
-			if(component) {
+		// update SIF files); add to SIF if interaction >= SIF threshold
+		if(interactionValueTransformed >= sifThresh) {
+      SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+			if(writeComponents) {
 				// numeric
-				if(numeric1 && numeric2) {
-					NUM_SIF << PP->nlistname[e1 - PP->nl_all] << "\t"
-									<< abs(b[b.size() - 1]) << "\t";
-					NUM_SIF << PP->nlistname[e2 - PP->nl_all] << endl;
+				if(var1IsNumeric && var2IsNumeric) {
+          NUM_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
 				}// integrative
-				else if(numeric1 && !numeric2) {
-					INT_SIF << PP->nlistname[e1 - PP->nl_all] << "\t"
-									<< abs(b[b.size() - 1]) << "\t";
-					INT_SIF << PP->locus[e2]->name << endl;
+				else if(var1IsNumeric && !var2IsNumeric) {
+					INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
 				}// integrative
-				else if(!numeric1 && numeric2) {
-					INT_SIF << PP->locus[e1]->name << "\t" << abs(b[b.size() - 1]) << "\t";
-					INT_SIF << PP->nlistname[e2 - PP->nl_all] << endl;
+				else if(!var1IsNumeric && var2IsNumeric) {
+					INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
 				}// SNP
 				else {
-					SNP_SIF << PP->locus[e1]->name << "\t" << abs(b[b.size() - 1]) << "\t";
-					SNP_SIF << PP->locus[e2]->name << endl;
+					SNP_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
 				}
 			}
-
 		}
+    
 #ifdef _OPENMP
 	}
 #endif
+  
 	// free model memory
-	delete lm;
+	delete interactionModel;
 }
 
 void Regain::writeRegain(bool pvals, bool fdrprune) {
-
 	double** regainMat;
 	if(pvals) {
 		regainMat = regainPMatrix;
@@ -486,9 +574,9 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
 	// p-values file
 	string pvpre = pvals ? ".pvals" : "";
 	// integrative
-	string intpre = intregain ? ".block" : "";
+	string intpre = integratedAttributes ? ".block" : "";
 	// compressed/binary file
-	string tail = compressed ? ".gz" : "";
+	string tail = writeCompressedFormat ? ".gz" : "";
 
 	// additional output text	
 	string pvtext = pvals ? "p-value " : "";
@@ -496,40 +584,44 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
 
 	regain_matrix_f += intpre + pvpre + prnpre + ".regain" + tail;
 
-	PP->printLOG("Writing " + fdrtext + " REGAIN " + pvtext +
+	PP->printLOG("Writing " + fdrtext + "REGAIN " + pvtext +
 					"matrix [ " + regain_matrix_f + " ]\n");
-	REGAIN_MATRIX.open(regain_matrix_f.c_str(), compressed);
-	if(component) {
+	REGAIN_MATRIX.open(regain_matrix_f.c_str(), writeCompressedFormat);
+	if(writeComponents) {
 		snp_f += ".snp" + pvpre + prnpre + ".regain" + tail;
 		PP->printLOG("Writing " + fdrtext + "SNP REGAIN " + pvtext +
 						"matrix [ " + snp_f + " ]\n");
-		SNP_MATRIX.open(snp_f.c_str(), compressed);
+		SNP_MATRIX.open(snp_f.c_str(), writeCompressedFormat);
 
 		num_f += ".num" + pvpre + prnpre + ".regain" + tail;
 		PP->printLOG("Writing " + fdrtext + "numeric REGAIN " + pvtext +
 						"matrix [ " + num_f + " ]\n");
-		NUM_MATRIX.open(num_f.c_str(), compressed);
+		NUM_MATRIX.open(num_f.c_str(), writeCompressedFormat);
 
 		int_f += ".int" + pvpre + prnpre + ".regain" + tail;
 		PP->printLOG("Writing " + fdrtext + "integrative REGAIN " +
 						pvtext + "matrix [ " + int_f + " ]\n");
-		INT_MATRIX.open(int_f.c_str(), compressed);
+		INT_MATRIX.open(int_f.c_str(), writeCompressedFormat);
 	}
 	// write SNP column names
 	for(int cn = 0; cn < PP->nl_all; ++cn) {
 		if(cn) {
 			REGAIN_MATRIX << "\t" << PP->locus[cn]->name;
-			if(component) SNP_MATRIX << "\t" << PP->locus[cn]->name;
+			if(writeComponents) SNP_MATRIX << "\t" << PP->locus[cn]->name;
 		} else {
 			REGAIN_MATRIX << PP->locus[cn]->name;
-			if(component) SNP_MATRIX << PP->locus[cn]->name;
+			if(writeComponents) SNP_MATRIX << PP->locus[cn]->name;
 		}
 	}
 	// write numeric attribute column names
 	for(int cn = 0; cn < PP->nlistname.size(); ++cn) {
-		if(!cn && !PP->nl_all) REGAIN_MATRIX << PP->nlistname[cn];
-		else REGAIN_MATRIX << "\t" << PP->nlistname[cn];
-		if(component) {
+		if(!cn && !PP->nl_all) {
+      REGAIN_MATRIX << PP->nlistname[cn];
+    }
+		else {
+      REGAIN_MATRIX << "\t" << PP->nlistname[cn];
+    }
+		if(writeComponents) {
 			if(cn) {
 				NUM_MATRIX << "\t" << PP->nlistname[cn];
 				INT_MATRIX << "\t" << PP->nlistname[cn];
@@ -540,59 +632,93 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
 		}
 	}
 	REGAIN_MATRIX << "\n";
-	if(component) {
+	if(writeComponents) {
 		NUM_MATRIX << "\n";
 		INT_MATRIX << "\n";
 		SNP_MATRIX << "\n";
 	}
 	// write matrix entries
-	for(int i = 0; i < numattr; ++i) {
-		for(int j = i; j < numattr; ++j) {
-			// use absolute value (magnitude) of betas 
-			regainMat[i][j] = abs(regainMat[i][j]);
-			// regainMat[i][j] = fabs(regainMat[i][j]);
+	for(int i = 0; i < numAttributes; ++i) {
+		for(int j = i; j < numAttributes; ++j) {
 			if(j == i) {// fill in symmetric entries, replacing j < i with tabs
-				string tabs = "";
-				for(int k = 0; k < j; k++)
-					tabs += "\t";
-				REGAIN_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
-				if(component) {
-					if(i < PP->nl_all)
-						SNP_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
-					else {
-						tabs = "";
-						for(int k = PP->nl_all; k < j; k++)
-							tabs += "\t";
-						NUM_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
-					}
-				}
+        // write tabs for upper triangular
+        if(outputFormat == REGAIN_OUTPUT_FORMAT_UPPER) {
+          string tabs = "";
+          for(int k = 0; k < j; k++) {
+            tabs += "\t";
+          }
+          REGAIN_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
+          if(writeComponents) {
+            if(i < PP->nl_all) {
+              SNP_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
+            }
+            else {
+              tabs = "";
+              for(int k = PP->nl_all; k < j; k++) {
+                tabs += "\t";
+              }
+              NUM_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
+            }
+          }
+        }
+        else {
+          // otherwise write symmetric entries for REGAIN_OUTPUT_FORMAT_FULL
+          for(int k = 0; k <= j; k++) {
+            string lineEnd = "";
+            if(k != j) {
+              lineEnd = "\t";
+            }
+            REGAIN_MATRIX << dbl2str_fixed(regainMat[i][k], 6) << lineEnd;
+            if(writeComponents) {
+              if(i < PP->nl_all) {
+                SNP_MATRIX << dbl2str_fixed(regainMat[i][k], 6) << lineEnd;
+              }
+              else {
+                for(int l = PP->nl_all; l <= j; l++) {
+                  if(l != j) {
+                    lineEnd = "\t";
+                  }
+                  NUM_MATRIX << dbl2str_fixed(regainMat[i][l], 6) << lineEnd;
+                }
+              }
+            }
+          }
+        }
 			} else {
 				REGAIN_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
-				if(component) {
+				if(writeComponents) {
 					if(i < PP->nl_all) {
-						if(j < PP->nl_all)
+						if(j < PP->nl_all) {
 							SNP_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
+            }
 						else {
-							if(j == PP->nl_all)
+							if(j == PP->nl_all) {
 								INT_MATRIX << dbl2str_fixed(regainMat[i][j], 6);
-							else INT_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
+              }
+							else {
+                INT_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
+              }
 						}
-					} else NUM_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
+					} else {
+            NUM_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
+          }
 				}
 			}
 		}
 		REGAIN_MATRIX << "\n";
-		if(component) {
+		if(writeComponents) {
 			if(i < PP->nl_all) {
 				SNP_MATRIX << "\n";
 				INT_MATRIX << "\n";
-			} else NUM_MATRIX << "\n";
+			} else {
+        NUM_MATRIX << "\n";
+      }
 		}
 	}
 
 	// close output stream
 	REGAIN_MATRIX.close();
-	if(component) {
+	if(writeComponents) {
 		SNP_MATRIX.close();
 		NUM_MATRIX.close();
 		INT_MATRIX.close();
@@ -601,10 +727,10 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
 
 void Regain::fdrPrune(double fdr) {
 	PP->printLOG("Calculating Benjamini Hochberg FDR for pruning\n");
-	int m = gainPint.size();
+	int m = gainIntPvals.size();
 	// sort gain interaction mal_el type by p-value, maintaining
 	// gainPMatrix location (row, col) with sorted values
-	sort(gainPint.begin(), gainPint.end(), Regain::mecomp);
+	sort(gainIntPvals.begin(), gainIntPvals.end(), Regain::mainEffectComparator);
 
 	// use rough FDR (RFDR) to estimate alpha based on input FDR
 	double alpha = 2 * m * fdr / (m + 1);
@@ -613,9 +739,11 @@ void Regain::fdrPrune(double fdr) {
 	for(int i = 0; i < m; i++) {
 		double l = (i + 1) * alpha / (double) m;
 		// test whether current p-value < current l
-		if(gainPint[i].first < l) {
+		if(gainIntPvals[i].first < l) {
 			R = i;
-		} else break;
+		} else {
+      break;
+    }
 	}
 
 	// BH threshold condition not met with any p-values, so exit
@@ -625,7 +753,7 @@ void Regain::fdrPrune(double fdr) {
 	}
 
 	// BH rejection threshold
-	double T = gainPint[R].first;
+	double T = gainIntPvals[R].first;
 	PP->printLOG("BH rejection threshold: T = " + dbl2str(T) + ", R = " +
 					int2str(R) + "\n");
 	PP->printLOG("Pruning reGAIN interaction terms with p-values > T (" +
@@ -633,7 +761,7 @@ void Regain::fdrPrune(double fdr) {
 
 	// now prune (set to 0.0) all values greater than R index
 	for(int i = R + 1; i < m; i++) {
-		pair<int, int> p = gainPint[i].second;
+		pair<int, int> p = gainIntPvals[i].second;
 		// symmetric matrix, so set [e1][e2] and [e2][e1]
 		regainMatrix[p.first][p.second] = 0.0;
 		regainMatrix[p.second][p.first] = 0.0;
@@ -685,6 +813,7 @@ void Regain::writeRcomm(double T, double fdr) {
 	RCOMM.close();
 }
 
-bool Regain::mecomp(const mat_el &l, const mat_el &r) {
+bool Regain::mainEffectComparator(const matrixElement &l, 
+        const matrixElement &r) {
 	return l.first < r.first;
 }

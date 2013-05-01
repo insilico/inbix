@@ -24,13 +24,33 @@ using namespace std;
 
 // type for storing p-value and matrix position (row,col) of
 // reGAIN interaction terms
-typedef pair< double, pair<int, int> > mat_el;
+typedef pair< double, pair<int, int> > matrixElement;
+
+// output options - bcw - 4/30/13
+enum RegainOutputFormat {
+  REGAIN_OUTPUT_FORMAT_UPPER, 
+  REGAIN_OUTPUT_FORMAT_FULL
+};
+
+enum RegainOutputTransform {
+  REGAIN_OUTPUT_TRANSFORM_NONE, 
+  REGAIN_OUTPUT_TRANSFORM_ABS, 
+  REGAIN_OUTPUT_TRANSFORM_THRESH
+};
 
 class Regain {
 public:
 	Regain(bool compr, double sifthr, bool integrative, bool compo,
 					bool fdrpr = false);
 	~Regain();
+  // set output threshold
+  bool setOutputThreshold(double threshold);
+  // set output format
+  bool setOutputFormat(RegainOutputFormat format);
+  // set output type
+  bool setOutputTransform(RegainOutputTransform transform);
+  // print output options to stdout and the inbix log
+  void logOutputOptions();
 	// iterate over all SNPs and numeric attributes (if present), calculating
 	// regression for main effect and interaction terms
 	void run();
@@ -46,27 +66,32 @@ public:
 	// If fdr is true, the filename is .pruned.regain, and the log output
 	// reflects this.
 	void writeRegain(bool pvalues, bool fdrprune = false);
-	// Benjamini Hochberg FDR pruning - removes interaction 
+	// Benjamini-Hochberg FDR pruning - removes interaction 
 	// terms from reGAIN matrix based on BH FDR threshold
 	// code based on method described in All of Statistics p. 167
 	void fdrPrune(double fdr);
 	// write R commands to plot FDR graph
 	void writeRcomm(double T, double fdr);
-	// comparison fnc for mat_el types
-	static bool mecomp(const mat_el &l, const mat_el &r);
+	// comparison comparator for matrixElement types
+	static bool mainEffectComparator(const matrixElement &l, const matrixElement &r);
 private:
+  // output options - bcw - 4/30/13
+  bool useOutputThreshold;
+  double outputThreshold;
+  RegainOutputTransform outputTransform;
+  RegainOutputFormat outputFormat;
 	// integrative regain mode
-	bool intregain;
-	// use zlib compression?
-	bool compressed;
-	// apply FDR pruning matrix?
-	bool fdrprune;
+	bool integratedAttributes;
+	// use zlib compression when writing matrix files?
+	bool writeCompressedFormat;
+	// apply FDR pruning to output matrix?
+	bool doFdrPrune;
 	// write out component matrices
-	bool component;
+	bool writeComponents;
 	// num attributes (SNPs + numeric for integrative, SNPs for normal regain)
-	int numattr;
+	int numAttributes;
 	// SIF interaction threshold
-	double sif_thresh;
+	double sifThresh;
 	// Output matrix files (used for writing regain and p-values files)
 	ZOutput REGAIN_MATRIX;
 	ZOutput SNP_MATRIX;
@@ -83,6 +108,8 @@ private:
 	double** regainMatrix;
 	double** regainPMatrix;
 	// collection of all interaction terms as mat_el types
-	vector<mat_el> gainPint;
+	vector<matrixElement> gainIntPvals;
+  // regression warnings - bcw - 4/30/13
+  vector<string> warnings;
 };
 #endif

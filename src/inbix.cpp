@@ -401,12 +401,46 @@ int main(int argc, char* argv[]) {
 						par::have_numerics,
 						par::regainComponents,
 						par::regainFdrPrune);
+    // reGAIN output options - bcw - 4/30/13
+    if(par::regainMatrixThreshold) {
+      regain->setOutputThreshold(par::regainMatrixThresholdValue);
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+    }
+    if(par::regainMatrixFormat == "upper") {
+      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+    }
+    else {
+      if(par::regainMatrixFormat == "full") {
+        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+      }
+      else {
+        error("reGAIN output format allowed options: {upper, full}");
+      }
+    }
+    if(par::regainMatrixTransform == "none") {
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+    }
+    else {
+      if(par::regainMatrixTransform == "threshold") {
+        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+      }
+      else {
+        if(par::regainMatrixTransform == "abs") {
+          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+        }
+        else {
+          error("reGAIN output transform allowed options: {none, threshold, abs}");
+        }
+      }
+    }
 		regain->run();
 		if(par::regainFdrPrune) {
 			regain->writeRegain(false);
 			regain->fdrPrune(par::regainFdr);
 		}
-		regain->writeRegain(false, par::regainFdrPrune);
+    // write output options to stdout and log file - bcw - 5/1/13
+    regain->logOutputOptions();
+  	regain->writeRegain(false, par::regainFdrPrune);
 		regain->writeRegain(true);
 		delete regain;
 		// stop inbix processing

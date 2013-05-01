@@ -342,6 +342,8 @@ public:
 
 	// added for reGAIN support - bcw - 4/22/13
 	static bool do_regain;
+  static const double regainLargeCoefPvalue;
+  static const double regainLargeCoefTvalue;
 	static bool regainCompress;
 	static bool regainComponents;
 	static double regainFdr;
@@ -349,6 +351,12 @@ public:
 	static bool regainSifFilter;
 	static double regainSifThreshold;
 	static bool regainUseBetaValues;
+  static bool regainExcludeMainEffects;
+  // regain matrix output - bcw - 4/30/13
+  static string regainMatrixTransform;
+  static string regainMatrixFormat;
+  static bool regainMatrixThreshold;
+  static double regainMatrixThresholdValue;
 	
 	static bool no_show_covar;
 	static bool dump_covar;
