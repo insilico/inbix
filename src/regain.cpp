@@ -122,6 +122,12 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
   outputThreshold = 0.0;
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
   outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
+  
+  pureInteractions = false;
+}
+
+void Regain::performPureInteraction(bool flag) {
+  pureInteractions = flag;
 }
 
 bool Regain::setOutputThreshold(double threshold) {
@@ -206,8 +212,14 @@ void Regain::run() {
 #endif
 				mainEffect(varIndex1, varIndex1 >= PP->nl_all);
 			} else {
-				interactionEffect(varIndex1, varIndex1 >= PP->nl_all, 
-                varIndex2, varIndex2 >= PP->nl_all);
+        if(pureInteractions) {
+          pureInteractionEffect(varIndex1, varIndex1 >= PP->nl_all, 
+                  varIndex2, varIndex2 >= PP->nl_all);
+        }
+        else {
+          interactionEffect(varIndex1, varIndex1 >= PP->nl_all, 
+                  varIndex2, varIndex2 >= PP->nl_all);
+        }
 			}
 		}
 	} // Next pair of SNPs/numeric attributes
@@ -495,6 +507,203 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
               << "\t" << setw(12) << interactionModelSE[3]
               << "\t" << setw(12) 
               << betaInteractionCoefs[3] / interactionModelSE[3]
+              << endl;
+    }
+    
+		// store p-value along with (varIndex1, varIndex2) location of
+		// item.  This is used later for FDR pruning
+		if(doFdrPrune) {
+			pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
+			matrixElement interactionPvalElement = 
+              make_pair(interactionPval, indexPair);
+			gainIntPvals.push_back(interactionPvalElement);
+		}
+
+		// update BETAS file
+    BETAS << coef1Label << "\t" << coef2Label;
+		for(unsigned int i = 0; i < betaInteractionCoefs.size(); ++i) {
+			// B0 coefficient doesn't have pval
+			if(i == 0) {
+				BETAS << "\t" << betaInteractionCoefs[i];
+			} else {
+				// adjust pvals index since there's no B0 pval
+				BETAS << "\t" << betaInteractionCoefs[i] 
+                << "\t" << betaInteractionCoefPVals[i - 1];
+			}
+		}
+		BETAS << endl;
+
+		// update SIF files); add to SIF if interaction >= SIF threshold
+		if(interactionValueTransformed >= sifThresh) {
+      SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+			if(writeComponents) {
+				// numeric
+				if(var1IsNumeric && var2IsNumeric) {
+          NUM_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+				}// integrative
+				else if(var1IsNumeric && !var2IsNumeric) {
+					INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+				}// integrative
+				else if(!var1IsNumeric && var2IsNumeric) {
+					INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+				}// SNP
+				else {
+					SNP_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+				}
+			}
+		}
+    
+#ifdef _OPENMP
+	}
+#endif
+  
+	// free model memory
+	delete interactionModel;
+}
+
+void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric, 
+        int varIndex2, bool var2IsNumeric) {
+	Model* interactionModel;
+
+	// logistic regression for binary phenotypes (traits), linear otherwise
+	if(par::bt) {
+		LogisticModel* m = new LogisticModel(PP);
+		interactionModel = m;
+	} else {
+		LinearModel* m = new LinearModel(PP);
+		interactionModel = m;
+	}
+
+	// Set missing data
+	interactionModel->setMissing();
+
+	// labels in regression model
+  ModelTermType varType1 = ADDITIVE;
+	string coef1Label = "";
+  if(var1IsNumeric) {
+    varType1 = NUMERIC;
+    coef1Label = PP->nlistname[varIndex1 - PP->nl_all];
+  } else {
+    varType1 = ADDITIVE;
+    coef1Label = PP->locus[varIndex1]->name;
+  }
+  ModelTermType varType2 = ADDITIVE;
+	string coef2Label = "";
+  if(var2IsNumeric) {
+    varType2 = NUMERIC;
+    coef2Label = PP->nlistname[varIndex2 - PP->nl_all];
+  } else {
+    varType2 = ADDITIVE;
+    coef2Label = PP->locus[varIndex2]->name;
+  }
+
+	// add covariates if specified
+	if(par::covar_file) addCovariates(*interactionModel);
+
+	// interaction
+//  cout << "Adding types interaction for "
+//          << coef1Label << ", idx: " << varIndex1 << ", type: " << varType1
+//          << " | "
+//          << coef2Label << ", idx: " << varIndex2 << ", type: " << varType2
+//          << endl;
+	interactionModel->addTypedInteraction(varIndex1, varType1, 
+          varIndex2, varType2);
+	interactionModel->label.push_back("EPI");
+
+	// Build design matrix
+	interactionModel->buildDesignMatrix();
+
+	// set test parameters for interaction regressions
+	int tp = 1;
+	// add # covars to test param to get interaction param
+	if(par::covar_file) {
+		tp += par::clist_number;
+	}
+	interactionModel->testParameter = tp; // interaction
+
+	// fit linear model coefficients
+	interactionModel->fitLM();
+
+	// Was the model fitting method successful?
+  if(!interactionModel->isValid()) {
+    PP->printLOG("\nWARNING: Invalid regression fit for interaction "
+      "variables [" + coef1Label + "], [" + coef2Label + "]\n");
+    vector<bool> vp = interactionModel->validParameters();
+    cout << "Parameter flags (0=false, 1=true):" << endl;
+    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
+    cout << endl;
+    shutdown();
+  }
+
+#ifdef _OPENMP
+#pragma omp critical
+	{
+#endif
+		vector_t betaInteractionCoefs = interactionModel->getCoefs();
+		vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+    double interactionPval = 
+      betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+		vector_t interactionModelSE = interactionModel->getSE();
+		// calculate statistical test value from beta/SE (t-test or z-test)
+		vector_t::const_iterator bIt = betaInteractionCoefs.begin();
+		vector_t::const_iterator sIt = interactionModelSE.begin();
+		vector_t regressTestStatValues;
+		for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
+			regressTestStatValues.push_back(*bIt / *sIt);
+		}
+
+		double interactionValue = 0;
+		if(par::regainUseBetaValues) {
+			interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+      if(interactionPval > par::regainLargeCoefPvalue) {
+        stringstream ss;
+        ss << "Large p-value [" << interactionPval 
+                << "] on coefficient for interaction variables [" 
+                << coef1Label << "][" << coef2Label << "]";
+        warnings.push_back(ss.str());
+      }
+		} else {
+			interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
+      if(interactionValue > par::regainLargeCoefTvalue) {
+        stringstream ss;
+        ss << "Large test statistic value [" << interactionValue 
+                << "] on coefficient for interaction variables [" 
+                << coef1Label << "][" << coef2Label << "]";
+        warnings.push_back(ss.str());
+      }
+		}
+    double interactionValueTransformed = interactionValue;
+    switch(outputTransform) {
+      case REGAIN_OUTPUT_TRANSFORM_NONE:
+        break;
+      case REGAIN_OUTPUT_TRANSFORM_THRESH:
+        if(interactionValue < outputThreshold) {
+          interactionValueTransformed = 0.0;
+        }
+        break;
+      case REGAIN_OUTPUT_TRANSFORM_ABS:
+        interactionValueTransformed = abs(interactionValue);
+        break;
+    }
+		regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
+		regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+		regainPMatrix[varIndex1][varIndex2] = interactionPval;
+		regainPMatrix[varIndex2][varIndex1] = interactionPval;
+
+    // !!!!! DEBUGGING RAW VALUES !!!!!
+    if(par::verbose) {
+      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+              << "\t" << coef1Label << "\t" << coef2Label
+              << "\t" << setw(12) << betaInteractionCoefs[1]
+              << "\t" << setw(6) << betaInteractionCoefPVals[0]
+              << "\t" << setw(12) << interactionModelSE[1]
+              << "\t" << setw(12) 
+              << betaInteractionCoefs[1] / interactionModelSE[1]
               << endl;
     }
     

@@ -53,6 +53,23 @@ typedef vector<Locus*>::iterator iLocus;
 typedef vector<CSNP*>::iterator iSNP;
 typedef vector<bool>::iterator iAllele;
 
+// Term types
+enum ModelTermType {
+  INTERCEPT,
+  ADDITIVE,
+  DOMDEV,
+  HAPLOTYPE,
+  SEX,
+  COVARIATE,
+  INTERACTION,
+  TYPED_INTERACTION,
+  QFAM,
+  NUMERIC
+};
+
+typedef pair<int, ModelTermType> interactionVar_t;
+typedef pair<interactionVar_t, interactionVar_t> interaction_t;
+
 class int2 {
 public:
 	int p1;

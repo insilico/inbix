@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
 		par::have_snps = par::read_bitfile || par::read_ped ||
 						par::tfile_input || par::lfile_input;
 		if(!P.readNumericFile()) {
-			error("Problem reading the numeric file");
+			error("Problem reading the numeric file: [" + par::numeric_filename + "]");
 		}
 		par::have_numerics = true;
 		//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
@@ -432,6 +432,12 @@ int main(int argc, char* argv[]) {
           error("reGAIN output transform allowed options: {none, threshold, abs}");
         }
       }
+    }
+    if(par::regainPureInteractions) {
+      regain->performPureInteraction(true);
+    }
+    else {
+      regain->performPureInteraction(false);
     }
 		regain->run();
 		if(par::regainFdrPrune) {

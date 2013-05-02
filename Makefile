@@ -37,6 +37,8 @@ LIB_LAPACK = /usr/lib/liblapack.so.3
 # --------------------------------------------------------------------
 
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen
+# debug mode
+#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen
 OUTPUT = inbix
 
 # Some system specific flags

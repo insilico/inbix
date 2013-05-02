@@ -2763,9 +2763,9 @@ void setOptions(CArgs & a) {
   }
 
   // numeric attribute file support - bcw - 4/22/13
-  if(a.find("--numeric")) {
+  if(a.find("--numeric-file")) {
     par::numeric_file = true;
-    par::numeric_filename = a.value("--numeric");
+    par::numeric_filename = a.value("--numeric-file");
   }
 
   // reGAIN analysis support - bcw - 4/22/13
@@ -2777,8 +2777,8 @@ void setOptions(CArgs & a) {
     par::regainUseBetaValues = true;
   }
 
-  if(a.find("--regain-exclude-main-effects")) {
-    par::regainExcludeMainEffects = true;
+  if(a.find("--regain-pure-interactions")) {
+    par::regainPureInteractions = true;
   }
 
   if(a.find("--regain-compress")) {
@@ -3992,6 +3992,7 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --regain {regain file}    Perform a reGAIN analysis   \n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"
+            << "      --regain-pure-interactions Exclude main effects from interactions\n"
             << "      --regain-compress         Compress reGAIN output      \n"
             << "      --regain-components       Write reGAIN components     \n"
             << "      --regain-fdr {rate}       Set reGAIN FDR              \n"

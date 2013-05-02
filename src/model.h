@@ -21,8 +21,7 @@ class Model {
 public:
 	Model();
 
-	virtual ~Model() {
-	};
+	virtual ~Model() {};
 
 	virtual void setDependent() = 0;
 	virtual void pruneY() = 0;
@@ -51,6 +50,7 @@ public:
 	void addCovariate(int);
 	void addNumeric(int);
 	void addInteraction(int, int);
+	void addTypedInteraction(int, ModelTermType, int, ModelTermType);
 	void buildDesignMatrix();
 	bool checkVIF();
 	vector<bool> validParameters();
@@ -119,30 +119,19 @@ protected:
 
 	// beta coefficients for each term/parameter in the model
 	vector_t coef; 
-	// Sigma? TODO: define this! bcw - 4/29/13
+	// sigma of SVD linear algebra decomposition - bcw - 4/29/13
 	matrix_t S; 
 
-	// Term types
-	enum terms {
-		INTERCEPT,
-		ADDITIVE,
-		DOMDEV,
-		HAPLOTYPE,
-		SEX,
-		COVARIATE,
-		INTERACTION,
-		QFAM,
-		NUMERIC
-	};
-
 	double buildIntercept();
-	double buildAdditive(Individual *, int);
-	double buildDominance(Individual *, int);
+	double buildAdditive(Individual*, int);
+  double getSimpleSNPValue(Individual* person, int snp);
+	double buildDominance(Individual*, int);
 	double buildHaplotype(int, int);
-	double buildSex(Individual *);
-	double buildCovariate(Individual *, int);
-	double buildNumeric(Individual *, int);
-	double buildInteraction(Individual *, int, vector_t &);
+	double buildSex(Individual*);
+	double buildCovariate(Individual*, int);
+	double buildNumeric(Individual*, int);
+	double buildInteraction(Individual*, int, vector_t&);
+	double buildTypedInteraction(Individual*, int);
 	double buildQFAM(Individual *);
 
 	bool skip;
@@ -169,6 +158,9 @@ protected:
 	// List of pairwise interactions
 	// ( indexing previously specified components, 1,2,..)
 	vector<int2> interaction;
+	// List of pairwise "pure" interactions - bcw - 5/2/13
+  // these pureInteraction elements specify the index and type of data
+	vector<interaction_t> typed_interaction;
 
 	// List of sets of haplotypes
 	vector<set<int> > haplotype;

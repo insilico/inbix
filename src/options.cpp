@@ -255,7 +255,7 @@ bool par::regainFdrPrune = false;
 bool par::regainSifFilter = false;
 double par::regainSifThreshold = 0.05;
 bool par::regainUseBetaValues = false;
-bool par::regainExcludeMainEffects = false;
+bool par::regainPureInteractions = false;
 // regain matrix output - bcw - 4/30/13
 string par::regainMatrixTransform = "none";
 string par::regainMatrixFormat = "upper";

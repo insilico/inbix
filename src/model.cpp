@@ -180,6 +180,15 @@ void Model::addInteraction(int a, int b) {
 	order.push_back(interaction.size() - 1);
 }
 
+void Model::addTypedInteraction(int a, ModelTermType typeA, 
+        int b, ModelTermType typeB) {
+	interactionVar_t var1 = make_pair(a, typeA);
+	interactionVar_t var2 = make_pair(b, typeB);
+	typed_interaction.push_back(make_pair(var1, var2));
+	type.push_back(TYPED_INTERACTION);
+	order.push_back(typed_interaction.size() - 1);
+}
+
 void Model::buildDesignMatrix() {
 	// Build X matrix (including intercept)
 	// Iterate a person at a time, entering only 
@@ -202,7 +211,8 @@ void Model::buildDesignMatrix() {
 					+ haplotype.size()
 					+ covariate.size()
 					+ numeric.size()
-					+ interaction.size();
+					+ interaction.size() 
+					+ typed_interaction.size();
 
 	// Sex effect?
 	if(sex_effect) {
@@ -239,8 +249,9 @@ void Model::buildDesignMatrix() {
 		// 3) Haplotypes
 		// 4) Covariates
 		// 5) Interactions of the above
-		// 6) QFAM variables
-		// 7) Numeric attributes
+		// 6) Interactions of the SNP and numeric combinations
+		// 7) QFAM variables
+		// 8) Numeric attributes
 
 		// Populate this vector with terms for this
 		// individual
@@ -275,6 +286,9 @@ void Model::buildDesignMatrix() {
 					break;
 				case INTERACTION:
 					trow[p] = buildInteraction(person, order[p], trow);
+					break;
+				case TYPED_INTERACTION:
+					trow[p] = buildTypedInteraction(person, order[p]);
 					break;
 				case QFAM:
 					trow[p] = buildQFAM(person);
@@ -628,6 +642,25 @@ double Model::buildAdditive(Individual * person, int snp) {
 
 }
 
+double Model::getSimpleSNPValue(Individual* person, int snp) {
+  bool i1 = person->one[snp];
+	bool i2 = person->two[snp];
+  ///////////////////////
+  // Autosomal coding
+  if(i1) {
+    if(!i2) {
+      skip = true;
+      return 0;
+    } else
+      return mAA;
+  } else {
+    if(i2)
+      return mAB; // het 
+    else
+      return mBB; // hom
+  }
+}
+
 double Model::buildDominance(Individual * person, int snp) {
 	////////////////////
 	// Dominance effects
@@ -692,6 +725,40 @@ double Model::buildInteraction(Individual * person, int j, vector_t & trow) {
 	///////////////
 	// Interactions
 	return trow[ interaction[j].p1 ] * trow[ interaction[j].p2 ];
+}
+
+double Model::buildTypedInteraction(Individual* person, int j) {
+	///////////////
+	// Interactions of types specified in the pure interaction
+  // get the types of the interaction variables
+  interaction_t interaction = typed_interaction[j];
+  interactionVar_t var1 = interaction.first;
+  interactionVar_t var2 = interaction.second;
+  double var1Val = 0;;
+  switch(var1.second) {
+    case ADDITIVE:
+      var1Val = getSimpleSNPValue(person, var1.first);
+      break;
+    case NUMERIC:
+      var1Val = person->nlist[var1.first];
+      break;
+    default:
+      error("buildTypedInteraction failed with an invalid type for the "
+              "first variable: " + int2str(var1.second));
+  }
+  double var2Val = 0;
+  switch(var2.second) {
+    case ADDITIVE:
+      var2Val = getSimpleSNPValue(person, var2.first);
+      break;
+    case NUMERIC:
+      var2Val = person->nlist[var2.first];;
+      break;
+    default:
+      error("buildTypedInteraction failed with an invalid type for the "
+              "second variable: " + int2str(var2.second));
+  }
+	return(var1Val * var2Val);
 }
 
 double Model::buildQFAM(Individual * person) {

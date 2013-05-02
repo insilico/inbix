@@ -55,12 +55,17 @@ public:
 	// regression for main effect and interaction terms
 	void run();
 	// calculate main effect regression coefficients for diagonal terms	
-	void mainEffect(int e1, bool numeric);
+	void mainEffect(int varIndex, bool varIsNumeric);
 	// add covariate terms to model, handling multiple covariates
 	void addCovariates(Model &m);
 	// calculate epistatic interaction between two SNPs or numeric attributes,
 	// or a SNP and a numeric attribute
-	void interactionEffect(int e1, bool numeric1, int e2, bool numeric2);
+	void interactionEffect(int varIndex1, bool var1IsNumeric, 
+        int varIndex2, bool var2IsNumeric);
+	// calculate epistatic interaction between two SNPs or numeric attributes,
+	// or a SNP and a numeric attribute; no main effects, i.e., "pure"
+	void pureInteractionEffect(int varIndex1, bool var1IsNumeric, 
+        int varIndex2, bool var2IsNumeric);
 	// write contents of reGAIN or reGAIN p-value matrix to file.  Integrative
 	// reGAIN files have a '.int.' in the filename, p-values have a '.pvals.'
 	// If fdr is true, the filename is .pruned.regain, and the log output
@@ -74,12 +79,16 @@ public:
 	void writeRcomm(double T, double fdr);
 	// comparison comparator for matrixElement types
 	static bool mainEffectComparator(const matrixElement &l, const matrixElement &r);
+  // set flag to include main effects in the interaction model or not
+  void performPureInteraction(bool flag);
 private:
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
   double outputThreshold;
   RegainOutputTransform outputTransform;
   RegainOutputFormat outputFormat;
+  // include main effects in interaction model? - bcw - 5/2/13
+  bool pureInteractions;
 	// integrative regain mode
 	bool integratedAttributes;
 	// use zlib compression when writing matrix files?

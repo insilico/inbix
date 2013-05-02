@@ -351,7 +351,7 @@ public:
 	static bool regainSifFilter;
 	static double regainSifThreshold;
 	static bool regainUseBetaValues;
-  static bool regainExcludeMainEffects;
+  static bool regainPureInteractions;
   // regain matrix output - bcw - 4/30/13
   static string regainMatrixTransform;
   static string regainMatrixFormat;
