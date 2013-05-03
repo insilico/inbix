@@ -342,6 +342,8 @@ public:
 
 	// added for reGAIN support - bcw - 4/22/13
 	static bool do_regain;
+	static bool do_regain_post;
+  static string regainFile;
   static const double regainLargeCoefPvalue;
   static const double regainLargeCoefTvalue;
 	static bool regainCompress;

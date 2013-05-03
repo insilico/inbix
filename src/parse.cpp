@@ -2824,6 +2824,11 @@ void setOptions(CArgs & a) {
     par::regainMatrixFormat = a.value("--regain-matrix-format");
   }
 
+  if(a.find("--regain-file")) {
+    par::do_regain_post = true;
+    par::regainFile = a.value("--regain-file");
+  }
+
   ////////////////////////
   // Reference allele file
   if(a.find("--reference")) {
@@ -3990,7 +3995,8 @@ void setOptions(CArgs & a) {
             << "      --linear                  Linear regression model     \n"
             << "      --logistic                Logistic regression model   \n"
             << "\n"
-            << "      --regain {regain file}    Perform a reGAIN analysis   \n"
+            << "      --regain                  Perform a reGAIN analysis   \n"
+            << "      --regain-file {regain file} Postprocess an existing reGAIN file     \n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions Exclude main effects from interactions\n"
             << "      --regain-compress         Compress reGAIN output      \n"

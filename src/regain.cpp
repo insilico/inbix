@@ -34,8 +34,23 @@
 // Plink object
 extern Plink* PP;
 
+Regain::Regain(bool compr, double sifthr, bool compo) {
+	writeCompressedFormat = compr;
+	sifThresh = sifthr;
+	writeComponents = compo;
+
+  // defaults
+	integratedAttributes = false;
+	doFdrPrune = false;
+  useOutputThreshold = false;
+  outputThreshold = 0.0;
+  outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
+  outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
+  pureInteractions = false;
+}
+
 Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
-				bool fdrpr) {
+				bool fdrpr, bool initMatrixFromData) {
 	// set class vars to passed args
 	writeCompressedFormat = compr;
 	sifThresh = sifthr;
@@ -49,33 +64,37 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 	// header in betas files
 	string hdr = integratedAttributes ? "attr" : "SNP";
 
-	// total number of attributes
-	numAttributes = 0;
-  if(integratedAttributes) {
-    numAttributes = PP->nl_all + PP->nlistname.size();
-  } else  {
-    numAttributes = PP->nl_all;
-  }
-	PP->printLOG("Total number of attributes [ " + int2str(numAttributes) + " ]\n");
-
-	// initialize matrices and open output files
+	// open output files
 	string beta_f = par::output_file_name + ext + ".betas";
 	string mebeta_f = par::output_file_name + ext + ".mebetas";
 	BETAS.open(beta_f.c_str(), ios::out);
 	MEBETAS.open(mebeta_f.c_str(), ios::out);
 	PP->printLOG("Writing interaction beta values to [ " + beta_f + " ]\n");
 	PP->printLOG("Writing main effect beta values to [ " + mebeta_f + " ]\n");
-	BETAS.precision(6);
-	MEBETAS.precision(6);
+	
+  // TODO: remove these set precision options?
+  // BETAS.precision(6);
+	// MEBETAS.precision(6);
+  
 	// print header
-	BETAS << hdr << "1\t" << hdr << "2\tB_0\tB_1\tB_1 P-VAL\tB_2\tB_2 P-VAL";
-	if(par::covar_file) {
-		for(int i = 0; i < par::clist_number; i++) {
-			BETAS << "\t" << PP->clistname[i] << "\t" << PP->clistname[i] << " P-VAL";
-		}
-	}
-	BETAS << "\tB_3\tB_3 P-VAL" << endl;
-
+  if(par::regainPureInteractions) {
+    BETAS << hdr << "1\t" << hdr << "2\tB_0";
+    if(par::covar_file) {
+      for(int i = 0; i < par::clist_number; i++) {
+        BETAS << "\t" << PP->clistname[i] << "\t" << PP->clistname[i] << " P-VAL";
+      }
+    }
+    BETAS << "\tB_I\tB_I P-VAL" << endl;
+  } else {
+    BETAS << hdr << "1\t" << hdr << "2\tB_0\tB_1\tB_1 P-VAL\tB_2\tB_2 P-VAL";
+    if(par::covar_file) {
+      for(int i = 0; i < par::clist_number; i++) {
+        BETAS << "\t" << PP->clistname[i] << "\t" << PP->clistname[i] << " P-VAL";
+      }
+    }
+    BETAS << "\tB_I\tB_I P-VAL" << endl;
+  }
+  
 	MEBETAS << hdr << "\tB_0\tB_1\tB_1 P-VAL";
 	if(par::covar_file) {
 		for(int i = 0; i < par::clist_number; i++) {
@@ -88,7 +107,7 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 	string sif_f = par::output_file_name + ext + ".sif";
 	SIF.open(sif_f.c_str(), ios::out);
 	PP->printLOG("Writing Cytoscape network file (SIF) to [ " + sif_f + " ]\n");
-	SIF.precision(6);
+	//SIF.precision(6);
 	if(writeComponents) {
 		string snp_sif_f = par::output_file_name + ".snp.sif";
 		string num_sif_f = par::output_file_name + ".num.sif";
@@ -96,28 +115,39 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 		SNP_SIF.open(snp_sif_f.c_str(), ios::out);
 		PP->printLOG("Writing SNP Cytoscape network file (SIF) to [ " +
 						snp_sif_f + " ]\n");
-		SNP_SIF.precision(6);
+		//SNP_SIF.precision(6);
 		NUM_SIF.open(num_sif_f.c_str(), ios::out);
 		PP->printLOG("Writing numeric Cytoscape network file (SIF) to [ " +
 						num_sif_f + " ]\n");
-		NUM_SIF.precision(6);
+		//NUM_SIF.precision(6);
 		INT_SIF.open(int_sif_f.c_str(), ios::out);
 		PP->printLOG("Writing integrative Cytoscape network file (SIF) to [ " +
 						int_sif_f + " ]\n");
-		INT_SIF.precision(6);
+		//INT_SIF.precision(6);
 	}
 
-	regainMatrix = new double*[numAttributes];
-	regainPMatrix = new double*[numAttributes];
-	// allocate reGAIN matrix
-	for(int i = 0; i < numAttributes; ++i) {
-		regainMatrix[i] = new double[numAttributes];
-	}
-	// allocate reGAIN p-value matrix
-	for(int i = 0; i < numAttributes; ++i) {
-		regainPMatrix[i] = new double[numAttributes];
-	}
+  if(initMatrixFromData) {
+    // total number of attributes
+    numAttributes = 0;
+    if(integratedAttributes) {
+      numAttributes = PP->nl_all + PP->nlistname.size();
+    } else  {
+      numAttributes = PP->nl_all;
+    }
+    PP->printLOG("Total number of attributes [ " + int2str(numAttributes) + " ]\n");
 
+    regainMatrix = new double*[numAttributes];
+    regainPMatrix = new double*[numAttributes];
+    // allocate reGAIN matrix
+    for(int i = 0; i < numAttributes; ++i) {
+      regainMatrix[i] = new double[numAttributes];
+    }
+    // allocate reGAIN p-value matrix
+    for(int i = 0; i < numAttributes; ++i) {
+      regainPMatrix[i] = new double[numAttributes];
+    }
+  }
+  
   useOutputThreshold = false;
   outputThreshold = 0.0;
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
@@ -188,6 +218,137 @@ Regain::~Regain() {
 	delete [] regainPMatrix;
 }
 
+bool Regain::readRegainFromFile(string regainFilename) {
+  	// open the numeric attributes file if possible
+	checkFileExists(regainFilename.c_str());
+	ifstream REGAIN(regainFilename.c_str(), ios::in);
+	if(REGAIN.fail()) {
+		return false;
+	}
+
+  // read matrix entries
+  bool readHeader = false;
+  int matrixRow = 0;
+  int matrixCol = 0;
+  double rawValue = 0;
+ 	while(!REGAIN.eof()) {
+    char nline[par::MAX_LINE_LENGTH];
+		REGAIN.getline(nline, par::MAX_LINE_LENGTH, '\n');
+
+		// convert to string
+		string sline = nline;
+		if (sline == "") continue;
+
+		// read line from text file into a vector of tokens
+		string buf;
+		stringstream ss(sline);
+		vector<string> tokens;
+		while(ss >> buf) {
+			tokens.push_back(buf);
+    }
+    
+    if(!readHeader) {
+      // process reGAIN file header
+      numAttributes = tokens.size();
+      readHeader = true;
+      regainMatrix = new double*[numAttributes];
+      // allocate reGAIN matrix and add column names
+      for(int i = 0; i < numAttributes; ++i) {
+        regainMatrix[i] = new double[numAttributes];
+        attributeNames.push_back(tokens[i]);
+      }
+      continue;
+    } else {
+      // process reGAIN matrix values
+      if(tokens.size() != numAttributes) {
+        PP->printLOG("Error reading line:\n" + sline + "\n");
+        REGAIN.close();
+        return false;
+      }
+      // set reGAIN matrix values, possibly transformed
+      matrixCol = 0;
+      for(vector<string>::const_iterator sIt=tokens.begin(); 
+              sIt != tokens.end(); ++sIt, ++matrixCol) {
+        if(!from_string<double>(rawValue, *sIt, std::dec)) {
+          PP->printLOG("Error parsing token:" + *sIt + "\n");
+          return false;
+        }
+        // make symmetric from upper triangular if not already
+        if(matrixCol <= matrixRow) {
+          regainMatrix[matrixRow][matrixCol] = rawValue;
+          regainMatrix[matrixCol][matrixRow] = rawValue;
+        }
+      }
+      ++matrixRow;
+    }
+  }
+  REGAIN.close();
+  
+  return true;
+}
+  bool Regain::writeRegainToFile(string newRegainFilename) {
+    PP->printLOG("Writing REGAIN matrix [ " + newRegainFilename + " ]\n");
+    ofstream outFile(newRegainFilename.c_str());
+    if(outFile.fail()) {
+      return false;
+    }
+    // write header
+    int hIdx = 0;
+    for(vector<string>::const_iterator hIt = attributeNames.begin();
+            hIt != attributeNames.end(); ++hIt, ++hIdx) {
+      if(hIdx) {
+        outFile << "\t" << *hIt;
+      }
+      else {
+        outFile << *hIt;
+      }
+    }
+    // write matrix entries, possibly transformed
+    double valueToWrite = 0;
+    for(int i=0; i < numAttributes; ++i) {
+      for(int j=0; j < numAttributes; ++j) {
+        double rawValue = regainMatrix[i][j];
+        switch(outputTransform) {
+          case REGAIN_OUTPUT_TRANSFORM_ABS:
+            valueToWrite = abs(rawValue);
+            break;
+          case REGAIN_OUTPUT_TRANSFORM_THRESH:
+            valueToWrite = rawValue < outputThreshold? 0: rawValue;
+            break;
+        }
+        switch(outputFormat) {
+          case REGAIN_OUTPUT_FORMAT_FULL:
+            if(j) {
+              outFile << "\t" << valueToWrite;
+            }
+            else {
+              outFile << valueToWrite;
+            }
+            break;
+          case REGAIN_OUTPUT_FORMAT_UPPER:
+            if(j < i) {
+              // write tabs
+              for(int k=0; k < i; ++k ) {
+                outFile << "\t";
+              }
+            }
+            else {
+              if(j > i) {
+                outFile << "\t" << valueToWrite;
+              }
+              else {
+                outFile << valueToWrite;
+              }
+            }
+            break;
+        }
+      }
+      outFile << endl;
+    }
+    outFile.close();
+    return true;
+  }
+  
 void Regain::run() {
 	int varIndex1, varIndex2;
   // reset the warnings list
@@ -299,7 +460,7 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
   // always use first coefficient after intercept as main effect term
 	double mainEffectValue = 0;
 	if(par::regainUseBetaValues) {
-		mainEffectValue = betaMainEffectCoefs[betaMainEffectCoefs.size() - 1];
+		mainEffectValue = betaMainEffectCoefs[tp];
     // report large p-value of coefficient as a warning
     if(mainEffectPval > par::regainLargeCoefPvalue) {
       stringstream ss;
@@ -308,8 +469,8 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
       warnings.push_back(ss.str());
     }
 	} else {
-		mainEffectValue = betaMainEffectCoefs[betaMainEffectCoefs.size() - 1] /
-						mainEffectModelSE[mainEffectModelSE.size() - 1];
+		mainEffectValue = betaMainEffectCoefs[tp] /
+						mainEffectModelSE[tp];
     // report large t-test value of coefficient as a warning
     if(mainEffectValue > par::regainLargeCoefTvalue) {
       stringstream ss;
@@ -983,7 +1144,7 @@ void Regain::fdrPrune(double fdr) {
 
 void Regain::writeRcomm(double T, double fdr) {
 	ofstream RCOMM;
-	RCOMM.precision(6);
+	//RCOMM.precision(6);
 	string fdr_r_file = par::output_file_name + ".R";
 	string betas_file = par::output_file_name + ".betas";
 	PP->printLOG("Writing R commands to generate FDR plot [" + fdr_r_file + "]\n");

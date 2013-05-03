@@ -40,9 +40,14 @@ enum RegainOutputTransform {
 
 class Regain {
 public:
+	Regain(bool compr, double sifthr, bool compo);
 	Regain(bool compr, double sifthr, bool integrative, bool compo,
-					bool fdrpr = false);
+					bool fdrpr = false, bool initMatrixFromData = true);
 	~Regain();
+  // read a reGAIN file for post processing
+  bool readRegainFromFile(string regainFilename);
+  // write reGAIN matrix to a new file
+  bool writeRegainToFile(string newRegainFilename);
   // set output threshold
   bool setOutputThreshold(double threshold);
   // set output format
@@ -99,6 +104,8 @@ private:
 	bool writeComponents;
 	// num attributes (SNPs + numeric for integrative, SNPs for normal regain)
 	int numAttributes;
+  // vector of attribute names of the regain matrix columns
+  vector<string> attributeNames;
 	// SIF interaction threshold
 	double sifThresh;
 	// Output matrix files (used for writing regain and p-values files)

@@ -159,19 +159,6 @@ int main(int argc, char* argv[]) {
 	//////////////////////////////////////////////////
 	// Main Input files
 
-	////////////////////////////////////////////
-	// A numeric file specified? - bcw - 4/20/13
-	if(par::numeric_file) {
-		par::have_snps = par::read_bitfile || par::read_ped ||
-						par::tfile_input || par::lfile_input;
-		if(!P.readNumericFile()) {
-			error("Problem reading the numeric file: [" + par::numeric_filename + "]");
-		}
-		par::have_numerics = true;
-		//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
-		//						ostream_iterator<string>(cout, "\n"));
-	}
-
 	// Simulate or read in data:
 	// Binary or ASCII format; transposed/long/generic
 	if(par::dummy) P.dummyLoader();
@@ -204,6 +191,19 @@ int main(int argc, char* argv[]) {
 							include_pos,
 							nvar);
 		}
+	}
+
+	////////////////////////////////////////////
+	// A numeric file specified? - bcw - 4/20/13
+	if(par::numeric_file) {
+		par::have_snps = par::read_bitfile || par::read_ped ||
+						par::tfile_input || par::lfile_input;
+		if(!P.readNumericFile()) {
+			error("Problem reading the numeric file: [" + par::numeric_filename + "]");
+		}
+		par::have_numerics = true;
+		//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
+		//						ostream_iterator<string>(cout, "\n"));
 	}
 
 	// Set number of individuals
@@ -400,7 +400,8 @@ int main(int argc, char* argv[]) {
 						par::regainSifThreshold,
 						par::have_numerics,
 						par::regainComponents,
-						par::regainFdrPrune);
+						par::regainFdrPrune, 
+            true);
     // reGAIN output options - bcw - 4/30/13
     if(par::regainMatrixThreshold) {
       regain->setOutputThreshold(par::regainMatrixThresholdValue);
@@ -453,6 +454,54 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
+	//////////////////////////////////////////////////
+	// reGAIN post processing requested - bcw - 5/3/13
+	if(par::do_regain_post) {
+		P.printLOG("Performing reGAIN file post processing\n");
+		P.SNP2Ind();
+		Regain* regain = new Regain(
+						par::regainCompress,
+						par::regainSifThreshold,
+						par::regainComponents
+    );
+    // reGAIN output options - bcw - 4/30/13
+    if(par::regainMatrixThreshold) {
+      regain->setOutputThreshold(par::regainMatrixThresholdValue);
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+    }
+    if(par::regainMatrixFormat == "upper") {
+      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+    }
+    else {
+      if(par::regainMatrixFormat == "full") {
+        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+      }
+      else {
+        error("reGAIN output format allowed options: {upper, full}");
+      }
+    }
+    if(par::regainMatrixTransform == "none") {
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+    }
+    else {
+      if(par::regainMatrixTransform == "threshold") {
+        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+      }
+      else {
+        if(par::regainMatrixTransform == "abs") {
+          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+        }
+        else {
+          error("reGAIN output transform allowed options: {none, threshold, abs}");
+        }
+      }
+    }
+		regain->readRegainFromFile(par::regainFile);
+		regain->writeRegainToFile(par::regainFile + ".post");
+		delete regain;
+    shutdown();
+  }
+  
 	//////////////////////////////////////
 	// Assign cluster solution from file 
 	if(par::include_cluster_from_file) {

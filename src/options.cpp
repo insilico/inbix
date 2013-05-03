@@ -246,7 +246,9 @@ string par::numeric_filename = "inbix.num";
 
 // added for reGAIN support - bcw - 4/22/13, 4/24/13
 bool par::do_regain = false;
-double const par::regainLargeCoefPvalue = 0.05;
+bool par::do_regain_post = false;
+string par::regainFile = "no file";
+double const par::regainLargeCoefPvalue = 0.95;
 double const par::regainLargeCoefTvalue = 10.0;
 bool par::regainCompress = false;
 bool par::regainComponents = false;
@@ -258,7 +260,7 @@ bool par::regainUseBetaValues = false;
 bool par::regainPureInteractions = false;
 // regain matrix output - bcw - 4/30/13
 string par::regainMatrixTransform = "none";
-string par::regainMatrixFormat = "upper";
+string par::regainMatrixFormat = "full";
 bool par::regainMatrixThreshold = false;
 double par::regainMatrixThresholdValue = 0.0;
 
