@@ -56,7 +56,7 @@ ifeq ($(SYS),UNIX)
  CXXFLAGS += -DUNIX
  CXX = $(CXX_UNIX)
  ifndef FORCE_DYNAMIC
-  CXXFLAGS += -static
+  CXXFLAGS += -static -fopenmp
  endif
 endif
 

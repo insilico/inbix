@@ -17,9 +17,7 @@
 #include <iterator>
 #include <sstream>
 
-#ifdef _OPENMP
 #include <omp.h>
-#endif
 
 #include "plink.h"
 #include "options.h"
@@ -353,14 +351,12 @@ void Regain::run() {
 	int varIndex1, varIndex2;
   // reset the warnings list
   warnings.resize(0);
-#ifdef _OPENMP
 	// OpenMP parallelization of this outer loop
 	int numThreads = omp_get_num_threads();
 	int numProcs = omp_get_num_procs();
-	cout << "\t\t" << numThreads << " OpenMP threads available" << endl;
-	cout << "\t\t" << numProcs << " OpenMP processors available" << endl;
+	cout << "OpenMP: " << numThreads << " threads available" << endl;
+	cout << "OpenMP: " << numProcs << " processors available" << endl;
 #pragma omp parallel for schedule(dynamic, 1) private(varIndex1, varIndex2)
-#endif
 	for(varIndex1 = 0; varIndex1 < numAttributes; varIndex1++) {
 		for(varIndex2 = 0; varIndex2 < numAttributes; varIndex2++) {
 			// We've already performed this test, since the matrix is symmetric
@@ -368,9 +364,7 @@ void Regain::run() {
 
 			// main effect of SNP/numeric attribute 1 - diagonal of the reGAIN matrix
 			if(varIndex1 == varIndex2) {
-#ifdef _OPENMP
 #pragma omp critical
-#endif
 				mainEffect(varIndex1, varIndex1 >= PP->nl_all);
 			} else {
         if(pureInteractions) {
@@ -604,10 +598,8 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
     shutdown();
   }
 
-#ifdef _OPENMP
 #pragma omp critical
 	{
-#endif
 		vector_t betaInteractionCoefs = interactionModel->getCoefs();
 		vector_t betaInteractionCoefPVals = interactionModel->getPVals();
     double interactionPval = 
@@ -718,10 +710,9 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
 				}
 			}
 		}
-    
-#ifdef _OPENMP
+  
+  // end pragma    
 	}
-#endif
   
 	// free model memory
 	delete interactionModel;
@@ -801,10 +792,8 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
     shutdown();
   }
 
-#ifdef _OPENMP
 #pragma omp critical
 	{
-#endif
 		vector_t betaInteractionCoefs = interactionModel->getCoefs();
 		vector_t betaInteractionCoefPVals = interactionModel->getPVals();
     double interactionPval = 
@@ -915,10 +904,9 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 				}
 			}
 		}
-    
-#ifdef _OPENMP
+
+    // end pragma
 	}
-#endif
   
 	// free model memory
 	delete interactionModel;
