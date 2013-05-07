@@ -470,10 +470,12 @@ int main(int argc, char* argv[]) {
       regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
     }
     if(par::regainMatrixFormat == "upper") {
+  		P.printLOG("Reformatting reGAIN matrix to upper triangular\n");
       regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
     }
     else {
       if(par::regainMatrixFormat == "full") {
+    		P.printLOG("Reformatting reGAIN matrix to full matrix\n");
         regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
       }
       else {
@@ -485,10 +487,12 @@ int main(int argc, char* argv[]) {
     }
     else {
       if(par::regainMatrixTransform == "threshold") {
+    		P.printLOG("Thresholding reGAIN matrix\n");
         regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
       }
       else {
         if(par::regainMatrixTransform == "abs") {
+      		P.printLOG("Absolute value reGAIN matrix\n");
           regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
         }
         else {
@@ -497,7 +501,7 @@ int main(int argc, char* argv[]) {
       }
     }
 		regain->readRegainFromFile(par::regainFile);
-		regain->writeRegainToFile(par::regainFile + ".post");
+		regain->writeRegainToFile(par::regainFile + ".postproc");
 		delete regain;
     shutdown();
   }

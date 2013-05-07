@@ -71,8 +71,8 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 	PP->printLOG("Writing main effect beta values to [ " + mebeta_f + " ]\n");
 	
   // TODO: remove these set precision options?
-  // BETAS.precision(6);
-	// MEBETAS.precision(6);
+  BETAS.precision(6);
+	MEBETAS.precision(6);
   
 	// print header
   if(par::regainPureInteractions) {
@@ -105,7 +105,7 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 	string sif_f = par::output_file_name + ext + ".sif";
 	SIF.open(sif_f.c_str(), ios::out);
 	PP->printLOG("Writing Cytoscape network file (SIF) to [ " + sif_f + " ]\n");
-	//SIF.precision(6);
+	SIF.precision(6);
 	if(writeComponents) {
 		string snp_sif_f = par::output_file_name + ".snp.sif";
 		string num_sif_f = par::output_file_name + ".num.sif";
@@ -113,15 +113,15 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 		SNP_SIF.open(snp_sif_f.c_str(), ios::out);
 		PP->printLOG("Writing SNP Cytoscape network file (SIF) to [ " +
 						snp_sif_f + " ]\n");
-		//SNP_SIF.precision(6);
+		SNP_SIF.precision(6);
 		NUM_SIF.open(num_sif_f.c_str(), ios::out);
 		PP->printLOG("Writing numeric Cytoscape network file (SIF) to [ " +
 						num_sif_f + " ]\n");
-		//NUM_SIF.precision(6);
+		NUM_SIF.precision(6);
 		INT_SIF.open(int_sif_f.c_str(), ios::out);
 		PP->printLOG("Writing integrative Cytoscape network file (SIF) to [ " +
 						int_sif_f + " ]\n");
-		//INT_SIF.precision(6);
+		INT_SIF.precision(6);
 	}
 
   if(initMatrixFromData) {
@@ -210,10 +210,12 @@ Regain::~Regain() {
 	delete [] regainMatrix;
 
 	// free regain p-value matrix memory
-	for(int i = 0; i < numAttributes; ++i) {
-		delete [] regainPMatrix[i];
-	}
-	delete [] regainPMatrix;
+  if(regainPMatrix) {
+    for(int i = 0; i < numAttributes; ++i) {
+      delete [] regainPMatrix[i];
+    }
+    delete [] regainPMatrix;
+  }
 }
 
 bool Regain::readRegainFromFile(string regainFilename) {
@@ -257,39 +259,39 @@ bool Regain::readRegainFromFile(string regainFilename) {
       }
       continue;
     } else {
-      // process reGAIN matrix values
-      if(tokens.size() != numAttributes) {
-        PP->printLOG("Error reading line:\n" + sline + "\n");
-        REGAIN.close();
-        return false;
+      // process upper reGAIN matrix values, ignoring lower
+      if(tokens.size() < numAttributes) {
+        matrixCol = matrixRow;
       }
-      // set reGAIN matrix values, possibly transformed
-      matrixCol = 0;
-      for(vector<string>::const_iterator sIt=tokens.begin(); 
-              sIt != tokens.end(); ++sIt, ++matrixCol) {
-        if(!from_string<double>(rawValue, *sIt, std::dec)) {
-          PP->printLOG("Error parsing token:" + *sIt + "\n");
+      else {
+        matrixCol = 0;
+      }
+      for(int tokenIdx=0; tokenIdx < tokens.size(); ++tokenIdx, ++matrixCol) {
+        if(!from_string<double>(rawValue, tokens[tokenIdx], std::dec)) {
+          PP->printLOG("Error parsing token:" + tokens[tokenIdx] + "\n");
           return false;
         }
         // make symmetric from upper triangular if not already
-        if(matrixCol <= matrixRow) {
-          regainMatrix[matrixRow][matrixCol] = rawValue;
-          regainMatrix[matrixCol][matrixRow] = rawValue;
-        }
+        regainMatrix[matrixRow][matrixCol] = rawValue;
+        regainMatrix[matrixCol][matrixRow] = rawValue;
       }
-      ++matrixRow;
     }
+    ++matrixRow;
   }
   REGAIN.close();
   
   return true;
 }
   bool Regain::writeRegainToFile(string newRegainFilename) {
+    
     PP->printLOG("Writing REGAIN matrix [ " + newRegainFilename + " ]\n");
     ofstream outFile(newRegainFilename.c_str());
     if(outFile.fail()) {
       return false;
     }
+    outFile.precision(6);
+    outFile.fixed;
+    
     // write header
     int hIdx = 0;
     for(vector<string>::const_iterator hIt = attributeNames.begin();
@@ -301,11 +303,13 @@ bool Regain::readRegainFromFile(string regainFilename) {
         outFile << *hIt;
       }
     }
+    outFile << endl;
+    
     // write matrix entries, possibly transformed
     double valueToWrite = 0;
     for(int i=0; i < numAttributes; ++i) {
       for(int j=0; j < numAttributes; ++j) {
-        double rawValue = regainMatrix[i][j];
+        double rawValue = valueToWrite = regainMatrix[i][j];
         switch(outputTransform) {
           case REGAIN_OUTPUT_TRANSFORM_ABS:
             valueToWrite = abs(rawValue);
@@ -326,13 +330,11 @@ bool Regain::readRegainFromFile(string regainFilename) {
           case REGAIN_OUTPUT_FORMAT_UPPER:
             if(j < i) {
               // write tabs
-              for(int k=0; k < i; ++k ) {
-                outFile << "\t";
-              }
+              outFile << "\t";
             }
             else {
-              if(j > i) {
-                outFile << "\t" << valueToWrite;
+              if(j < (numAttributes -1)) {
+                outFile << valueToWrite << "\t";
               }
               else {
                 outFile << valueToWrite;
@@ -344,6 +346,7 @@ bool Regain::readRegainFromFile(string regainFilename) {
       outFile << endl;
     }
     outFile.close();
+    
     return true;
   }
   
@@ -1132,7 +1135,7 @@ void Regain::fdrPrune(double fdr) {
 
 void Regain::writeRcomm(double T, double fdr) {
 	ofstream RCOMM;
-	//RCOMM.precision(6);
+	RCOMM.precision(6);
 	string fdr_r_file = par::output_file_name + ".R";
 	string betas_file = par::output_file_name + ".betas";
 	PP->printLOG("Writing R commands to generate FDR plot [" + fdr_r_file + "]\n");
