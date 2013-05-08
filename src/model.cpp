@@ -728,7 +728,7 @@ double Model::buildInteraction(Individual * person, int j, vector_t & trow) {
 }
 
 double Model::buildTypedInteraction(Individual* person, int j) {
-	///////////////
+	//////////////////////////////////////////////////////////
 	// Interactions of types specified in the pure interaction
   // get the types of the interaction variables
   interaction_t interaction = typed_interaction[j];
@@ -758,6 +758,15 @@ double Model::buildTypedInteraction(Individual* person, int j) {
       error("buildTypedInteraction failed with an invalid type for the "
               "second variable: " + int2str(var2.second));
   }
+
+#if defined(REGAIN_DEBUG)
+	cout << "Model::buildTypedInteraction: " 
+					<< "var1 value: " << var1Val 
+					<< ", var2 value: " << var2Val 
+					<< ", interaction value: " << (var1Val * var2Val)
+					<< endl;
+#endif
+	
 	return(var1Val * var2Val);
 }
 

@@ -740,18 +740,22 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 	// labels in regression model
   ModelTermType varType1 = ADDITIVE;
 	string coef1Label = "";
+	int var1TypeIndex = varIndex1;
   if(var1IsNumeric) {
     varType1 = NUMERIC;
     coef1Label = PP->nlistname[varIndex1 - PP->nl_all];
+		var1TypeIndex = varIndex1 - PP->nl_all;
   } else {
     varType1 = ADDITIVE;
     coef1Label = PP->locus[varIndex1]->name;
   }
   ModelTermType varType2 = ADDITIVE;
 	string coef2Label = "";
+	int var2TypeIndex = varIndex2;
   if(var2IsNumeric) {
     varType2 = NUMERIC;
     coef2Label = PP->nlistname[varIndex2 - PP->nl_all];
+		var2TypeIndex = varIndex2 - PP->nl_all;
   } else {
     varType2 = ADDITIVE;
     coef2Label = PP->locus[varIndex2]->name;
@@ -761,13 +765,16 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 	if(par::covar_file) addCovariates(*interactionModel);
 
 	// interaction
-//  cout << "Adding types interaction for "
-//          << coef1Label << ", idx: " << varIndex1 << ", type: " << varType1
-//          << " | "
-//          << coef2Label << ", idx: " << varIndex2 << ", type: " << varType2
-//          << endl;
-	interactionModel->addTypedInteraction(varIndex1, varType1, 
-          varIndex2, varType2);
+#if defined(REGAIN_DEBUG)
+  cout << "Adding typed interaction for "
+          << coef1Label << ", idx: " << var1TypeIndex << ", type: " << varType1
+          << " | "
+          << coef2Label << ", idx: " << var2TypeIndex << ", type: " << varType2
+          << endl;
+#endif
+	
+	interactionModel->addTypedInteraction(var1TypeIndex, varType1, 
+          var1TypeIndex, varType2);
 	interactionModel->label.push_back("EPI");
 
 	// Build design matrix
