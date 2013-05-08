@@ -389,122 +389,6 @@ int main(int argc, char* argv[]) {
 				error("Problem reading the specified covariate from the covariate file");
 		}
 	}
-
-	////////////////////////////////////////////
-	// reGAIN analysis requested - bcw - 4/22/13
-	if(par::do_regain) {
-		P.printLOG("Performing reGAIN analysis\n");
-		P.SNP2Ind();
-		Regain* regain = new Regain(
-						par::regainCompress,
-						par::regainSifThreshold,
-						par::have_numerics,
-						par::regainComponents,
-						par::regainFdrPrune, 
-            true);
-    // reGAIN output options - bcw - 4/30/13
-    if(par::regainMatrixThreshold) {
-      regain->setOutputThreshold(par::regainMatrixThresholdValue);
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-    }
-    if(par::regainMatrixFormat == "upper") {
-      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
-    }
-    else {
-      if(par::regainMatrixFormat == "full") {
-        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
-      }
-      else {
-        error("reGAIN output format allowed options: {upper, full}");
-      }
-    }
-    if(par::regainMatrixTransform == "none") {
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-    }
-    else {
-      if(par::regainMatrixTransform == "threshold") {
-        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-      }
-      else {
-        if(par::regainMatrixTransform == "abs") {
-          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
-        }
-        else {
-          error("reGAIN output transform allowed options: {none, threshold, abs}");
-        }
-      }
-    }
-    if(par::regainPureInteractions) {
-      regain->performPureInteraction(true);
-    }
-    else {
-      regain->performPureInteraction(false);
-    }
-		regain->run();
-		if(par::regainFdrPrune) {
-			regain->writeRegain(false);
-			regain->fdrPrune(par::regainFdr);
-		}
-    // write output options to stdout and log file - bcw - 5/1/13
-    regain->logOutputOptions();
-  	regain->writeRegain(false, par::regainFdrPrune);
-		regain->writeRegain(true);
-		delete regain;
-		// stop inbix processing
-		shutdown();
-	}
-
-	//////////////////////////////////////////////////
-	// reGAIN post processing requested - bcw - 5/3/13
-	if(par::do_regain_post) {
-		P.printLOG("Performing reGAIN file post processing\n");
-		P.SNP2Ind();
-		Regain* regain = new Regain(
-						par::regainCompress,
-						par::regainSifThreshold,
-						par::regainComponents
-    );
-    // reGAIN output options - bcw - 4/30/13
-    if(par::regainMatrixThreshold) {
-      regain->setOutputThreshold(par::regainMatrixThresholdValue);
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-    }
-    if(par::regainMatrixFormat == "upper") {
-  		P.printLOG("Reformatting reGAIN matrix to upper triangular\n");
-      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
-    }
-    else {
-      if(par::regainMatrixFormat == "full") {
-    		P.printLOG("Reformatting reGAIN matrix to full matrix\n");
-        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
-      }
-      else {
-        error("reGAIN output format allowed options: {upper, full}");
-      }
-    }
-    if(par::regainMatrixTransform == "none") {
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-    }
-    else {
-      if(par::regainMatrixTransform == "threshold") {
-    		P.printLOG("Thresholding reGAIN matrix\n");
-        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-      }
-      else {
-        if(par::regainMatrixTransform == "abs") {
-      		P.printLOG("Absolute value reGAIN matrix\n");
-          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
-        }
-        else {
-          error("reGAIN output transform allowed options: {none, threshold, abs}");
-        }
-      }
-    }
-		regain->readRegainFromFile(par::regainFile);
-		regain->writeRegainToFile(par::regainFile + ".postproc");
-		delete regain;
-    shutdown();
-  }
   
 	//////////////////////////////////////
 	// Assign cluster solution from file 
@@ -654,7 +538,7 @@ int main(int argc, char* argv[]) {
 	P.printLOG("After frequency and genotyping pruning, there are "
 					+ int2str(P.nl_all) + " SNPs\n");
 
-	if(P.nl_all == 0)
+	if(P.nl_all == 0 && P.nlistname.size() == 0)
 		error("Stopping as there are no SNPs left for analysis\n");
 
 	if(P.n == 0)
@@ -671,6 +555,122 @@ int main(int argc, char* argv[]) {
 			P.locus[l]->allele1 = "0";
 	}
 
+	////////////////////////////////////////////
+	// reGAIN analysis requested - bcw - 4/22/13
+	if(par::do_regain) {
+		P.printLOG("Performing reGAIN analysis\n");
+		P.SNP2Ind();
+		Regain* regain = new Regain(
+						par::regainCompress,
+						par::regainSifThreshold,
+						par::have_numerics,
+						par::regainComponents,
+						par::regainFdrPrune, 
+            true);
+    // reGAIN output options - bcw - 4/30/13
+    if(par::regainMatrixThreshold) {
+      regain->setOutputThreshold(par::regainMatrixThresholdValue);
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+    }
+    if(par::regainMatrixFormat == "upper") {
+      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+    }
+    else {
+      if(par::regainMatrixFormat == "full") {
+        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+      }
+      else {
+        error("reGAIN output format allowed options: {upper, full}");
+      }
+    }
+    if(par::regainMatrixTransform == "none") {
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+    }
+    else {
+      if(par::regainMatrixTransform == "threshold") {
+        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+      }
+      else {
+        if(par::regainMatrixTransform == "abs") {
+          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+        }
+        else {
+          error("reGAIN output transform allowed options: {none, threshold, abs}");
+        }
+      }
+    }
+    if(par::regainPureInteractions) {
+      regain->performPureInteraction(true);
+    }
+    else {
+      regain->performPureInteraction(false);
+    }
+		regain->run();
+		if(par::regainFdrPrune) {
+			regain->writeRegain(false);
+			regain->fdrPrune(par::regainFdr);
+		}
+    // write output options to stdout and log file - bcw - 5/1/13
+    regain->logOutputOptions();
+  	regain->writeRegain(false, par::regainFdrPrune);
+		regain->writeRegain(true);
+		delete regain;
+		// stop inbix processing
+		shutdown();
+	}
+
+	//////////////////////////////////////////////////
+	// reGAIN post processing requested - bcw - 5/3/13
+	if(par::do_regain_post) {
+		P.printLOG("Performing reGAIN file post processing\n");
+		P.SNP2Ind();
+		Regain* regain = new Regain(
+						par::regainCompress,
+						par::regainSifThreshold,
+						par::regainComponents
+    );
+    // reGAIN output options - bcw - 4/30/13
+    if(par::regainMatrixThreshold) {
+      regain->setOutputThreshold(par::regainMatrixThresholdValue);
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+    }
+    if(par::regainMatrixFormat == "upper") {
+  		P.printLOG("Reformatting reGAIN matrix to upper triangular\n");
+      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+    }
+    else {
+      if(par::regainMatrixFormat == "full") {
+    		P.printLOG("Reformatting reGAIN matrix to full matrix\n");
+        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+      }
+      else {
+        error("reGAIN output format allowed options: {upper, full}");
+      }
+    }
+    if(par::regainMatrixTransform == "none") {
+      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+    }
+    else {
+      if(par::regainMatrixTransform == "threshold") {
+    		P.printLOG("Thresholding reGAIN matrix\n");
+        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+      }
+      else {
+        if(par::regainMatrixTransform == "abs") {
+      		P.printLOG("Absolute value reGAIN matrix\n");
+          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+        }
+        else {
+          error("reGAIN output transform allowed options: {none, threshold, abs}");
+        }
+      }
+    }
+		regain->readRegainFromFile(par::regainFile);
+		regain->writeRegainToFile(par::regainFile + ".postproc");
+		delete regain;
+    shutdown();
+  }
+  
 	/////////////////////////////////////////
 	// SET statistics?
 	if(par::read_set)

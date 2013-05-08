@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2006 Shaun Purcell                  //
@@ -9,7 +7,6 @@
 // details                                                      //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-
 
 #include <iostream>
 #include <fstream>
@@ -31,15 +28,12 @@ extern ofstream LOG;
 
 using namespace std;
 
-
 ////////////////////////////////////////
 // Epistasis tests (no permutation)
-
 void Plink::calcEpistasis() {
 
   ///////////////////////////////////////////
   // SNP major mode or individual major mode?
-
   if(par::fast_epistasis) {
     if(!par::SNP_major)
       Ind2SNP();
@@ -47,7 +41,6 @@ void Plink::calcEpistasis() {
     if(par::SNP_major)
       SNP2Ind();
   }
-
 
   //////////////////////////////////////////////
   // Set up results files
@@ -128,7 +121,6 @@ void Plink::calcEpistasis() {
   // (i.e. average / proportion of significant epistatic tests
   //  at a certain alpha level, par::epi_alpha2
 
-
   vector<bool> sA(nl_all, false);
   vector<bool> sB(nl_all, false);
 
@@ -170,22 +162,17 @@ void Plink::calcEpistasis() {
     }
   }
 
-
   // Use fast aff coding
-
   if(par::bt)
     affCoding(*this);
 
-
   // Count how many items in the SET1
-
   int epc = 0;
   for(vector<bool>::iterator e1 = sA.begin();
-      e1 != sA.end();
-      e1++)
+          e1 != sA.end();
+          e1++)
     if(*e1) epc++;
   int epcc = 0;
-
 
   // Keep track of how many epistatic tests actually performed
   long int nepi = 0;
@@ -194,7 +181,6 @@ void Plink::calcEpistasis() {
   vector<int> summary_good(nl_all, 0);
   vector<double> best_score(nl_all, 0);
   vector<int> best_partner(nl_all);
-
 
   //////////////////////////////////////////
   // Begin iterating over pairs : SET x SET
@@ -227,23 +213,20 @@ void Plink::calcEpistasis() {
 
         // Skip X chromosome for now
         if(par::chr_sex[locus[e1]->chr] ||
-           par::chr_sex[locus[e2]->chr] ||
-           par::chr_haploid[locus[e1]->chr] ||
-           par::chr_haploid[locus[e2]->chr])
+                par::chr_sex[locus[e2]->chr] ||
+                par::chr_haploid[locus[e1]->chr] ||
+                par::chr_haploid[locus[e2]->chr])
           continue;
 
         // SNPs too close (case-only analysis)
         if(par::epi_caseonly)
           if(locus[e1]->chr == locus[e2]->chr)
             if(fabs((double) (locus[e1]->bp - locus[e2]->bp))
-               < par::epi_caseonly_kb_gap * 1000)
+                    < par::epi_caseonly_kb_gap * 1000)
               continue;
-
-
 
         //////////////////////////////////
         // Perform test of epistasis here
-
         if(par::bt && par::fast_epistasis) {
 
           double z; // statistic from either method
@@ -324,7 +307,6 @@ void Plink::calcEpistasis() {
 
               }
             }
-
               // Unaffecteds?
             else if(!par::epi_caseonly) // unaffected
             {
@@ -382,12 +364,9 @@ void Plink::calcEpistasis() {
             b1++;
             b2++;
             person++;
-
           }
 
-
           // Calculate log(OR) and SEs
-
           double or_aff, v_aff, or_unf, v_unf;
 
           or_aff = log((double) (a11 * a22) / (double) (a12 * a21));
@@ -403,11 +382,9 @@ void Plink::calcEpistasis() {
             z = fabs((or_aff - or_unf) / sqrt(v_aff + v_unf));
           }
 
-
           //////////////////////////////
           // --nop option in effect
           // Just output z score, if valid & above threshold
-
           if(par::epi_quickscan) {
             // Is this worth recording?
             if(realnum(z)) {
@@ -423,14 +400,11 @@ void Plink::calcEpistasis() {
             }
           }
 
-
           /////////////////////////////////
           // More full parsing of results
-
           double zero = 0;
 
           // Check this is a proper result
-
           if(par::epi_filter && realnum(z)) {
 
             // One more test performed
@@ -463,7 +437,6 @@ void Plink::calcEpistasis() {
             }
 
             // Is this worth recording?
-
             if(z >= par::epi_alpha1) {
               EPI << setw(4) << locus[e1]->chr << " "
                       << setw(par::pp_maxsnp) << locus[e1]->name << " "
@@ -491,10 +464,8 @@ void Plink::calcEpistasis() {
 
         } // End of binary OR test
 
-
         ///////////////////////////////////////////////
         // Logistic or linear regression epistasis test
-
         if(!par::fast_epistasis) {
 
           Model * lm;
@@ -508,51 +479,34 @@ void Plink::calcEpistasis() {
           }
 
           // Set missing data
-
           lm->setMissing();
 
-
           // Main effect of SNP 1
-
           lm->addAdditiveSNP(e1);
           lm->label.push_back("ADD1");
 
-
           // Main effect of SNP 2
-
           lm->addAdditiveSNP(e2);
           lm->label.push_back("ADD2");
 
-
           // Epistasis
-
           lm->addInteraction(1, 2);
           lm->label.push_back("EPI");
 
-
           // Build design matrix
-
           lm->buildDesignMatrix();
-
 
           // Prune out any remaining missing individuals
           // No longer needed
-
           //		   lm->pruneY();
 
-
           // Fit linear model
-
           lm->fitLM();
 
-
           // Did model fit okay?
-
           lm->validParameters();
 
-
           // Obtain estimates and statistic
-
           lm->testParameter = 3; // interaction
           vector_t b = lm->getCoefs();
           double chisq = lm->getStatistic();
@@ -568,14 +522,12 @@ void Plink::calcEpistasis() {
                   << endl;
 
           // Is this result worth displaying?
-
           if(lm->isValid()) {
 
             // One more valid test performed
             nepi++;
 
             // Count as a good result
-
             summary_good[e1]++;
             if(sA[e2]) summary_good[e2]++;
 
@@ -589,14 +541,12 @@ void Plink::calcEpistasis() {
             }
 
             // Is this result the best scrore yet for marker in set A?
-
             if(z > best_score[e1]) {
               best_score[e1] = z;
               best_partner[e1] = e2;
             }
 
             // The second marker might also be in set A
-
             if(sA[e2]) {
               if(z > best_score[e2]) {
                 best_score[e2] = z;
@@ -606,7 +556,6 @@ void Plink::calcEpistasis() {
           }
 
           // Is this result worth displaying?
-
           if(z >= par::epi_alpha1) {
             EPI << setw(4) << locus[e1]->chr << " "
                     << setw(par::pp_maxsnp) << locus[e1]->name << " "
@@ -630,14 +579,11 @@ void Plink::calcEpistasis() {
               << "\n";
 
             EPI.flush();
-
           }
 
           // Clean up
           delete lm;
-
         }
-
 
       } // Next pair of SNPs
     }
@@ -650,12 +596,10 @@ void Plink::calcEpistasis() {
   BETAS.close();
   EPI.close();
 
-
   //////////////////////
   // Summary of results
 
   // Skip this for now
-
   if(true) {
     f += ".summary";
     EPI.open(f.c_str(), ios::out);
@@ -694,6 +638,5 @@ void Plink::calcEpistasis() {
 
     EPI.close();
   }
-
 
 }

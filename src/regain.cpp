@@ -655,17 +655,17 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
 		regainPMatrix[varIndex2][varIndex1] = interactionPval;
 
     // !!!!! DEBUGGING RAW VALUES !!!!!
-    if(par::verbose) {
-      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-              << "\t" << coef1Label << "\t" << coef2Label
-              << "\t" << setw(12) << betaInteractionCoefs[3]
-              << "\t" << setw(6) << betaInteractionCoefPVals[2]
-              << "\t" << setw(12) << interactionModelSE[3]
-              << "\t" << setw(12) 
-              << betaInteractionCoefs[3] / interactionModelSE[3]
-              << endl;
-    }
-    
+#if defined(REGAIN_DEBUG)
+    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+            << "\t" << coef1Label << "\t" << coef2Label
+            << "\t" << setw(12) << betaInteractionCoefs[3]
+            << "\t" << setw(6) << betaInteractionCoefPVals[2]
+            << "\t" << setw(12) << interactionModelSE[3]
+            << "\t" << setw(12) 
+            << betaInteractionCoefs[3] / interactionModelSE[3]
+            << endl;
+#endif    
+      
 		// store p-value along with (varIndex1, varIndex2) location of
 		// item.  This is used later for FDR pruning
 		if(doFdrPrune) {
@@ -849,16 +849,16 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 		regainPMatrix[varIndex2][varIndex1] = interactionPval;
 
     // !!!!! DEBUGGING RAW VALUES !!!!!
-    if(par::verbose) {
-      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-              << "\t" << coef1Label << "\t" << coef2Label
-              << "\t" << setw(12) << betaInteractionCoefs[1]
-              << "\t" << setw(6) << betaInteractionCoefPVals[0]
-              << "\t" << setw(12) << interactionModelSE[1]
-              << "\t" << setw(12) 
-              << betaInteractionCoefs[1] / interactionModelSE[1]
-              << endl;
-    }
+#if defined(REGAIN_DEBUG)
+    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+            << "\t" << coef1Label << "\t" << coef2Label
+            << "\t" << setw(12) << betaInteractionCoefs[1]
+            << "\t" << setw(6) << betaInteractionCoefPVals[0]
+            << "\t" << setw(12) << interactionModelSE[1]
+            << "\t" << setw(12) 
+            << betaInteractionCoefs[1] / interactionModelSE[1]
+            << endl;
+#endif
     
 		// store p-value along with (varIndex1, varIndex2) location of
 		// item.  This is used later for FDR pruning

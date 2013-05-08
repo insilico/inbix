@@ -32,7 +32,6 @@ void Plink::readData() {
 
   //////////////////////
   // Check files exist
-
   if(!par::ped_from_stdin)
     checkFileExists(par::pedfile);
 
@@ -40,7 +39,6 @@ void Plink::readData() {
 
   ///////////////////////////////////////////////
   // .map file
-
   vector<bool> include;
   vector<int> include_pos(0);
   int nl_actual = 0;
@@ -50,14 +48,10 @@ void Plink::readData() {
           include_pos,
           nl_actual);
 
-
-
   ///////////////////////////////////////////////
   // .ped
-
-
   FILE * PED;
-
+  
   if(!par::ped_from_stdin) {
     PED = fopen64(par::pedfile.c_str(), "r");
     if(PED == NULL)
@@ -73,11 +67,8 @@ void Plink::readData() {
   int c = 0; // number of individuals
   string s2;
 
-
   while(1) {
-
     // End of input stream? 
-
     if(par::ped_from_stdin) {
       if(cin.eof())
         break;
@@ -86,11 +77,8 @@ void Plink::readData() {
         break;
     }
 
-
     // Otherwise read in the next person
-
     Individual * person = new Individual;
-
 
     // Get first field
     int f = 0;
@@ -109,7 +97,6 @@ void Plink::readData() {
     if(person->fid == "FID")
       error("FID is a reserved ID... please select a different family ID");
 
-
     // Is this line a comment?      
     if(!par::ped_from_stdin) {
       if(person->fid.substr(0, 1) == "#") {
@@ -121,9 +108,7 @@ void Plink::readData() {
       }
     }
 
-
     // First 6 or 7 obligatory fields
-
     if(par::ped_skip_fid)
       person->iid = person->fid;
     else {
@@ -163,8 +148,6 @@ void Plink::readData() {
         if(readString(PED, phenotype)) f++;
     }
 
-
-
     // Are we using 0/1 coding?
     if(par::coding01) {
       if(phenotype == "1")
@@ -184,7 +167,6 @@ void Plink::readData() {
         if(readString(PED, dummy)) f++;
     }
 
-
     // Skip last empty line that gets read
     if(person->fid == "") break;
 
@@ -202,21 +184,17 @@ void Plink::readData() {
         person->missing = true;
     }
 
-
     //////////////////
     // A non-founder?
-
     person->founder =
             (person->pat == "0" && person->mat == "0") ? true : false;
 
-
     //////////////////////////////
     // Test for quantitative trait
-
-    if(phenotype == par::missing_phenotype)
+    if(phenotype == par::missing_phenotype) {
       person->missing = true;
+    }
     else {
-
       // Store in person->phenotype as number, checking for 
       // conversion failure
       if(!from_string<double>(person->phenotype, phenotype, std::dec))
@@ -231,10 +209,8 @@ void Plink::readData() {
       }
     }
 
-
     /////////////////////////////
     // Add necessary locus space
-
     if(!par::SNP_major) {
       person->one.resize(nl_actual);
       person->two.resize(nl_actual);
@@ -242,7 +218,6 @@ void Plink::readData() {
 
     /////////////////////
     // Read genotypes now
-
     int gn = 0;
     int i = 0;
     bool linedone = false;
@@ -259,7 +234,6 @@ void Plink::readData() {
 
         while(1) {
           char ch = fgetc(PED);
-
           // Delimiter?
           if(ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || feof(PED)) {
 
@@ -283,12 +257,11 @@ void Plink::readData() {
         // Is this a compound genotype?
         if(par::compound_genotype_code) {
           // In this case, each allele must be exactly 1-character long
-          if(one.length() != 2)
+          if(one.length() != 2) {
             error("Problem with compound genotype [ " + one + " ] should be two characters long\n");
-
+          }
           two = one[1];
           one = one[0];
-
           // Add second allele
           ++gn;
         } else {
@@ -318,21 +291,18 @@ void Plink::readData() {
             }
         }
 
-        if(linedone && one.length() == 0 && two.length() == 0)
+        if(linedone && one.length() == 0 && two.length() == 0) {
           break;
-
+        }
       }
-
 
       /////////////////////////////////////
       // Only consider loci to be included
-
       if(include[i]) {
 
         //////////////////////////////
         // Look up genomic order, 
         // insert in slot k in locus[]
-
         int k = include_pos[i];
         Locus * loc = locus[k];
 
@@ -344,7 +314,9 @@ void Plink::readData() {
           // ...and not already listed
           if(one != loc->allele1 && one != loc->allele2) {
             // ...then add to first empty slot
-            if(loc->allele1 == "") loc->allele1 = one;
+            if(loc->allele1 == "") {
+              loc->allele1 = one;
+            }
             else if(loc->allele2 == "") loc->allele2 = one;
             else {
               // .. or show an error if no empty slots
@@ -383,12 +355,9 @@ void Plink::readData() {
             }
         }
 
-
         /////////////////////////////
         // Add specific genotypes
-
         if(par::SNP_major) {
-
           // 00 hom
           if(one == loc->allele1 && two == loc->allele1) {
             SNP[k]->one.push_back(false);
@@ -409,7 +378,6 @@ void Plink::readData() {
             SNP[k]->two.push_back(false);
           }
         } else {
-
           // 00 hom
           if(one == loc->allele1 && two == loc->allele1) {
             person->one[k] = false;
@@ -430,9 +398,7 @@ void Plink::readData() {
             person->two[k] = false;
           }
         }
-
       }
-
 
       // Advance to next locus
       i++;
@@ -460,7 +426,6 @@ void Plink::readData() {
 
     } // line done?
 
-
     // check size of line length somewhere
     if(!par::ped_from_stdin) {
       if(gn != 2 * include.size()) {
@@ -481,20 +446,19 @@ void Plink::readData() {
       }
     }
 
-    if(fatal)
+    if(fatal) {
       error(fmsg);
+    }
 
     // Increase person counter
     c++;
 
     // Add individual to list
     sample.push_back(person);
-
   }
 
   // If a binary trait, now make 0 missing also
   // i.e. if we never saw other than missing, 0, 1 or 2
-
   if(par::bt)
     for(int i = 0; i < sample.size(); i++)
       if(sample[i]->phenotype == 0)
@@ -517,13 +481,9 @@ void Plink::readData() {
     ambiguous.clear();
   }
 
-
-
   // Close PED file
   if(!par::ped_from_stdin)
     fclose(PED);
-
-
 
   printLOG(int2str(c) + " individuals read from [ " + par::pedfile + " ] \n");
   int nm = 0;
@@ -532,7 +492,6 @@ void Plink::readData() {
   printLOG(int2str(nm) + " individuals with nonmissing phenotypes\n");
 
   if(par::bt) {
-
     if(par::coding01)
       printLOG("Assuming a disease phenotype (0=unaff, 1=aff, other=miss)\n");
     else {
@@ -544,7 +503,6 @@ void Plink::readData() {
     int ncase = 0;
     int ncontrol = 0;
     int nmissing = 0;
-
     for(int i = 0; i < sample.size(); i++)
       if(sample[i]->missing)
         nmissing++;
@@ -552,7 +510,6 @@ void Plink::readData() {
         ncontrol++;
       else if(sample[i]->phenotype == 2)
         ncase++;
-
     printLOG(int2str(ncase) + " cases, "
             + int2str(ncontrol) + " controls and "
             + int2str(nmissing) + " missing\n");
@@ -565,8 +522,6 @@ void Plink::readData() {
   // Display sex counts
   printLOG(int2str(nmale) + " males, " + int2str(nfemale)
           + " females, and " + int2str(nambig) + " of unspecified sex\n");
-
-
 }
 
 void Plink::readSet() {
