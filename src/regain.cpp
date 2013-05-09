@@ -655,7 +655,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
 		regainPMatrix[varIndex2][varIndex1] = interactionPval;
 
     // !!!!! DEBUGGING RAW VALUES !!!!!
-#if defined(REGAIN_DEBUG)
+#if defined(DEBUG_REGAIN)
     cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
             << "\t" << coef1Label << "\t" << coef2Label
             << "\t" << setw(12) << betaInteractionCoefs[3]
@@ -765,7 +765,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 	if(par::covar_file) addCovariates(*interactionModel);
 
 	// interaction
-#if defined(REGAIN_DEBUG)
+#if defined(DEBUG_REGAIN)
   cout << "Adding typed interaction for "
           << coef1Label << ", idx: " << var1TypeIndex << ", type: " << varType1
           << " | "
@@ -856,7 +856,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 		regainPMatrix[varIndex2][varIndex1] = interactionPval;
 
     // !!!!! DEBUGGING RAW VALUES !!!!!
-#if defined(REGAIN_DEBUG)
+#if defined(DEBUG_REGAIN)
     cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
             << "\t" << coef1Label << "\t" << coef2Label
             << "\t" << setw(12) << betaInteractionCoefs[1]

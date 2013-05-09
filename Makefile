@@ -37,9 +37,9 @@ LIB_LAPACK = /usr/lib/liblapack.so.3
 # --------------------------------------------------------------------
 
 # optimized mode
-#CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen
+CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen
 # debug mode
-CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen
+#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_REGAIN
 
 OUTPUT = inbix
 
@@ -56,7 +56,7 @@ ifeq ($(SYS),UNIX)
  CXXFLAGS += -DUNIX
  CXX = $(CXX_UNIX)
  ifndef FORCE_DYNAMIC
-  CXXFLAGS += -static -fopenmp -DDEBUG_REGAIN
+  CXXFLAGS += -static -fopenmp
  endif
 endif
 
