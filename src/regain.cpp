@@ -774,7 +774,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 #endif
 	
 	interactionModel->addTypedInteraction(var1TypeIndex, varType1, 
-          var1TypeIndex, varType2);
+          var2TypeIndex, varType2);
 	interactionModel->label.push_back("EPI");
 
 	// Build design matrix

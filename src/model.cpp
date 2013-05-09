@@ -643,8 +643,10 @@ double Model::buildAdditive(Individual * person, int snp) {
 }
 
 double Model::getSimpleSNPValue(Individual* person, int snp) {
+
   bool i1 = person->one[snp];
 	bool i2 = person->two[snp];
+
   ///////////////////////
   // Autosomal coding
   if(i1) {
@@ -659,6 +661,7 @@ double Model::getSimpleSNPValue(Individual* person, int snp) {
     else
       return mBB; // hom
   }
+	
 }
 
 double Model::buildDominance(Individual * person, int snp) {
@@ -734,7 +737,7 @@ double Model::buildTypedInteraction(Individual* person, int j) {
   interaction_t interaction = typed_interaction[j];
   interactionVar_t var1 = interaction.first;
   interactionVar_t var2 = interaction.second;
-  double var1Val = 0;;
+  double var1Val = -1;
   switch(var1.second) {
     case ADDITIVE:
       var1Val = getSimpleSNPValue(person, var1.first);
@@ -746,7 +749,7 @@ double Model::buildTypedInteraction(Individual* person, int j) {
       error("buildTypedInteraction failed with an invalid type for the "
               "first variable: " + int2str(var1.second));
   }
-  double var2Val = 0;
+  double var2Val = -1;
   switch(var2.second) {
     case ADDITIVE:
       var2Val = getSimpleSNPValue(person, var2.first);
@@ -761,8 +764,8 @@ double Model::buildTypedInteraction(Individual* person, int j) {
 
 #if defined(REGAIN_DEBUG)
 	cout << "Model::buildTypedInteraction: " 
-					<< "var1 value: " << var1Val 
-					<< ", var2 value: " << var2Val 
+					<< "var1 index: " << var1.first << " | value: " << var1Val 
+					<< ", var2 index: " << var2.first << " | value: " << var2Val 
 					<< ", interaction value: " << (var1Val * var2Val)
 					<< endl;
 #endif
