@@ -2768,6 +2768,11 @@ void setOptions(CArgs & a) {
     par::numeric_filename = a.value("--numeric-file");
   }
 
+  // numeric attribute file support - bcw - 5/10/13
+  if(a.find("--covariance-matrix")) {
+    par::do_covariance_matrix = true;
+  }
+
   // reGAIN analysis support - bcw - 4/22/13
   if(a.find("--regain")) {
     par::do_regain = true;
@@ -3995,6 +4000,7 @@ void setOptions(CArgs & a) {
             << "      --linear                  Linear regression model     \n"
             << "      --logistic                Logistic regression model   \n"
             << "\n"
+            << "      --covariance-matrix       Compute a covariance matrix \n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file     \n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"

@@ -196,14 +196,42 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////
 	// A numeric file specified? - bcw - 4/20/13
 	if(par::numeric_file) {
+    // check for SNPs already loaded
 		par::have_snps = par::read_bitfile || par::read_ped ||
 						par::tfile_input || par::lfile_input;
+
+    // compute a variance-covariance matrix of the numeric data
+    if(par::do_covariance_matrix) {
+      if(par::have_snps) {
+        error("Covariance matrix is only supported in numeric data");
+      }
+      // read the data matrix
+      matrix_t X;
+      vector<string> variableNames;
+      if(!matrixRead(par::numeric_filename, X, variableNames)) {
+        error("Cannot read matrix file: " + par::numeric_filename);
+      }
+      // compute covariances/correlations
+      matrix_t covMatrix;
+      matrix_t corMatrix;
+      if(matrixComputeCovariance(X, covMatrix, corMatrix)) {
+        // write results
+        string covFilename = par::numeric_filename + ".covariance";
+        string corFilename = par::numeric_filename + ".correlation";
+        matrixWrite(covMatrix, covFilename, variableNames);
+        matrixWrite(corMatrix, corFilename, variableNames);
+      }
+      else {
+        error("Could not compute covariance/correlation matrices");
+      }
+      shutdown();
+    }
+
+    // prepare numeric attributes for further processing
 		if(!P.readNumericFile()) {
 			error("Problem reading the numeric file: [" + par::numeric_filename + "]");
 		}
 		par::have_numerics = true;
-		//		copy(par::nlistNames.begin(), par::nlistNames.end(), 
-		//						ostream_iterator<string>(cout, "\n"));
 	}
 
 	// Set number of individuals
