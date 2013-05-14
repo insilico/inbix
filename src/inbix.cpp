@@ -594,17 +594,26 @@ int main(int argc, char* argv[]) {
 	if(par::do_modularity) {
 		P.printLOG("Performing network modularity analysis\n");
     InteractionNetwork* network;
-    // check for input file type
+    // check for input file type, and construct a new network
     if(par::sifNetwork) {
 	    network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
-      pair<double, vector<vector<unsigned int> > > modules = 
-        network->ModularityLeadingEigenvector(0.001);
-  		P.printLOG("Total modularity is " + dbl2str(modules.first) + "\n");
-			P.printLOG("There are " + int2str(modules.second.size()) +
-               " modules" + "\n");
-      network->ShowModules();
-      delete network;
     }
+    if(par::afniNetwork) {
+	    network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
+    }
+    // perform network operations
+    pair<double, vector<vector<unsigned int> > > modules = 
+      network->ModularityLeadingEigenvector(par::modEdgeThreshold);
+    P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
+    P.printLOG("There are " + int2str(modules.second.size()) +
+             " modules" + "\n");
+    network->ShowModules();
+    if(par::modComputeHomophily) {
+      network->ShowHomophily();
+    }
+    network->SaveModules(par::modSaveFile);
+    // clean up and shut down
+    delete network;
     shutdown();
   }
   

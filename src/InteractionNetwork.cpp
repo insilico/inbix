@@ -728,6 +728,18 @@ pair<double, vector<double> >	InteractionNetwork::Homophily() {
 	return results;
 }
 
+void InteractionNetwork::ShowHomophily() {
+  inbixEnv->printLOG("Q from existing modules: " + dbl2str(ComputeQ()) + "\n");
+  pair<double, vector<double> > homophily = Homophily();
+  inbixEnv->printLOG("Total homophily: " + dbl2str(homophily.first) + "\n");
+  vector<double>::const_iterator hIt = homophily.second.begin();
+  unsigned int modIdx = 0;
+  for(; hIt != homophily.second.end(); ++hIt, ++modIdx) {
+    inbixEnv->printLOG("Homophily for module " + int2str(modIdx) +
+             ": " + dbl2str(*hIt) + "\n");
+  }
+}
+
 double InteractionNetwork::ComputeQ() {
 
 	intvec_t allModules = FlattenModules();
@@ -804,6 +816,10 @@ void InteractionNetwork::ShowModules() {
 
 void InteractionNetwork::SaveModules(string saveFilename) {
 	ofstream outputFileHandle(saveFilename.c_str());
+  if(outputFileHandle.fail()) {
+    error("Could not open network modules file for saving: " + saveFilename + "\n");
+  }
+  inbixEnv->printLOG("Saving network modules to [" + saveFilename + "]\n");
 	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
 		for(unsigned int memberIdx=0; memberIdx < modules[moduleIdx].size();
 				++memberIdx) {

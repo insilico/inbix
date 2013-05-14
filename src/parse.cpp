@@ -2839,10 +2839,29 @@ void setOptions(CArgs & a) {
     par::sifFile = a.value("--sif-file");
     par::sifNetwork = true;
   }
+
   if(a.find("--modularity")) {
     par::do_modularity = true;
   }
+  
+  if(a.find("--modularity-homophily")) {
+    par::modComputeHomophily = true;
+  }
 
+  if(a.find("--modularity-edge-threshold")) {
+    par::modEdgeThreshold =
+            a.value_double("--modularity-edge-threshold");
+  }
+
+  if(a.find("--modularity-save-file")) {
+    par::modSaveFile = a.value("--modularity-save-file");
+  }
+
+  if(a.find("--afni-1d-file")) {
+    par::afniNetwork = true;
+    par::afni1dFile = a.value("--afni-1d-file");
+  }
+  
   ////////////////////////
   // Reference allele file
   if(a.find("--reference")) {
@@ -4025,7 +4044,11 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
             << "\n"
             << "      --modularity              Perform a network modularity analysis   \n"
-            << "      --sif-file {SIF file}     Process an existing SIF file     \n"
+            << "      --modularity-homophily    Compute module homophilies\n"
+            << "      --sif-file {SIF file}     Read network from a SIF file\n"
+            <<  "     --modularity-edge-threshold Edge threshold for adjacency matrix\n"
+            <<  "     --modularity-save-file    Save network modules to file\n"
+            <<  "     --afni-1d-file            Read network from AFNI 1D file \n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

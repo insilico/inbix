@@ -48,6 +48,7 @@ public:
 	bool SetModulesFromFile(std::string modulesFilename);
 	void ShowModules();
 	void SaveModules(std::string saveFilename);
+  void ShowHomophily();
 
 	// merge this network with another one
 	bool Merge(InteractionNetwork& toMerge,

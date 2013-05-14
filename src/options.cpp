@@ -266,8 +266,13 @@ bool par::regainMatrixThreshold = false;
 double par::regainMatrixThresholdValue = 0.0;
 // added for modularity support - bcw - 5/13/13
 bool par::do_modularity = false;
+double par::modEdgeThreshold = 0.1;
+string par::modSaveFile = "inbix.modules";
+bool par::modComputeHomophily = false;
 string par::sifFile = "";
 bool par::sifNetwork = false;
+string par::afni1dFile = "";
+bool par::afniNetwork = false;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

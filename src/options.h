@@ -363,9 +363,14 @@ public:
 
 	// added for modularity support - bcw - 5/13/13
 	static bool do_modularity;
+  static double modEdgeThreshold;
+  static string modSaveFile;
+  static bool modComputeHomophily;
   static string sifFile;
   static bool sifNetwork;
-	
+  static string afni1dFile;
+  static bool afniNetwork;
+  
 	static bool no_show_covar;
 	static bool dump_covar;
 	static bool dump_covar_with_phenotype;
