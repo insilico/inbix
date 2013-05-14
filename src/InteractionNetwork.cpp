@@ -650,6 +650,10 @@ pair<double, vector<vector<unsigned int> > >
 
 pair<double, vector<double> >	InteractionNetwork::Homophily() {
 
+  if(!modules.size()) {
+    error("Caanot compute homphily: no modules exist");
+  }
+  
 	double globalHomophily = 0.0;
 	vector<double> localHomophilies;
 
@@ -694,14 +698,18 @@ pair<double, vector<double> >	InteractionNetwork::Homophily() {
         internalConnections += modMatrix[i][j];
       }
     }
+    
 		// get the number of external connections
 		matrix_t notMatrix;
     matrixExtractRowColIdx(adjMatrix, modIndices, notIndices, notMatrix);
     vector_t notSums;
-    matrixSums(notMatrix, notSums, 0);
+    matrixSums(notMatrix, notSums, 1);
 		//double externalConnections = sum(sum(notMatrix));
-    double externalConnections = accumulate(notSums.begin(), notSums.end(), 0);
-    
+    double externalConnections = 0;
+    for(int i=0; i < notSums.size(); ++i) {
+      externalConnections += notSums[i];
+    }
+
 //		cout << "int: " << internalConnections
 //				<< ", ext: " << externalConnections << endl;
 
@@ -735,7 +743,7 @@ void InteractionNetwork::ShowHomophily() {
   vector<double>::const_iterator hIt = homophily.second.begin();
   unsigned int modIdx = 0;
   for(; hIt != homophily.second.end(); ++hIt, ++modIdx) {
-    inbixEnv->printLOG("Homophily for module " + int2str(modIdx) +
+    inbixEnv->printLOG("Homophily for module " + int2str(modIdx+1) +
              ": " + dbl2str(*hIt) + "\n");
   }
 }
@@ -745,22 +753,25 @@ double InteractionNetwork::ComputeQ() {
 	intvec_t allModules = FlattenModules();
   // double m = sum(sum(adjMatrix)) / 2.0;
   vector_t rowSums;
-  matrixSums(adjMatrix, rowSums, 0);
-  double m = accumulate(rowSums.begin(), rowSums.end(), 0);
+  matrixSums(adjMatrix, rowSums, 1);
+  double m = 0;
+  for(int i=0; i < rowSums.size(); ++i) {
+    m += rowSums[i];
+  }
   m /= 2.0;
+  cout << "m = " << m << endl;
 
   double q = 0.0;
-  // rowvec k = sum(adjMatrix);
   vector_t k;
-  matrixSums(adjMatrix, k, 0);
+  matrixSums(adjMatrix, k, 1);
   for(int i=0; i < adjMatrix.size(); ++i) {
     for(int j=0; j < adjMatrix.size(); ++j) {
-			q = q + (adjMatrix[i][j] - k[i] * k[j] / (2.0 * m)) *
+			q += (adjMatrix[i][j] - k[i] * k[j] / (2.0 * m)) *
 					((double) (allModules[i] == allModules[j]) - 0.5) * 2.0;
     }
   }
   q = q / (4.0 * m);
-
+  
   return q;
 }
 
@@ -805,7 +816,7 @@ bool InteractionNetwork::SetModulesFromFile(string modulesFilename) {
 void InteractionNetwork::ShowModules() {
 	inbixEnv->printLOG("Modules:\n");
 	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
-		inbixEnv->printLOG("Nodes in module " + int2str(moduleIdx) + ": ");
+		inbixEnv->printLOG("Nodes in module " + int2str(moduleIdx+1) + ": ");
 		for(unsigned int memberIdx=0; memberIdx < modules[moduleIdx].size();
 				++memberIdx) {
 			inbixEnv->printLOG(nodeNames[modules[moduleIdx][memberIdx]] + " ");

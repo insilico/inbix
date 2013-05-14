@@ -1620,10 +1620,14 @@ bool matrixWrite(matrix_t m, string mFilename,
 
 bool matrixSums(matrix_t m, vector_t& sums, int dim) {
   sums.clear();
-  sums.resize(m.size(), 0);
+  if(dim == 0) {
+    sums.resize(m.size(), 0);
+  } else {
+    sums.resize(m[0].size(), 0);
+  }
   for(int i=0; i < m.size(); ++i) {
-    for(int j=0; j < m.size(); ++j) {
-      if(dim==0) {
+    for(int j=0; j < m[0].size(); ++j) {
+      if(dim == 0) {
         sums[j] += m[i][j];
       } else {
         sums[i] += m[i][j];
