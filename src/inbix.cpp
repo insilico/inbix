@@ -35,7 +35,9 @@
 #include "stats.h"
 #include "idhelp.h"
 #include "zed.h"
+
 #include "regain.h"
+#include "InteractionNetwork.h"
 
 using namespace std;
 
@@ -566,10 +568,12 @@ int main(int argc, char* argv[]) {
 	P.printLOG("After frequency and genotyping pruning, there are "
 					+ int2str(P.nl_all) + " SNPs\n");
 
-	if(P.nl_all == 0 && P.nlistname.size() == 0)
-		error("Stopping as there are no SNPs left for analysis\n");
+	if((P.nl_all == 0) && (P.nlistname.size() == 0) && (!par::do_modularity)) {
+		error("Stopping as there are no SNPs or numeric attributes "
+            "left for analysis\n");
+  }
 
-	if(P.n == 0)
+	if((P.n == 0) && (!par::do_modularity))
 		error("Stopping as there are no individuals left for analysis\n");
 
 	//////////////////////////////////////////////////
@@ -583,6 +587,23 @@ int main(int argc, char* argv[]) {
 			P.locus[l]->allele1 = "0";
 	}
 
+	////////////////////////////////////////////////
+	// modularity analysis requested - bcw - 5/13/13
+  // NOTE: if regain file specified AND modularity assume 
+  // no transform option.
+	if(par::do_modularity) {
+		P.printLOG("Performing network modularity analysis\n");
+    InteractionNetwork* network;
+    // check for input file type
+    if(par::sifNetwork) {
+      network = new InteractionNetwork(par::sifFile, SIF_FILE, false);
+      network->ModularityLeadingEigenvector(0.001);
+      network->ShowModules();
+      delete network;
+    }
+    shutdown();
+  }
+  
 	////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {

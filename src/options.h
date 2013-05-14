@@ -360,6 +360,11 @@ public:
   static string regainMatrixFormat;
   static bool regainMatrixThreshold;
   static double regainMatrixThresholdValue;
+
+	// added for modularity support - bcw - 5/13/13
+	static bool do_modularity;
+  static string sifFile;
+  static bool sifNetwork;
 	
 	static bool no_show_covar;
 	static bool dump_covar;

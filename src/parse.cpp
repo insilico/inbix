@@ -2834,6 +2834,15 @@ void setOptions(CArgs & a) {
     par::regainFile = a.value("--regain-file");
   }
 
+  // added for modularity support - bcw - 5/13/13
+  if(a.find("--sif-file")) {
+    par::sifFile = a.value("--sif-file");
+    par::sifNetwork = true;
+  }
+  if(a.find("--modularity")) {
+    par::do_modularity = true;
+  }
+
   ////////////////////////
   // Reference allele file
   if(a.find("--reference")) {
@@ -4014,6 +4023,9 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-threshold-value {threshold}  Filter reGAIN output \n"
             << "      --regain-matrix-format {format}  reGAIN output format \n"
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
+            << "\n"
+            << "      --modularity              Perform a network modularity analysis   \n"
+            << "      --sif-file {SIF file}     Process an existing SIF file     \n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

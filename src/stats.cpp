@@ -1496,7 +1496,7 @@ bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix,
 
   // compute correlations from covariances
   vector_t covDiag;
-  matrixDiag(covMatrix, covDiag);
+  matrixGetDiag(covMatrix, covDiag);
   // standard deviations from variances
   for(int i=0; i < covDiag.size(); ++i) {
     covDiag[i] = 1.0 / sqrt(covDiag[i]);
@@ -1562,10 +1562,17 @@ bool matrixTranspose(matrix_t in, matrix_t& out) {
   return true;
 }
 
-bool matrixDiag(matrix_t m, vector_t& d) {
+bool matrixGetDiag(matrix_t m, vector_t& d) {
   d.clear();
   for(int i=0; i < m.size(); ++i) {
     d.push_back(m[i][i]);
+  }
+  return true;
+}
+
+bool matrixSetDiag(matrix_t& m, vector_t d) {
+  for(int i=0; i < d.size(); ++i) {
+    m[i][i] = d[i];
   }
   return true;
 }
@@ -1607,6 +1614,38 @@ bool matrixWrite(matrix_t m, string mFilename,
   }
   
   outFile.close();
+  
+  return true;
+}
+
+bool matrixSums(matrix_t m, vector_t& sums, int dim) {
+  sums.clear();
+  sums.resize(m.size(), 0);
+  for(int i=0; i < m.size(); ++i) {
+    for(int j=0; j < m.size(); ++j) {
+      if(dim==0) {
+        sums[j] += m[i][j];
+      } else {
+        sums[i] += m[i][j];
+      }
+    }
+  }
+
+  return true;
+}
+
+bool matrixExtractRowColIdx(matrix_t m, intvec_t rowIdx, intvec_t colIdx, 
+        matrix_t& nm) {
+  int nr = rowIdx.size();
+  int nc = colIdx.size();
+  
+  sizeMatrix(nm, nr, nc);
+  
+  for(int i=0; i < nr; ++i) {
+    for(int j=0; j < nc; ++j) {
+      nm[i][j] = m[rowIdx[i]][colIdx[j]];
+    }
+  }
   
   return true;
 }

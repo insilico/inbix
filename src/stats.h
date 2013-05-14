@@ -38,7 +38,9 @@ bool matrixSubtract(matrix_t m1, matrix_t m2, matrix_t& result);
 // transpose a matrix
 bool matrixTranspose(matrix_t in, matrix_t& out);
 // extract the matrix diagonal
-bool matrixDiag(matrix_t m, vector_t& d);
+bool matrixGetDiag(matrix_t m, vector_t& d);
+// extract the matrix diagonal
+bool matrixSetDiag(matrix_t& m, vector_t d);
 // compute a covariance and correlation matrices from a file of numeric data
 bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix, 
         matrix_t& corMatrix);
@@ -46,6 +48,13 @@ bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix,
 bool matrixRead(string mFilename, matrix_t& m, vector<string>& variableNames);
 // write a matrix to a file with variable names header
 bool matrixWrite(matrix_t m, string mFilename, vector<string> variableNames);
+
+// bcw - 5/13/13
+// get the sums of rows or columns, indicated by dim, into a vector
+bool matrixSums(matrix_t m, vector_t& sums, int dim);
+// extract a new matrix from a list of row and column indices
+bool matrixExtractRowColIdx(matrix_t m, intvec_t rowIdx, intvec_t colIdx, 
+        matrix_t& nm);
 // ----------------------------------------------------------------------------
 
 class Eigen {
