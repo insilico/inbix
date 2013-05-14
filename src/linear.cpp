@@ -294,10 +294,10 @@ void LinearModel::fitLM() {
 		 Here we solve the fitting equation using singular value decomposition
 		 of the NData by MA matrix. The arrays U, V and W provide workspace
 		 on input. On output they define the singular value decomposition and
-		 can be used to obtaint he covariance matrix. MP and NP are the
+		 can be used to obtain the covariance matrix. MP and NP are the
 		 physical dimensions of the matrices U, V, and W as indicated below.
 		 It is necessary that MP be greater than or equal to NData and that
-		 NP be greather than or equal to MP. The program returns values for
+		 NP be greater than or equal to MP. The program returns values for
 		 the MA fit parameters A[] and the chi-square, ChiSq. The user
 		 supplies a subroutine, funcs(), that returns the MA basis functions
 		 evaluated at x in the array afunc[].

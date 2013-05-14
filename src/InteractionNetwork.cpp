@@ -30,8 +30,11 @@ using namespace std;
 using namespace Insilico;
 
 InteractionNetwork::InteractionNetwork(string matrixFileParam,
-		 MatrixFileType fileType, bool isUpperTriangular)
+		 MatrixFileType fileType, bool isUpperTriangular, Plink* pp)
 {
+  // provide access to the inbix (PLINK) environment)
+  inbixEnv = pp;
+  
 	// read the matrix file and store in adjacencyMatrix member variable
 	switch(fileType) {
 	case REGAIN_FILE:
@@ -63,8 +66,11 @@ InteractionNetwork::InteractionNetwork(string matrixFileParam,
 }
 
 InteractionNetwork::InteractionNetwork(double** variablesMatrix,
-		unsigned int dim, vector<string>& variableNames)
+		unsigned int dim, vector<string>& variableNames, Plink* pp)
 {
+  // provide access to the inbix (PLINK) environment)
+  inbixEnv = pp;
+
 	// setup G matrix for SNPrank algorithm
 	sizeMatrix(adjMatrix, dim, dim);
 	// copy variable matrix values into G
@@ -128,6 +134,7 @@ void InteractionNetwork::PrintSummary()
 bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
 {
 	bool success = false;
+  
 	switch(fileType) {
 	case CSV_FILE:
 		success = WriteDelimitedFile(outFile, ",");
@@ -472,7 +479,7 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
   split(headerValues, header);
   unsigned int adjDim = headerValues.size();
   if(!adjDim) {
-		cerr << "ERROR: ReadBrainCorr1DFile: Could not parse corr 1D values"
+		cerr << "ERROR: ReadBrainCorr1DFile: Could not parse 1D correlation values"
 				<< endl;
 		return false;
   }
@@ -494,7 +501,7 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
     split(corr1dValues, line, delimiter);
     if(corr1dValues.size() != tokensExpected) {
       cerr << "ERROR line:" << endl << endl << line << endl << endl;
-      cerr << "ERROR: Could not parse corr1d.txt file row: "
+      cerr << "ERROR: Could not parse 1D correlation file row: "
         << (row+1) << endl << "Expecting " << tokensExpected
         << " values, got " << corr1dValues.size() << endl;
       return false;
@@ -542,7 +549,7 @@ pair<double, vector<vector<unsigned int> > >
 	} else {
     error("Adjacency threshold must be greater than zero");
   }
-
+  
 	// get column sums k_i, which correspond to number of edges * 2
   vector_t k;
   matrixSums(A, k, 1);
@@ -556,16 +563,13 @@ pair<double, vector<vector<unsigned int> > >
   // B = A - k_vec * k_vec.t() / (2.0 * m);
 	matrix_t B;
   sizeMatrix(B, n, n);
-  matrix_t kTScaled;
-  sizeMatrix(kTScaled, n, n);
   double scaleFactor = 1.0 / (2.0 * m);
   for(int i=0; i < n; ++i) {
     for(int j=0; j < n; ++j) {
-      kTScaled[i][j] = k[j] * k[j] * scaleFactor;
-      B[i][j] = A[i][j] - kTScaled[i][j];
+      B[i][j] = A[i][j] - k[i] * k[j] * scaleFactor;
     }
   }
-
+  
 	// ------------------------- I T E R A T I O N ------------------------------
 
 	stack<vector<unsigned int> > processStack;
@@ -599,7 +603,7 @@ pair<double, vector<vector<unsigned int> > >
 		matrix_t BgRowSumDiag;
     sizeMatrix(BgRowSumDiag, Bg.size(), Bg.size());
     vector_t rowsums;
-    matrixSums(Bg, rowsums, 1);
+    matrixSums(Bg, rowsums, 0);
 		for(unsigned int i=0; i < rowsums.size(); ++i) {
 			Bg[i][i] = Bg[i][i] - rowsums[i];
 		}
@@ -787,14 +791,14 @@ bool InteractionNetwork::SetModulesFromFile(string modulesFilename) {
 	return true;
 }
 void InteractionNetwork::ShowModules() {
-	cout << "Modules:" << endl;
+	inbixEnv->printLOG("Modules:\n");
 	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
-		cout << "Nodes in module " << moduleIdx << ": ";
+		inbixEnv->printLOG("Nodes in module " + int2str(moduleIdx) + ": ");
 		for(unsigned int memberIdx=0; memberIdx < modules[moduleIdx].size();
 				++memberIdx) {
-			cout << nodeNames[modules[moduleIdx][memberIdx]] << " ";
+			inbixEnv->printLOG(nodeNames[modules[moduleIdx][memberIdx]] + " ");
 		}
-		cout << endl;
+    inbixEnv->printLOG("\n");
 	}
 }
 
@@ -819,10 +823,16 @@ pair<double, vector_t>
   //	eigval.max(maxeig_idx);
   //	colvec s_out = eigvec.col(maxeig_idx);
 
+  // eigenvectors changes B!!!
+  matrix_t tempB(B);
+  
   // compute eigenvectors and eigenvalues
-  Eigen eigen = eigenvectors(B);
+  Eigen eigen = eigenvectors(tempB);
   vector_t eigval = eigen.d;
   matrix_t eigvec = eigen.z;
+  //display(eigvec);
+  //display(eigval);
+  
   int maxEigIdx = 0;
   double maxEigvalue = eigval[maxEigIdx];
   for(int i=1; i < eigval.size(); ++i) {
@@ -835,8 +845,11 @@ pair<double, vector_t>
   // get the max eigenvector into s_out
   vector_t s_out;
   for(int i=0; i < eigvec[0].size(); ++i) {
-    s_out.push_back(eigvec[maxEigIdx][i]);
+    s_out.push_back(eigvec[i][maxEigIdx]);
   }
+  //display(s_out);
+  //exit(1);
+
   // transform s_out into -1 or 1 values
 	for(unsigned int i=0; i < s_out.size(); ++i) {
 		if(s_out[i] < 0) {
@@ -846,13 +859,14 @@ pair<double, vector_t>
 			s_out[i] = 1;
 		}
 	}
-
+  //display(s_out);
+  
   //                    (n x 1^T) (n x n) (n x 1)
 	//matrix_t Q_matrix_t = s_out.t() * B * s_out;
   vector_t s_outTB;
   s_outTB.resize(B.size(), 0);
-  for(int i=0; i < B.size(); ++i) {
-    for(int j=0; j < s_out.size(); ++j) {
+  for(int i=0; i < s_out.size(); ++i) {
+    for(int j=0; j < B.size(); ++j) {
       s_outTB[i] += s_out[j] * B[j][i];
     }
   }

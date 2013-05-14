@@ -596,8 +596,12 @@ int main(int argc, char* argv[]) {
     InteractionNetwork* network;
     // check for input file type
     if(par::sifNetwork) {
-      network = new InteractionNetwork(par::sifFile, SIF_FILE, false);
-      network->ModularityLeadingEigenvector(0.001);
+	    network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
+      pair<double, vector<vector<unsigned int> > > modules = 
+        network->ModularityLeadingEigenvector(0.001);
+  		P.printLOG("Total modularity is " + dbl2str(modules.first) + "\n");
+			P.printLOG("There are " + int2str(modules.second.size()) +
+               " modules" + "\n");
       network->ShowModules();
       delete network;
     }

@@ -26,10 +26,10 @@ class InteractionNetwork {
 public:
 	// construct using a file representing the variable interactions matrix
 	InteractionNetwork(std::string matrixFileParam, MatrixFileType fileType,
-			bool isUpperTriangular=false);
+			bool isUpperTriangular, Plink* pp);
 	// matrix constructor for calling as a library method
 	InteractionNetwork(double** variablesMatrix, unsigned int dim,
-			std::vector<std::string>& variableNames);
+			std::vector<std::string>& variableNames, Plink* pp);
 	virtual ~InteractionNetwork();
 
 	// write adjacency matrix to file
@@ -81,6 +81,8 @@ private:
 	// communities/modules
 	double Q;
 	std::vector<std::vector<unsigned int> > modules;
+  
+  Plink* inbixEnv;
 };
 
 #endif
