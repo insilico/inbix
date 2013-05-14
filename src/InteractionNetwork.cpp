@@ -119,16 +119,23 @@ void InteractionNetwork::PrintAdjacencyMatrix() {
 
 void InteractionNetwork::PrintSummary()
 {
-	cout << endl;
-	cout << "---------------------------" << endl;
-	cout << "Interaction Network Summary" << endl;
-	cout << "---------------------------" << endl;
-
-	// copy the armadillo adjacency matrix into an igraph adjacency matrix
 	unsigned int n = adjMatrix.size();
-	cout << "Number of nodes:                     "	<< n << endl;
-	
-	// removed igraph stuff - bcw - 5/13/13
+	inbixEnv->printLOG("Adjacency matrix is "	+ int2str(n) + " x " + 
+    int2str(n) + "\n");
+	double minElement = adjMatrix[0][0];
+	double maxElement = adjMatrix[0][0];
+  for(int i=0; i < adjMatrix.size(); ++i) {
+    for(int j=0; j < adjMatrix.size(); ++j) {
+      if(adjMatrix[i][j] < minElement) {
+        minElement = adjMatrix[i][j];
+      }
+      if(adjMatrix[i][j] > maxElement) {
+        maxElement = adjMatrix[i][j];
+      }
+    }
+  }
+  inbixEnv->printLOG("Minimum: " + dbl2str(minElement) + "\n");
+  inbixEnv->printLOG("Maximum: " + dbl2str(maxElement) + "\n");
 }
 
 bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
@@ -759,7 +766,6 @@ double InteractionNetwork::ComputeQ() {
     m += rowSums[i];
   }
   m /= 2.0;
-  cout << "m = " << m << endl;
 
   double q = 0.0;
   vector_t k;

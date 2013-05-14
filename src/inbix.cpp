@@ -601,6 +601,7 @@ int main(int argc, char* argv[]) {
     if(par::afniNetwork) {
 	    network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
     }
+    network->PrintSummary();
     // perform network operations
     pair<double, vector<vector<unsigned int> > > modules = 
       network->ModularityLeadingEigenvector(par::modEdgeThreshold);
