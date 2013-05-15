@@ -13,7 +13,8 @@
 
 #include "plink.h"
 
-const double MODULARITY_THRESHOLD = 0.0;
+const double DEFAULT_EDGE_THRESHOLD = 0.1;
+const double MODULARITY_THRESHOLD = 0.0; 
 
 enum MatrixFileType {
 	REGAIN_FILE,
@@ -32,6 +33,9 @@ public:
 			std::vector<std::string>& variableNames, Plink* pp);
 	virtual ~InteractionNetwork();
 
+  // set edge threshold
+  bool SetThreshold(double threshold);
+  
 	// write adjacency matrix to file
 	unsigned int NumNodes();
 	matrix_t GetAdjacencyMatrix();
@@ -42,7 +46,7 @@ public:
 
 	// community/modularity methods
 	std::pair<double, std::vector<std::vector<unsigned int> > >
-		ModularityLeadingEigenvector(double adjThreshold);
+		ModularityLeadingEigenvector();
 	std::pair<double, std::vector<double> >	Homophily();
 	double ComputeQ();
 	bool SetModulesFromFile(std::string modulesFilename);
@@ -79,6 +83,9 @@ private:
 	// adjacency matrix
 	matrix_t adjMatrix;
 
+  // edge threshold
+  double edgeThreshold;
+  
 	// communities/modules
 	double Q;
 	std::vector<std::vector<unsigned int> > modules;

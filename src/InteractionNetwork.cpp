@@ -63,6 +63,8 @@ InteractionNetwork::InteractionNetwork(string matrixFileParam,
 						int2str(fileType) + "\n");
 	}
 	networkFile = matrixFileParam;
+  
+  edgeThreshold = DEFAULT_EDGE_THRESHOLD;
 }
 
 InteractionNetwork::InteractionNetwork(double** variablesMatrix,
@@ -84,10 +86,17 @@ InteractionNetwork::InteractionNetwork(double** variablesMatrix,
 	}
 	// set default values
 	networkFile = "";
+  edgeThreshold = DEFAULT_EDGE_THRESHOLD;
 }
 
 InteractionNetwork::~InteractionNetwork()
 {}
+
+bool InteractionNetwork::SetThreshold(double threshold) {
+  edgeThreshold = threshold;
+  
+  return true;
+}
 
 unsigned int InteractionNetwork::NumNodes()
 {
@@ -120,7 +129,7 @@ void InteractionNetwork::PrintAdjacencyMatrix() {
 void InteractionNetwork::PrintSummary()
 {
 	unsigned int n = adjMatrix.size();
-	inbixEnv->printLOG("Adjacency matrix is "	+ int2str(n) + " x " + 
+	inbixEnv->printLOG("Adjacency Matrix: "	+ int2str(n) + " x " + 
     int2str(n) + "\n");
 	double minElement = adjMatrix[0][0];
 	double maxElement = adjMatrix[0][0];
@@ -136,6 +145,7 @@ void InteractionNetwork::PrintSummary()
   }
   inbixEnv->printLOG("Minimum: " + dbl2str(minElement) + "\n");
   inbixEnv->printLOG("Maximum: " + dbl2str(maxElement) + "\n");
+  inbixEnv->printLOG("Edge Threshold: " + dbl2str(edgeThreshold) + "\n");
 }
 
 bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
@@ -531,7 +541,7 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 }
 
 pair<double, vector<vector<unsigned int> > >
-	InteractionNetwork::ModularityLeadingEigenvector(double adjThreshold) {
+	InteractionNetwork::ModularityLeadingEigenvector() {
 
 	// keep original adjacency matrix
 	matrix_t A(adjMatrix);
@@ -542,19 +552,15 @@ pair<double, vector<vector<unsigned int> > >
 	matrixSetDiag(A, diagZ);
 
 	// make the adjacency matrix binary using a threshold (from user params)
-	if(adjThreshold > 0) {
-		for(unsigned int i=0; i < n; ++i) {
-			for(unsigned int j=0; j < n; ++j) {
-				if(A[i][j] < adjThreshold) {
-					A[i][j] = 0.0;
-				}
-				else {
-					A[i][j] = 1.0;
-				}
-			}
-		}
-	} else {
-    error("Adjacency threshold must be greater than zero");
+  for(unsigned int i=0; i < n; ++i) {
+    for(unsigned int j=0; j < n; ++j) {
+      if(A[i][j] < edgeThreshold) {
+        A[i][j] = 0.0;
+      }
+      else {
+        A[i][j] = 1.0;
+      }
+    }
   }
   
 	// get column sums k_i, which correspond to number of edges * 2
@@ -658,40 +664,43 @@ pair<double, vector<vector<unsigned int> > >
 pair<double, vector<double> >	InteractionNetwork::Homophily() {
 
   if(!modules.size()) {
-    error("Caanot compute homphily: no modules exist");
+    error("Cannot compute homphily: no modules exist");
   }
   
 	double globalHomophily = 0.0;
 	vector<double> localHomophilies;
 
 	unsigned int totalNodes = adjMatrix.size();
-	// cout << "Total nodes: " << totalNodes << endl;
+//	cout << "Total nodes: " << totalNodes << endl;
 
 	// for each module in the modules list
-	for(unsigned int i=0; i < modules.size(); ++i) {
+//	cout << "Number of module: " << modules.size() << endl;
+	for(unsigned int curModule=0; curModule < modules.size(); ++curModule) {
 
 		// get the indices of the nodes in the module
-		unsigned int modSize = modules[i].size();
-		// cout << "Module size: " << modSize << endl;
+		unsigned int modSize = modules[curModule].size();
+//		cout << "Module size: " << modSize << endl;
 
 		intvec_t modIndices(modSize);
 		for(unsigned int mi=0; mi < modSize; ++mi) {
-			modIndices[mi] = modules[i][mi];
+			modIndices[mi] = modules[curModule][mi];
 		}
-		// modIndices.print("module indices");
 
 		// get the indices of the nodes not in the module
 		intvec_t notIndices(totalNodes - modSize);
 		unsigned int notIndex = 0;
 		for(unsigned int j=0; j < modules.size(); ++j) {
-			if(j != i) {
+			if(j != curModule) {
 				for(unsigned int k=0; k < modules[j].size(); ++k) {
 					notIndices[notIndex] = modules[j][k];
 					++notIndex;
 				}
 			}
 		}
-		// notIndices.print("indices NOT in module");
+//    cout << "Module indices:" << endl;
+//    display(modIndices);
+//    cout << "Not in module indices:" << endl;
+//    display(notIndices);
 
 		// get the number of internal connections
 		// matrix_t modMatrix = adjMatrix(modIndices, modIndices);
@@ -726,19 +735,19 @@ pair<double, vector<double> >	InteractionNetwork::Homophily() {
 			modHomophily = (internalConnections - externalConnections) /
 					(internalConnections + externalConnections);
 		}
-		// cout << "Module homophily: " << modHomophily << endl;
+//		cout << "Module homophily: " << modHomophily << endl;
 		double localHomophily = modSize * modHomophily / totalNodes;
-		// cout << "Module frac: " << localHomophily << endl;
+//		cout << "Module frac: " << localHomophily << endl;
 		localHomophilies.push_back(localHomophily);
 
 		// update global homophily
 		globalHomophily += localHomophily;
 	}
 
-	pair<double, vector<double> > results;
+  pair<double, vector<double> > results;
 	results.first = globalHomophily;
 	results.second.resize(localHomophilies.size());
-	results.second = localHomophilies;
+	copy(localHomophilies.begin(), localHomophilies.end(), results.second.begin());
 
 	return results;
 }

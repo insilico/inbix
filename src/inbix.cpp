@@ -601,10 +601,11 @@ int main(int argc, char* argv[]) {
     if(par::afniNetwork) {
 	    network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
     }
+    network->SetThreshold(par::modEdgeThreshold);
     network->PrintSummary();
     // perform network operations
     pair<double, vector<vector<unsigned int> > > modules = 
-      network->ModularityLeadingEigenvector(par::modEdgeThreshold);
+      network->ModularityLeadingEigenvector();
     P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
     P.printLOG("There are " + int2str(modules.second.size()) +
              " modules" + "\n");
