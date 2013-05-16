@@ -105,13 +105,13 @@ clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp	\
 nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
 flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
 tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
-metaanal.cpp regain.cpp InteractionNetwork.cpp
+metaanal.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
 fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
 gvar.h cnv.h cfamily.h idhelp.h zed.h regain.h InteractionNetwork.h     \
-StringUtils.h
+StringUtils.h CentralityRanker.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS

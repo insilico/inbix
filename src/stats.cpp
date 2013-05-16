@@ -1518,10 +1518,41 @@ bool matrixFill(matrix_t& m, double f) {
   return true;
 }
 
+bool matrixMultiplyScalar(matrix_t& m, double s) {
+  for(int i=0; i < m.size(); ++i) {
+    for(int j=0; j < m[0].size(); ++j) {
+      m[i][j] *= s;
+    }
+  }
+  return true;
+}
+
 bool matrixDivideScalar(matrix_t& m, double s) {
   for(int i=0; i < m.size(); ++i) {
     for(int j=0; j < m[0].size(); ++j) {
       m[i][j] /= s;
+    }
+  }
+  return true;
+}
+
+bool matrixAdd(matrix_t m1, matrix_t m2, matrix_t& result) {
+  int m1Rows = m1.size();
+  int m2Rows = m2.size();
+  int m1Cols = m1[0].size();
+  int m2Cols = m2[0].size();
+
+  if(m1Rows != m2Rows) {
+    error("Error in matrixSubtract, rows sizes are not compatible");
+  }
+  
+  if(m1Cols != m2Cols) {
+    error("Error in matrixSubtract, rows sizes are not compatible");
+  }
+  
+  for(int i=0; i < m1Rows; ++i) {
+    for(int j=0; j < m1Cols; ++j) {
+      result[i][j] = m1[i][j] + m2[i][j];
     }
   }
   return true;
@@ -1649,6 +1680,33 @@ bool matrixExtractRowColIdx(matrix_t m, intvec_t rowIdx, intvec_t colIdx,
     for(int j=0; j < nc; ++j) {
       nm[i][j] = m[rowIdx[i]][colIdx[j]];
     }
+  }
+  
+  return true;
+}
+
+bool matrixGetTrace(matrix_t m, double& t) {
+  t = 0;
+  for(int i=0; i < m.size(); ++i) {
+    t += m[i][i];
+  }
+  return true;
+}
+
+bool matrixElementWiseMultiply(matrix_t m, matrix_t n, matrix_t& m_out) {
+  int mRow = m.size();
+  int mCol = m[0].size();
+  int nRow = n.size();
+  int nCol = n[0].size();
+  if((mRow == nRow) && (mCol == nCol)) {
+    sizeMatrix(m_out, nRow, nCol);
+    for(int i=0; i < nRow; ++i) {
+      for(int j=0; j < nCol; ++j) {
+        m_out[i][j] = m[i][j] * n[i][j];
+      }
+    }
+  } else {
+    error("matrixElementWiseMultiply has incompatible matrices");
   }
   
   return true;

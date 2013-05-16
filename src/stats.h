@@ -49,12 +49,23 @@ bool matrixRead(string mFilename, matrix_t& m, vector<string>& variableNames);
 // write a matrix to a file with variable names header
 bool matrixWrite(matrix_t m, string mFilename, vector<string> variableNames);
 
-// bcw - 5/13/13
-// get the sums of rows or columns, indicated by dim, into a vector
+// added for modularity - bcw - 5/13/13
+// get the sums of columns or rows, indicated by dim (0=columns, 1=rows), 
+// into a vector
 bool matrixSums(matrix_t m, vector_t& sums, int dim);
 // extract a new matrix from a list of row and column indices
 bool matrixExtractRowColIdx(matrix_t m, intvec_t rowIdx, intvec_t colIdx, 
         matrix_t& nm);
+
+// added for SNPrank/CentralityRanker - bcw - 5/13/13
+// get the trace of a matrix, sum of the diagonal
+bool matrixGetTrace(matrix_t m, double& t);
+// multiply two matrices element-by-element
+bool matrixElementWiseMultiply(matrix_t m, matrix_t n, matrix_t& out);
+// divide a matrix by a scalar
+bool matrixMultiplyScalar(matrix_t& m, double s);
+// add one matrix to another
+bool matrixAdd(matrix_t m1, matrix_t m2, matrix_t& result);
 // ----------------------------------------------------------------------------
 
 class Eigen {

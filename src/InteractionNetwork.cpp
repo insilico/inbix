@@ -145,7 +145,11 @@ void InteractionNetwork::PrintSummary()
   }
   inbixEnv->printLOG("Minimum: " + dbl2str(minElement) + "\n");
   inbixEnv->printLOG("Maximum: " + dbl2str(maxElement) + "\n");
-  inbixEnv->printLOG("Edge Threshold: " + dbl2str(edgeThreshold) + "\n");
+  if(edgeThreshold > 0) {
+    inbixEnv->printLOG("Edge Threshold: " + dbl2str(edgeThreshold) + "\n");
+  } else {
+    inbixEnv->printLOG("Edge Threshold: NO THRESHOLD\n");
+  }
 }
 
 bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
@@ -331,19 +335,10 @@ bool InteractionNetwork::ReadGainFile(string gainFilename, bool isUpperTriangula
 	}
 
 	string line;
-	string delimiter = "";
 
 	// read first line (header)
 	getline(gainFileHandle, line);
 	trim(line);
-
-	// set delimiter based on discovery of , or whitespace
-	if(line.find(',') != string::npos) {
-		delimiter = ",";
-	}
-	else {
-		delimiter = "\t";
-	}
 
 	// tokenize header
   vector<string> lineParts;
@@ -552,13 +547,15 @@ pair<double, vector<vector<unsigned int> > >
 	matrixSetDiag(A, diagZ);
 
 	// make the adjacency matrix binary using a threshold (from user params)
-  for(unsigned int i=0; i < n; ++i) {
-    for(unsigned int j=0; j < n; ++j) {
-      if(A[i][j] < edgeThreshold) {
-        A[i][j] = 0.0;
-      }
-      else {
-        A[i][j] = 1.0;
+  if(edgeThreshold > 0) {
+    for(unsigned int i=0; i < n; ++i) {
+      for(unsigned int j=0; j < n; ++j) {
+        if(A[i][j] < edgeThreshold) {
+          A[i][j] = 0.0;
+        }
+        else {
+          A[i][j] = 1.0;
+        }
       }
     }
   }
