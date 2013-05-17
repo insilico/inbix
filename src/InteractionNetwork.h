@@ -13,8 +13,8 @@
 
 #include "plink.h"
 
-const double DEFAULT_EDGE_THRESHOLD = 0.1;
-const double MODULARITY_THRESHOLD = 0.0; 
+const double DEFAULT_CONNECTIVITY_THRESHOLD = 0;
+const double MODULARITY_THRESHOLD = 0; 
 
 enum MatrixFileType {
 	REGAIN_FILE,
@@ -34,7 +34,7 @@ public:
 	virtual ~InteractionNetwork();
 
   // set edge threshold
-  bool SetThreshold(double threshold);
+  bool SetConnectivityThreshold(double threshold);
   
 	// write adjacency matrix to file
 	unsigned int NumNodes();
@@ -84,7 +84,7 @@ private:
 	matrix_t adjMatrix;
 
   // edge threshold
-  double edgeThreshold;
+  double connectivityThreshold;
   
 	// communities/modules
 	double Q;

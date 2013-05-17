@@ -1669,6 +1669,22 @@ bool matrixSums(matrix_t m, vector_t& sums, int dim) {
   return true;
 }
 
+bool matrixComputeNodeDegrees(matrix_t a, vector_t& ad) {
+  if(a.size() != a[0].size()) {
+    error("Cannot compute degrees of non-square network matrix");
+  }
+  ad.resize(a.size(), 0);
+  for(int i=0; i < a.size(); ++i) {
+    for(int j=0; j < a[0].size(); ++j) {
+      if(a[i][j] != 0) {
+        ad[i] += 1;
+      }
+    }
+  }
+  
+  return true;
+}
+
 bool matrixExtractRowColIdx(matrix_t m, intvec_t rowIdx, intvec_t colIdx, 
         matrix_t& nm) {
   int nr = rowIdx.size();
@@ -1707,6 +1723,22 @@ bool matrixElementWiseMultiply(matrix_t m, matrix_t n, matrix_t& m_out) {
     }
   } else {
     error("matrixElementWiseMultiply has incompatible matrices");
+  }
+  
+  return true;
+}
+
+bool matrixConnectivityThreshold(matrix_t& m, double t) {
+	// threshold the adjacency matrix
+  for(unsigned int i=0; i < m.size(); ++i) {
+    for(unsigned int j=0; j < m[0].size(); ++j) {
+      if(m[i][j] < t) {
+        m[i][j] = 0.0;
+      }
+      else {
+        m[i][j] = 1.0;
+      }
+    }
   }
   
   return true;

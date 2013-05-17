@@ -2848,9 +2848,10 @@ void setOptions(CArgs & a) {
     par::modComputeHomophily = true;
   }
 
-  if(a.find("--modularity-edge-threshold")) {
-    par::modEdgeThreshold =
-            a.value_double("--modularity-edge-threshold");
+  if(a.find("--modularity-connectivity-threshold")) {
+    par::modEnableConnectivityThreshold= true;
+    par::modConnectivityThreshold =
+            a.value_double("--modularity-connectivity-threshold");
   }
 
   if(a.find("--modularity-save-file")) {
@@ -2860,6 +2861,31 @@ void setOptions(CArgs & a) {
   if(a.find("--afni-1d-file")) {
     par::afniNetwork = true;
     par::afni1dFile = a.value("--afni-1d-file");
+  }
+
+  // added for ranker support - bcw - 5/16/13
+  if(a.find("--rank-by")) {
+    par::do_ranking = true;
+    par::ranker_method = a.value("--rank-by");
+    if(par::ranker_method == "centrality") {
+      par::do_centrality = true;
+    }
+  }
+
+  if(a.find("--rank-save-top-n")) {
+    par::ranker_top_n = a.value_int("--rank-save-top-n");
+  }
+
+  if(a.find("--rank-save-ranks")) {
+    par::ranker_save_file = a.value("--rank-save-ranks");
+  }
+
+  if(a.find("--rank-save-data")) {
+    par::ranker_save_data_file = a.value("--rank-save-data");
+  }
+  
+  if(a.find("--rank-file")) {
+    par::ranker_input_file = a.value("--rank-file");
   }
   
   ////////////////////////
@@ -4030,7 +4056,7 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --covariance-matrix       Compute a covariance matrix \n"
             << "      --regain                  Perform a reGAIN analysis   \n"
-            << "      --regain-file {regain file} Postprocess an existing reGAIN file     \n"
+            << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions Exclude main effects from interactions\n"
             << "      --regain-compress         Compress reGAIN output      \n"
@@ -4039,16 +4065,22 @@ void setOptions(CArgs & a) {
             << "      --regain-fdr-prune        Perform reGAIN FDR pruning  \n"
             << "      --regain-sif-filter       Filter reGAIN SIF output    \n"
             << "      --regain-sif-threshold {threshold}  Filter reGAIN SIF \n"
-            << "      --regain-matrix-threshold-value {threshold}  Filter reGAIN output \n"
+            << "      --regain-matrix-threshold-value {threshold}  Filter reGAIN output\n"
             << "      --regain-matrix-format {format}  reGAIN output format \n"
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
             << "\n"
-            << "      --modularity              Perform a network modularity analysis   \n"
-            << "      --modularity-edge-threshold Edge threshold for adjacency matrix\n"
-            << "      --modularity-save-file    Save network modules to file\n"
+            << "      --modularity              Perform a network modularity analysis\n"
+            << "      --modularity-connectivity-threshold Edge threshold for connectivity\n"
+            << "      --modularity-save-file {file name} Save network modules to file\n"
             << "      --modularity-homophily    Compute module homophilies\n"
             << "      --sif-file {SIF file}     Read network from a SIF file\n"
-            << "      --afni-1d-file {1D file}  Read network from AFNI 1D file \n"
+            << "      --afni-1d-file {1D file}  Read network from AFNI 1D file\n"
+            << "\n"
+            << "      --rank-by {ranker}        Rank variables by ranker\n"
+            << "      --rank-save-top-n {save top N} Save top ranked\n"
+            << "      --rank-save-ranks {file name} Save ranker results to file\n"
+            << "      --rank-save-data {file name} Save ranker results to new data file\n"
+            << "      --rank-file {ranker file} Load an existing ranker file\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

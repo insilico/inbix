@@ -66,6 +66,10 @@ bool matrixElementWiseMultiply(matrix_t m, matrix_t n, matrix_t& out);
 bool matrixMultiplyScalar(matrix_t& m, double s);
 // add one matrix to another
 bool matrixAdd(matrix_t m1, matrix_t m2, matrix_t& result);
+// compute the degrees of the nodes in an network adjacency matrix
+bool matrixComputeNodeDegrees(matrix_t a, vector_t& ad);
+// threshold a matrix into a connectivity (0/1) matrix)
+bool matrixConnectivityThreshold(matrix_t& m, double t);
 // ----------------------------------------------------------------------------
 
 class Eigen {

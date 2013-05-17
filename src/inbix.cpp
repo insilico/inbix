@@ -568,14 +568,18 @@ int main(int argc, char* argv[]) {
 	P.printLOG("After frequency and genotyping pruning, there are "
 					+ int2str(P.nl_all) + " SNPs\n");
 
-	if((P.nl_all == 0) && (P.nlistname.size() == 0) && (!par::do_modularity)) {
+  // NOTE:: some methods do not require SNP and/or numeric data to be loaded,
+  // so do not exit with an error when these conditions are detected.
+	if((P.nl_all == 0) && (P.nlistname.size() == 0) && 
+          (!par::do_modularity) && (!par::do_centrality)) {
 		error("Stopping as there are no SNPs or numeric attributes "
             "left for analysis\n");
   }
 
-	if((P.n == 0) && (!par::do_modularity))
+	if((P.n == 0) && (!par::do_modularity) && (!par::do_centrality)) {
 		error("Stopping as there are no individuals left for analysis\n");
-
+  }
+  
 	//////////////////////////////////////////////////
 	// Re-report basic case/control counts, etc
 	summaryBasics(P);
@@ -588,20 +592,50 @@ int main(int argc, char* argv[]) {
 	}
 
 	////////////////////////////////////////////////
+	// variable ranking requested - bcw - 5/16/13
+	if(par::do_ranking) {
+    P.printLOG("Performing variable ranking\n");
+    if(par::do_centrality) {
+      P.printLOG("Ranking by network centrality\n");
+    }
+    else {
+      if(par::ranker_method == "relieff") {
+        P.printLOG("Ranking Relief-F\n");
+        P.printLOG("***** Relief-F not implemented *****\n");
+      }
+    }
+    shutdown();
+  }
+  
+	////////////////////////////////////////////////
 	// modularity analysis requested - bcw - 5/13/13
   // NOTE: if regain file specified AND modularity assume 
   // no transform option.
 	if(par::do_modularity) {
 		P.printLOG("Performing network modularity analysis\n");
-    InteractionNetwork* network;
+    InteractionNetwork* network = 0;
     // check for input file type, and construct a new network
     if(par::sifNetwork) {
+      P.printLOG("Reading network from SIF file [" + par::sifFile + "]\n");
 	    network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
     }
     if(par::afniNetwork) {
+      P.printLOG("Reading network from corr.1D file [" + par::afni1dFile + "]\n");
 	    network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
     }
-    network->SetThreshold(par::modEdgeThreshold);
+    if(par::do_regain_post) {
+      P.printLOG("Reading network from reGAIN file [" + par::regainFile + "]\n");
+      network = new InteractionNetwork(par::regainFile, REGAIN_FILE, false, &P);
+    }
+    if(!network) {
+      error("Network construction for modularity analysis failed for the "
+              "given inbix options");
+    }
+    if(par::modEnableConnectivityThreshold) {
+      P.printLOG("Thresholding adjacency matrix connectivity 0 if < " + 
+        dbl2str(par::modConnectivityThreshold) + "\n");
+      network->SetConnectivityThreshold(par::modConnectivityThreshold);
+    }
     network->PrintSummary();
     // perform network operations
     pair<double, vector<vector<unsigned int> > > modules = 

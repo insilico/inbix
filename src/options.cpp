@@ -266,13 +266,22 @@ bool par::regainMatrixThreshold = false;
 double par::regainMatrixThresholdValue = 0.0;
 // added for modularity support - bcw - 5/13/13
 bool par::do_modularity = false;
-double par::modEdgeThreshold = 0.1;
+double par::modConnectivityThreshold = 0.1;
+bool par::modEnableConnectivityThreshold = true;
 string par::modSaveFile = "inbix.modules";
 bool par::modComputeHomophily = false;
 string par::sifFile = "";
 bool par::sifNetwork = false;
 string par::afni1dFile = "";
 bool par::afniNetwork = false;
+// added for ranking support - bcw - 5/16/13
+bool par::do_ranking = false;
+string par::ranker_method = "";
+bool par::do_centrality = false;
+int par::ranker_top_n = -1;
+string par::ranker_save_file = "inbix.ranks";
+string par::ranker_save_data_file = "";
+string par::ranker_input_file = "";
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

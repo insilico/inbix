@@ -363,13 +363,23 @@ public:
 
 	// added for modularity support - bcw - 5/13/13
 	static bool do_modularity;
-  static double modEdgeThreshold;
+  static double modConnectivityThreshold;
+  static bool modEnableConnectivityThreshold;
   static string modSaveFile;
   static bool modComputeHomophily;
   static string sifFile;
   static bool sifNetwork;
   static string afni1dFile;
   static bool afniNetwork;
+
+	// added for ranking support - bcw - 5/16/13
+  static bool do_ranking;
+	static string ranker_method;
+  static bool do_centrality;
+  static int ranker_top_n;
+  static string ranker_save_file;
+  static string ranker_save_data_file;
+  static string ranker_input_file;
   
 	static bool no_show_covar;
 	static bool dump_covar;

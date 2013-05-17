@@ -64,7 +64,7 @@ InteractionNetwork::InteractionNetwork(string matrixFileParam,
 	}
 	networkFile = matrixFileParam;
   
-  edgeThreshold = DEFAULT_EDGE_THRESHOLD;
+  connectivityThreshold = DEFAULT_CONNECTIVITY_THRESHOLD;
 }
 
 InteractionNetwork::InteractionNetwork(double** variablesMatrix,
@@ -86,15 +86,14 @@ InteractionNetwork::InteractionNetwork(double** variablesMatrix,
 	}
 	// set default values
 	networkFile = "";
-  edgeThreshold = DEFAULT_EDGE_THRESHOLD;
+  connectivityThreshold = DEFAULT_CONNECTIVITY_THRESHOLD;
 }
 
 InteractionNetwork::~InteractionNetwork()
 {}
 
-bool InteractionNetwork::SetThreshold(double threshold) {
-  edgeThreshold = threshold;
-  
+bool InteractionNetwork::SetConnectivityThreshold(double threshold) {
+  connectivityThreshold = threshold;
   return true;
 }
 
@@ -145,8 +144,8 @@ void InteractionNetwork::PrintSummary()
   }
   inbixEnv->printLOG("Minimum: " + dbl2str(minElement) + "\n");
   inbixEnv->printLOG("Maximum: " + dbl2str(maxElement) + "\n");
-  if(edgeThreshold > 0) {
-    inbixEnv->printLOG("Edge Threshold: " + dbl2str(edgeThreshold) + "\n");
+  if(connectivityThreshold > 0) {
+    inbixEnv->printLOG("Edge Threshold: " + dbl2str(connectivityThreshold) + "\n");
   } else {
     inbixEnv->printLOG("Edge Threshold: NO THRESHOLD\n");
   }
@@ -342,7 +341,7 @@ bool InteractionNetwork::ReadGainFile(string gainFilename, bool isUpperTriangula
 
 	// tokenize header
   vector<string> lineParts;
-  split(lineParts, line);
+  split(lineParts, line, "\t");
   for(unsigned int nn=0; nn < lineParts.size(); ++nn) {
   	nodeNames.push_back(lineParts[nn]);
   	nodeNameIndex[lineParts[nn]] = nn;
@@ -363,7 +362,7 @@ bool InteractionNetwork::ReadGainFile(string gainFilename, bool isUpperTriangula
 	while(getline(gainFileHandle, line)) {
 		trim(line);
 		lineTokens.clear();
-		split(lineTokens, line);
+		split(lineTokens, line, "\t");
 		if(lineTokens.size() != tokensExpected) {
 			cerr << "ERROR line:" << endl << endl << line << endl << endl;
 			cerr << "ERROR: Could not parse (re)GAIN file row: " << (row+2) << endl
@@ -381,14 +380,11 @@ bool InteractionNetwork::ReadGainFile(string gainFilename, bool isUpperTriangula
 				return false;
 			}
 			double t;
-			if(!from_string<double>(t, lineParts[col], std::dec)) {
-				error("Parsing REGAIN line " + line);
+			if(!from_string<double>(t, token, std::dec)) {
+				error("Parsing failed in REGAIN line:\n" + line);
 			}
 			adjMatrix[row][col] = t;
 			if((row != col) && isUpperTriangular) {
-				if(!from_string<double>(t, lineParts[col], std::dec)) {
-					error("Parsing REGAIN line " + line);
-				}
 				adjMatrix[col][row] = t;
 			}
 		}
@@ -542,24 +538,14 @@ pair<double, vector<vector<unsigned int> > >
 	matrix_t A(adjMatrix);
 	unsigned int n = A.size();
 
-	// remove the diagonal
+	// zero the diagonal
   vector_t diagZ(n, 0);
 	matrixSetDiag(A, diagZ);
 
-	// make the adjacency matrix binary using a threshold (from user params)
-  if(edgeThreshold > 0) {
-    for(unsigned int i=0; i < n; ++i) {
-      for(unsigned int j=0; j < n; ++j) {
-        if(A[i][j] < edgeThreshold) {
-          A[i][j] = 0.0;
-        }
-        else {
-          A[i][j] = 1.0;
-        }
-      }
-    }
+  if(par::modEnableConnectivityThreshold) {
+    matrixConnectivityThreshold(A, connectivityThreshold);
   }
-  
+
 	// get column sums k_i, which correspond to number of edges * 2
   vector_t k;
   matrixSums(A, k, 1);
@@ -762,27 +748,29 @@ void InteractionNetwork::ShowHomophily() {
 }
 
 double InteractionNetwork::ComputeQ() {
-
 	intvec_t allModules = FlattenModules();
-  // double m = sum(sum(adjMatrix)) / 2.0;
-  vector_t rowSums;
-  matrixSums(adjMatrix, rowSums, 1);
-  double m = 0;
-  for(int i=0; i < rowSums.size(); ++i) {
-    m += rowSums[i];
-  }
-  m /= 2.0;
-
-  double q = 0.0;
+  //display(allModules);
   vector_t k;
   matrixSums(adjMatrix, k, 1);
+  // double m = sum(sum(adjMatrix)) / 2.0;
+  double m = 0;
+  for(int i=0; i < k.size(); ++i) {
+    m += k[i];
+  }
+  m /= 2;
+  //cout << m << endl;
+  //display(k);
+  
+  double q = 0.0;
   for(int i=0; i < adjMatrix.size(); ++i) {
-    for(int j=0; j < adjMatrix.size(); ++j) {
-			q += (adjMatrix[i][j] - k[i] * k[j] / (2.0 * m)) *
+    for(int j=0; j < adjMatrix[0].size(); ++j) {
+      double temp = (adjMatrix[i][j] - k[i] * k[j] / (2.0 * m)) *
 					((double) (allModules[i] == allModules[j]) - 0.5) * 2.0;
+      //cout << temp << endl;
+      q += temp;
     }
   }
-  q = q / (4.0 * m);
+  q /= (4.0 * m);
   
   return q;
 }
