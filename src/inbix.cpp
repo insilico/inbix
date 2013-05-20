@@ -632,9 +632,13 @@ int main(int argc, char* argv[]) {
               "given inbix options");
     }
     if(par::modEnableConnectivityThreshold) {
-      P.printLOG("Thresholding adjacency matrix connectivity 0 if < " + 
+      P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " + 
         dbl2str(par::modConnectivityThreshold) + "\n");
       network->SetConnectivityThreshold(par::modConnectivityThreshold);
+      if(par::modUseBinaryThreshold) {
+        P.printLOG("Using binary thresholding to 1 if > threshold\n");
+        network->SetBinaryThresholding(par::modUseBinaryThreshold);
+      }
     }
     network->PrintSummary();
     // perform network operations
@@ -647,7 +651,9 @@ int main(int argc, char* argv[]) {
     if(par::modComputeHomophily) {
       network->ShowHomophily();
     }
+    // save modules
     network->SaveModules(par::modSaveFile);
+
     // clean up and shut down
     delete network;
     shutdown();

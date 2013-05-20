@@ -365,6 +365,7 @@ public:
 	static bool do_modularity;
   static double modConnectivityThreshold;
   static bool modEnableConnectivityThreshold;
+  static bool modUseBinaryThreshold;
   static string modSaveFile;
   static bool modComputeHomophily;
   static string sifFile;

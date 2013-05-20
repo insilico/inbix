@@ -63,8 +63,10 @@ InteractionNetwork::InteractionNetwork(string matrixFileParam,
 						int2str(fileType) + "\n");
 	}
 	networkFile = matrixFileParam;
-  
+
+	// set default values
   connectivityThreshold = DEFAULT_CONNECTIVITY_THRESHOLD;
+  useBinaryThreshold = false;
 }
 
 InteractionNetwork::InteractionNetwork(double** variablesMatrix,
@@ -84,16 +86,48 @@ InteractionNetwork::InteractionNetwork(double** variablesMatrix,
 	for(unsigned int i=0; i < dim; ++i) {
 		nodeNames.push_back(variableNames[i]);
 	}
-	// set default values
 	networkFile = "";
+
+	// set default values
   connectivityThreshold = DEFAULT_CONNECTIVITY_THRESHOLD;
+  useBinaryThreshold = false;
 }
 
 InteractionNetwork::~InteractionNetwork()
 {}
 
+bool InteractionNetwork::PrepareConnectivytMatrix() {
+
+	// keep original adjacency matrix
+	A = adjMatrix;
+	n = A.size();
+
+	// zero the diagonal, since only want interaction connections
+  vector_t diagZ(n, 0);
+	matrixSetDiag(A, diagZ);
+
+  // determine connectivity based on threshold
+  matrixConnectivityThreshold(A, connectivityThreshold, useBinaryThreshold);
+
+	// get column sums k_i = node degree
+  // and m = total network connectivity
+  matrixSums(A, k, 1);
+  for(int i=0; i < k.size(); ++i) {
+    m += k[i];
+  }
+	m *= 0.5;
+
+  return true;
+}
+
 bool InteractionNetwork::SetConnectivityThreshold(double threshold) {
   connectivityThreshold = threshold;
+  return true;
+}
+
+bool InteractionNetwork::SetBinaryThresholding(bool binaryFlag) {
+  useBinaryThreshold = binaryFlag;
+  
   return true;
 }
 
@@ -144,11 +178,7 @@ void InteractionNetwork::PrintSummary()
   }
   inbixEnv->printLOG("Minimum: " + dbl2str(minElement) + "\n");
   inbixEnv->printLOG("Maximum: " + dbl2str(maxElement) + "\n");
-  if(connectivityThreshold > 0) {
-    inbixEnv->printLOG("Edge Threshold: " + dbl2str(connectivityThreshold) + "\n");
-  } else {
-    inbixEnv->printLOG("Edge Threshold: NO THRESHOLD\n");
-  }
+  inbixEnv->printLOG("Edge Threshold: " + dbl2str(connectivityThreshold) + "\n");
 }
 
 bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
@@ -534,28 +564,11 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 pair<double, vector<vector<unsigned int> > >
 	InteractionNetwork::ModularityLeadingEigenvector() {
 
-	// keep original adjacency matrix
-	matrix_t A(adjMatrix);
-	unsigned int n = A.size();
-
-	// zero the diagonal
-  vector_t diagZ(n, 0);
-	matrixSetDiag(A, diagZ);
-
-  if(par::modEnableConnectivityThreshold) {
-    matrixConnectivityThreshold(A, connectivityThreshold);
-  }
-
-	// get column sums k_i, which correspond to number of edges * 2
-  vector_t k;
-  matrixSums(A, k, 1);
-  double m = 0;
-  for(int i=0; i < k.size(); ++i) {
-    m += k[i];
-  }
-	m *= 0.5;
-
-	// real symmetric modularity matrix B
+  // prepare the connectivity matrix for module detection
+  // sets up: A, k and m
+  PrepareConnectivytMatrix();
+  
+	// create a real symmetric modularity matrix B
   // B = A - k_vec * k_vec.t() / (2.0 * m);
 	matrix_t B;
   sizeMatrix(B, n, n);
@@ -749,7 +762,9 @@ void InteractionNetwork::ShowHomophily() {
 
 double InteractionNetwork::ComputeQ() {
 	intvec_t allModules = FlattenModules();
-  //display(allModules);
+	sort(allModules.begin(), allModules.end());
+  display(allModules);
+	
   vector_t k;
   matrixSums(adjMatrix, k, 1);
   // double m = sum(sum(adjMatrix)) / 2.0;
@@ -766,7 +781,7 @@ double InteractionNetwork::ComputeQ() {
     for(int j=0; j < adjMatrix[0].size(); ++j) {
       double temp = (adjMatrix[i][j] - k[i] * k[j] / (2.0 * m)) *
 					((double) (allModules[i] == allModules[j]) - 0.5) * 2.0;
-      //cout << temp << endl;
+      cout << temp << endl;
       q += temp;
     }
   }

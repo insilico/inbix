@@ -69,7 +69,7 @@ bool matrixAdd(matrix_t m1, matrix_t m2, matrix_t& result);
 // compute the degrees of the nodes in an network adjacency matrix
 bool matrixComputeNodeDegrees(matrix_t a, vector_t& ad);
 // threshold a matrix into a connectivity (0/1) matrix)
-bool matrixConnectivityThreshold(matrix_t& m, double t);
+bool matrixConnectivityThreshold(matrix_t& m, double t, bool binary);
 // ----------------------------------------------------------------------------
 
 class Eigen {

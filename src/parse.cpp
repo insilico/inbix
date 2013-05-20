@@ -2854,6 +2854,10 @@ void setOptions(CArgs & a) {
             a.value_double("--modularity-connectivity-threshold");
   }
 
+  if(a.find("--modularity-binary-threshold")) {
+    par::modUseBinaryThreshold= true;
+  }
+
   if(a.find("--modularity-save-file")) {
     par::modSaveFile = a.value("--modularity-save-file");
   }
@@ -4071,6 +4075,7 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --modularity              Perform a network modularity analysis\n"
             << "      --modularity-connectivity-threshold Edge threshold for connectivity\n"
+            << "      --modularity-binary-threshold Threshold to binary connectivity?\n"
             << "      --modularity-save-file {file name} Save network modules to file\n"
             << "      --modularity-homophily    Compute module homophilies\n"
             << "      --sif-file {SIF file}     Read network from a SIF file\n"

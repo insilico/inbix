@@ -1728,15 +1728,17 @@ bool matrixElementWiseMultiply(matrix_t m, matrix_t n, matrix_t& m_out) {
   return true;
 }
 
-bool matrixConnectivityThreshold(matrix_t& m, double t) {
+bool matrixConnectivityThreshold(matrix_t& m, double t, bool binary) {
 	// threshold the adjacency matrix
   for(unsigned int i=0; i < m.size(); ++i) {
     for(unsigned int j=0; j < m[0].size(); ++j) {
-      if(m[i][j] < t) {
+      if(m[i][j] <= t) {
         m[i][j] = 0.0;
       }
       else {
-        m[i][j] = 1.0;
+        if(binary) {
+          m[i][j] = 1.0;
+        }
       }
     }
   }

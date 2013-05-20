@@ -35,6 +35,7 @@ public:
 
   // set edge threshold
   bool SetConnectivityThreshold(double threshold);
+  bool SetBinaryThresholding(bool binaryFlag);
   
 	// write adjacency matrix to file
 	unsigned int NumNodes();
@@ -66,6 +67,9 @@ private:
 	bool ReadGainFile(std::string gainFilename, bool isUpperTriangular=false);
 	bool ReadBrainCorr1DFile(std::string corr1dFilename);
 	bool ReadSifFile(std::string sifFilename);
+
+  bool PrepareConnectivytMatrix();
+  
 	// matrix writers
 	bool WriteDelimitedFile(std::string outFilename, std::string fileType);
 	bool WriteSifFile(std::string outFilename);
@@ -82,9 +86,21 @@ private:
 
 	// adjacency matrix
 	matrix_t adjMatrix;
-
+	// connectivity matrix
+	matrix_t A;
+	// node degrees - not necessarily discrete
+	vector_t k;
+	// number of edges/links
+	double m;
+	// number of nodes/vertices
+	double n;
+	
+	// modularity matrix
+	matrix_t B;
+	
   // edge threshold
   double connectivityThreshold;
+  bool useBinaryThreshold;
   
 	// communities/modules
 	double Q;

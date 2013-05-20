@@ -157,7 +157,7 @@ $(OUTPUT) : $(OBJ)
 FORCE:
 
 clean:
-	rm -f *.o *~
+	rm -f *.o *~ inbix
 
 install:
 	cp inbix /usr/local/bin
