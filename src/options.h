@@ -381,6 +381,9 @@ public:
   static string ranker_save_file;
   static string ranker_save_data_file;
   static string ranker_input_file;
+
+	// added for data set support - bcw - 5/21/13
+  static bool exportArff;
   
 	static bool no_show_covar;
 	static bool dump_covar;

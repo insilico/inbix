@@ -591,6 +591,17 @@ int main(int argc, char* argv[]) {
 			P.locus[l]->allele1 = "0";
 	}
 
+ 	////////////////////////////////////////////////
+	// data set export requested - bcw - 5/21/13
+	if(par::exportArff) {
+    P.printLOG("Performing data set export to Weka ARFF format\n");
+    // switch from SNP-major to individual-major data orientation!
+    P.SNP2Ind();
+    string arffFilename = par::output_file_name + ".arff";
+    P.outputArffFile(arffFilename);
+    shutdown();
+  }
+
 	////////////////////////////////////////////////
 	// variable ranking requested - bcw - 5/16/13
 	if(par::do_ranking) {

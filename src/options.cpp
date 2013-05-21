@@ -283,6 +283,8 @@ int par::ranker_top_n = -1;
 string par::ranker_save_file = "inbix.ranks";
 string par::ranker_save_data_file = "";
 string par::ranker_input_file = "";
+// added for data set support - bcw - 5/21/13
+bool par::exportArff = false;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

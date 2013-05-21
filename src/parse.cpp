@@ -2892,6 +2892,11 @@ void setOptions(CArgs & a) {
     par::ranker_input_file = a.value("--rank-file");
   }
   
+  // added for data set support - bcw - 5/21/13
+  if(a.find("--export-arff")) {
+    par::exportArff = true;
+  }
+  
   ////////////////////////
   // Reference allele file
   if(a.find("--reference")) {
@@ -4058,7 +4063,7 @@ void setOptions(CArgs & a) {
             << "      --linear                  Linear regression model     \n"
             << "      --logistic                Logistic regression model   \n"
             << "\n"
-            << "      --covariance-matrix       Compute a covariance matrix \n"
+            << "      --covariance-matrix       Compute covariance and correlation matrices\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"
@@ -4086,6 +4091,8 @@ void setOptions(CArgs & a) {
             << "      --rank-save-ranks {file name} Save ranker results to file\n"
             << "      --rank-save-data {file name} Save ranker results to new data file\n"
             << "      --rank-file {ranker file} Load an existing ranker file\n"
+            << "\n"
+            << "      --export-arff             Write data to Weka ARFF format\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

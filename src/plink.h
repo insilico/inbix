@@ -733,7 +733,6 @@ public:
 	// Functions
 
 	// Input/output functions
-
 	void readData();
 	void readDataLongFormat();
 	void readFamFile(string);
@@ -768,12 +767,14 @@ public:
 	void outputSetFile();
 	void setAssocSummary();
 
-
 	void Ind2SNP();
 	void SNP2Ind();
-
+  
+  // export capability - bcw - 5/21/13
+  bool outputArffFile(string arffFilename);
+  int getSimpleSNPValue(Individual* person, int snp);
+  
 	// Summary statistic / data cleaning functions
-
 	void filterSNPs();
 	void processGVAR();
 
