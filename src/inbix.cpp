@@ -38,6 +38,7 @@
 
 #include "regain.h"
 #include "InteractionNetwork.h"
+#include "CentralityRanker.h"
 
 using namespace std;
 
@@ -605,14 +606,31 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////
 	// variable ranking requested - bcw - 5/16/13
 	if(par::do_ranking) {
+    if(!par::do_regain_post) {
+      error("Ranking requires a reGAIN file");
+    }
     P.printLOG("Performing variable ranking\n");
     if(par::do_centrality) {
       P.printLOG("Ranking by network centrality\n");
+      CentralityRanker cr(par::regainFile);
+      if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
+        error("Centrality ranking failed");
+      }
+      if(par::verbose) {
+        cr.WriteToConsole();
+      }
+      cr.WriteToFile(par::ranker_save_file);
     }
     else {
       if(par::ranker_method == "relieff") {
         P.printLOG("Ranking Relief-F\n");
         P.printLOG("***** Relief-F not implemented *****\n");
+      }
+      else {
+        if(par::ranker_method == "random") {
+          P.printLOG("Ranking Random\n");
+          P.printLOG("***** Random ranking not implemented *****\n");
+        }
       }
     }
     shutdown();

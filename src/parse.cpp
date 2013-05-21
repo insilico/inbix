@@ -4064,6 +4064,7 @@ void setOptions(CArgs & a) {
             << "      --logistic                Logistic regression model   \n"
             << "\n"
             << "      --covariance-matrix       Compute covariance and correlation matrices\n"
+            << "\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"

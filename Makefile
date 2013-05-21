@@ -38,9 +38,9 @@ LIB_IGRAPH = /usr/lib/libigraph.so
 # --------------------------------------------------------------------
 
 # optimized mode
-#CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wwrite-strings
+CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wwrite-strings
 # debug mode
-CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_REGAIN
+#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY_SOLVER
 
 OUTPUT = inbix
 

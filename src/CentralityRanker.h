@@ -58,6 +58,7 @@ private:
 
 	// centrality rank scores
 	vector_t r;
+  vector<pair<double, int> > ranks;
 };
 
 #endif /* CENTRALITY_RANKER_H */

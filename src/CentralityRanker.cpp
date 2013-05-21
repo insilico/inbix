@@ -9,16 +9,18 @@
 #include <vector>
 #include <cmath>
 
-#include "StringUtils.h"
-
 #include "plink.h"
 #include "stats.h"
 #include "helper.h"
 
+#include "StringUtils.h"
 #include "CentralityRanker.h"
 
 using namespace std;
 using namespace Insilico;
+
+// Plink object
+extern Plink* PP;
 
 CentralityRanker::CentralityRanker(string gainFileParam, bool isUpperTriangular)
 {
@@ -93,13 +95,13 @@ bool CentralityRanker::CalculateCentrality(SolverMethod method)
   matrixGetDiag(G, diag);
   matrixSetDiag(Gdiag, diag);
 #ifdef DEBUG_CENTRALITY
-	diaplay(Gdiag);
+	display(diag);
 #endif
 
 	// sum of diagonal elements is Gtrace
 	matrixGetTrace(G, Gtrace);
 #ifdef DEBUG_CENTRALITY
-	cout << "Gtrace: "	<< Gtrace << endl;
+	cout << "Gtrace: " << Gtrace << endl;;
 #endif
 
 #ifdef DEBUG_CENTRALITY
@@ -145,19 +147,21 @@ bool CentralityRanker::SetGammaVector(vector_t& gammaVectorValues)
 
 void CentralityRanker::WriteToFile(string outFile)
 {
+  PP->printLOG("Writing centrality scores to [" + outFile + "]\n");
 	// r indices sorted in descending order
-	sort(r.begin(), r.end());
-  reverse(r.begin(), r.end());
+	sort(ranks.begin(), ranks.end());
+  reverse(ranks.begin(), ranks.end());
 	// output r (centrality rankings) to file, truncating to 6 decimal places
 	ofstream outputFileHandle(outFile.c_str());
 	outputFileHandle << "SNP\tCentrality\tdiag\tdegree" << endl;
 	for(int i = 0; i < r.size(); i++) {
-			int index = r[i];
-			outputFileHandle << variableNames[index] << "\t"
-					 << fixed << r[index] << "\t"
-					 << Gdiag[index][index] << "\t"
-					 << colsum[index];
-			outputFileHandle << endl;
+    double score = ranks[i].first;
+    int index = ranks[i].second;
+    outputFileHandle << variableNames[index] << "\t"
+         << score << "\t"
+         << Gdiag[index][index] << "\t"
+         << colsum[index];
+    outputFileHandle << endl;
 	}
 	outputFileHandle.close();
 }
@@ -165,17 +169,18 @@ void CentralityRanker::WriteToFile(string outFile)
 void CentralityRanker::WriteToConsole()
 {
 	// r indices sorted in descending order
-	sort(r.begin(), r.end());
-  reverse(r.begin(), r.end());
+	sort(ranks.begin(), ranks.end());
+  reverse(ranks.begin(), ranks.end());
 	// output r (centrality rankings) to file, truncating to 6 decimal places
 	cout << "SNP\tCentrality\tdiag\tdegree" << endl;
 	for(int i = 0; i < r.size(); i++) {
-			int index = r[i];
-			cout << variableNames[index] << "\t"
-					 << fixed << setprecision(8) << r[index] << "\t"
-					 << Gdiag[index][index] << "\t"
-					 << colsum[index];
-			cout << endl;
+    double score = ranks[i].first;
+    int index = ranks[i].second;
+    cout << variableNames[index] << "\t"
+         << score << "\t"
+         << Gdiag[index][index] << "\t"
+         << colsum[index];
+    cout << endl;
 	}
 }
 
@@ -332,6 +337,7 @@ bool CentralityRanker::GaussEliminationSolver()
     averageGamma /= (double) n;
 		cout << "Average gamma = " << averageGamma << endl;
 	}
+  
   // repmat(gamma_vec, n, 1);
 	matrix_t gamma_matrix;
   sizeMatrix(gamma_matrix, n, n);
@@ -357,7 +363,7 @@ bool CentralityRanker::GaussEliminationSolver()
 		}
 	}
 #ifdef DEBUG_CENTRALITY
-	cout << "DEBUG: b: " << endl << b << endl;
+	display(b);
 #endif
 
 	// D = n x n sparse matrix with 1/colsum for nonzero elements of colsum
@@ -372,7 +378,7 @@ bool CentralityRanker::GaussEliminationSolver()
 		}
 	}
 #ifdef DEBUG_CENTRALITY
-	cout << "DEBUG: D: " << endl << D << endl;
+	display(D);
 #endif
 
 	// SOLVE: Ax = b system of equations using gaussian elimination
@@ -397,12 +403,24 @@ bool CentralityRanker::GaussEliminationSolver()
   matrix_t v;
 	sizeMatrix(v, n, n);
 	const double TOL = 1.0e-13;
+#ifdef DEBUG_CENTRALITY_SOLVER
+  display(u);
+  display(v);
+  display(w);
+#endif
 	if(!svdcmp(u, w, v)) {
     display(u);
     display(w);
     display(v);
     error("SVD solver failed");
 	}
+#ifdef DEBUG_CENTRALITY_SOLVER
+  display(u);
+  display(v);
+  display(w);
+  cout << "Performing back substitution" << endl;
+#endif
+
 	double wmax = 0.0;
 	for(int j = 0; j < n; j++) {
 		if(w[j] > wmax) {
@@ -415,8 +433,9 @@ bool CentralityRanker::GaussEliminationSolver()
 			w[j] = 0.0;
 		}
 	}
+  r.resize(n);
 	svbksb(u, w, v, b, r);
-#ifdef DEBUG_CENTRALITY
+#ifdef DEBUG_CENTRALITY_SOLVER
 	display(r);
 #endif
   // --------------------------------------------------------------------------
@@ -428,8 +447,9 @@ bool CentralityRanker::GaussEliminationSolver()
   }
   for(int i=0; i < r.size(); ++i) {
     r[i] /= rSum;
+    ranks.push_back(make_pair(r[i], i));
   }
-#ifdef DEBUG_CENTRALITY
+#ifdef DEBUG_CENTRALITY_SOLVER
 	display(r);
 #endif
 
@@ -473,7 +493,7 @@ bool CentralityRanker::PowerMethodSolver()
     D[i][i] = 1 / colsum[i];
   }
 #ifdef DEBUG_CENTRALITY
-	cout << "DEBUG: D: " << endl << D << endl;
+	display(D);
 #endif
 
 	for (int i = 0; i < colsum_nzidx.size(); i++){
