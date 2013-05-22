@@ -617,9 +617,9 @@ int main(int argc, char* argv[]) {
         error("Centrality ranking failed");
       }
       if(par::verbose) {
-        cr.WriteToConsole();
+        cr.WriteToConsole(par::ranker_top_n);
       }
-      cr.WriteToFile(par::ranker_save_file);
+      cr.WriteToFile(par::ranker_save_file, par::ranker_top_n);
     }
     else {
       if(par::ranker_method == "relieff") {

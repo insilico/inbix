@@ -145,7 +145,7 @@ bool CentralityRanker::SetGammaVector(vector_t& gammaVectorValues)
 	return true;
 }
 
-void CentralityRanker::WriteToFile(string outFile)
+void CentralityRanker::WriteToFile(string outFile, int topN)
 {
   PP->printLOG("Writing centrality scores to [" + outFile + "]\n");
 	// r indices sorted in descending order
@@ -154,7 +154,15 @@ void CentralityRanker::WriteToFile(string outFile)
 	// output r (centrality rankings) to file, truncating to 6 decimal places
 	ofstream outputFileHandle(outFile.c_str());
 	outputFileHandle << "SNP\tCentrality\tdiag\tdegree" << endl;
-	for(int i = 0; i < r.size(); i++) {
+  int numToWrite = ranks.size();
+  if((topN > 0) && (topN <= ranks.size())) {
+    numToWrite = topN;
+  }
+  else {
+    cout << "WARNING: Attempting to use top N outside valid range: " 
+            << topN << ". Using all ranks." << endl;
+  }
+	for(int i = 0; i < numToWrite; i++) {
     double score = ranks[i].first;
     int index = ranks[i].second;
     outputFileHandle << variableNames[index] << "\t"
@@ -166,14 +174,22 @@ void CentralityRanker::WriteToFile(string outFile)
 	outputFileHandle.close();
 }
 
-void CentralityRanker::WriteToConsole()
+void CentralityRanker::WriteToConsole(int topN)
 {
 	// r indices sorted in descending order
 	sort(ranks.begin(), ranks.end());
   reverse(ranks.begin(), ranks.end());
 	// output r (centrality rankings) to file, truncating to 6 decimal places
 	cout << "SNP\tCentrality\tdiag\tdegree" << endl;
-	for(int i = 0; i < r.size(); i++) {
+  int numToWrite = ranks.size();
+  if((topN > 0) && (topN <= ranks.size())) {
+    numToWrite = topN;
+  }
+  else {
+    cout << "WARNING: Attempting to use top N outside valid range: " 
+            << topN << ". Using all ranks." << endl;
+  }
+	for(int i = 0; i < numToWrite; i++) {
     double score = ranks[i].first;
     int index = ranks[i].second;
     cout << variableNames[index] << "\t"

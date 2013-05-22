@@ -2876,8 +2876,8 @@ void setOptions(CArgs & a) {
     }
   }
 
-  if(a.find("--rank-save-top-n")) {
-    par::ranker_top_n = a.value_int("--rank-save-top-n");
+  if(a.find("--rank-top-n")) {
+    par::ranker_top_n = a.value_int("--rank-top-n");
   }
 
   if(a.find("--rank-save-ranks")) {

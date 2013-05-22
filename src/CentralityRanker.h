@@ -27,8 +27,8 @@ public:
 	void SetGlobalGamma(double gammaParam);
 	bool SetGammaVector(vector_t& gammaVectorValues);
 	// write results
-	void WriteToFile(std::string outfile);
-	void WriteToConsole();
+	void WriteToFile(std::string outfile, int topN = -1);
+	void WriteToConsole(int topN = -1);
 private:
 	// reads the GAIN input file
 	bool ReadGainFile(std::string gainFilename, bool isUpperTriangular=false);
@@ -59,6 +59,8 @@ private:
 	// centrality rank scores
 	vector_t r;
   vector<pair<double, int> > ranks;
+  
+  int topN;
 };
 
 #endif /* CENTRALITY_RANKER_H */
