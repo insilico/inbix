@@ -2896,6 +2896,12 @@ void setOptions(CArgs & a) {
   if(a.find("--export-arff")) {
     par::exportArff = true;
   }
+  if(a.find("--export-delimited")) {
+    par::exportDelimited = true;
+  }
+  if(a.find("--export-delimiter")) {
+    par::exportDelimiter = a.value("--export-delimiter");
+  }
   
   ////////////////////////
   // Reference allele file
@@ -4088,12 +4094,14 @@ void setOptions(CArgs & a) {
             << "      --afni-1d-file {1D file}  Read network from AFNI 1D file\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
-            << "      --rank-save-top-n {save top N} Save top ranked\n"
+            << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
             << "      --rank-save-ranks {file name} Save ranker results to file\n"
             << "      --rank-save-data {file name} Save ranker results to new data file\n"
             << "      --rank-file {ranker file} Load an existing ranker file\n"
             << "\n"
             << "      --export-arff             Write data to Weka ARFF format\n"
+            << "      --export-delimited        Write data to delimited format\n"
+            << "      --export-delimiter {delimiter} Export delimiter\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

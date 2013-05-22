@@ -303,13 +303,10 @@ public:
 
 
 // Main genotype storage, ordered by SNP
-
 class CSNP {
 public:
-
 	vector<bool> one; // SNP-major mode genotypes
 	vector<bool> two;
-
 };
 
 class Cluster {
@@ -414,7 +411,6 @@ public:
 		return ( name == p2.name);
 	}
 
-
 };
 
 namespace std {
@@ -452,7 +448,6 @@ namespace std {
 
 class MainExitException {
 public:
-
 	void exitMessage() {
 		cout << "Exception: ending...\n";
 	}
@@ -728,7 +723,6 @@ public:
 	// Pointer to permutation class
 	Perm * pperm;
 
-
 	///////////////////////
 	// Functions
 
@@ -773,6 +767,7 @@ public:
   // export capability - bcw - 5/21/13
   bool outputArffFile(string arffFilename);
   int getSimpleSNPValue(Individual* person, int snp);
+  bool outputDelimitedFile(string delimitedFilename, string delimiter);
   
 	// Summary statistic / data cleaning functions
 	void filterSNPs();
@@ -811,7 +806,6 @@ public:
 	void initialiseGeneCountAssociation(Perm &);
 
 	// Family-based functions
-
 	void parseTrios();
 	void makeFounders();
 	void makeMissingParents();
@@ -840,7 +834,6 @@ public:
 					vector<int> &,
 					vector<bool> &);
 
-
 	vector<double> testTDT_POO(bool, bool,
 					Perm &,
 					vector<bool> &,
@@ -848,31 +841,23 @@ public:
 	void perm_testTDT_POO(Perm &);
 
 	// IBS sharing test statistics
-
 	vector<double> sharingIBSTest(Perm &);
 	void perm_sharingIBSTest(Perm &);
-
-
 
 	////////////////////////////////////
 	// Main pointers to other classes
 
 	// Haplotype phasing/testing
-
 	HaploPhase * haplo;
 
 	// GLM models
-
 	Model * model;
 
 	// Conditional haplotype tests (WHAP)
-
 	Chap * whap;
 
 	// Set-based functions
-
 	Set * pS;
-
 
 	// PLINK Functions
 	int readInformative();
@@ -891,11 +876,9 @@ public:
 	void calcGenomeIBM(Individual *, Individual *);
 	Z calcGenomeIBD(Individual *, Individual *, Z);
 
-
 	vector<Z> calcLocusIBD(Individual *, Individual *, Z);
 	vector<double> calcMultiPoint(vector<Z> &, Z, ofstream &);
 	vector<double> calcSinglePoint(vector<Z> &, Z);
-
 
 	short calcPhenotypes(vector<double> &, Individual *p1, Individual *p2);
 	void calcRegression(int);
@@ -904,7 +887,6 @@ public:
 	void preCalcRegression_PIHAT();
 
 	// Association tests
-
 	void calcAssociationWithPermutation(Perm&);
 	void calcAssociationWithBootstrap();
 
@@ -915,7 +897,6 @@ public:
 
 	void perm_testHotel(Perm &);
 	vector<double> calcHotel(bool, Perm &, Set &, int, int);
-
 
 	void calcMH();
 	void calcHomog();
@@ -931,7 +912,6 @@ public:
 	void setReferenceAllele();
 
 	map<Range, vector<int> > mkBlks(int, int);
-
 
 	void setFlagToCase();
 	void setFlagToControl();
@@ -1017,7 +997,6 @@ public:
 	void attribFilterSNP();
 	void attribFilterInd();
 
-
 	void zeroOnCluster();
 	void setObligMissing();
 
@@ -1072,9 +1051,7 @@ public:
 #endif
 	void cleanUp();
 
-
 	// Misc help functions
-
 	void setFlags(bool f) {
 		vector<Individual*>::iterator person = sample.begin();
 		while (person != sample.end()) {
@@ -1082,7 +1059,6 @@ public:
 			person++;
 		}
 	}
-
 
 	// Additional functions
 	void permTestRareDistribution(Perm &);

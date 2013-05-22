@@ -62,7 +62,7 @@ ifeq ($(SYS),UNIX)
 endif
 
 ifeq ($(SYS),MAC)
- CXXFLAGS += -DUNIX -Dfopen64=fopen -D_FILE_OFFSET_BITS=64
+ CXXFLAGS += -DUNIX -fopenmp
  CXX = $(CXX_UNIX)
 endif
 

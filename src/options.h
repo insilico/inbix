@@ -384,6 +384,8 @@ public:
 
 	// added for data set support - bcw - 5/21/13
   static bool exportArff;
+  static bool exportDelimited;
+  static string exportDelimiter;
   
 	static bool no_show_covar;
 	static bool dump_covar;

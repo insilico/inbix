@@ -2291,3 +2291,86 @@ int Plink::getSimpleSNPValue(Individual* person, int snp) {
     }
   }
 }
+
+bool Plink::outputDelimitedFile(string delimitedFilename, string delimiter) {
+  printLOG("Writing delimited file to [ " + delimitedFilename + "]\n");
+  ofstream DELIM_FILE(delimitedFilename.c_str(), ios::out);
+
+  // write header section
+	
+  // write attribute section
+  // write SNP attributes
+  bool needLeadingDelim = false;
+  for(int i=0; i < nl_all; ++i) {
+    if(needLeadingDelim) {
+      DELIM_FILE << delimiter << locus[i]->name;
+    }
+    else {
+      DELIM_FILE << locus[i]->name;
+      needLeadingDelim = true;
+    }
+  }
+  // write numeric attributes
+  for(int i=0; i < nlistname.size(); ++i) {
+    if(needLeadingDelim) {
+      DELIM_FILE << delimiter << nlistname[i];
+    }
+    else {
+      DELIM_FILE << nlistname[i];
+      needLeadingDelim = true;
+    }
+  }
+  DELIM_FILE << delimiter << "Class" << endl;
+  
+  // write data section
+  int nmissing=0, ncase=0, ncontrol=0;
+  for (int i = 0; i < sample.size(); i++) {
+    bool seenDataForLine = false;
+    // write SNPs
+    for(int j=0; j < nl_all; ++j) {
+      if(seenDataForLine) {
+        DELIM_FILE << delimiter << getSimpleSNPValue(sample[i], j);
+      }
+      else {
+        DELIM_FILE << getSimpleSNPValue(sample[i], j);
+        seenDataForLine = true;
+      }
+    }
+    // write numerics
+    for(int j=0; j < nlistname.size(); ++j) {
+      if(seenDataForLine) {
+        DELIM_FILE << delimiter << sample[i]->nlist[j];
+      }
+      else {
+        DELIM_FILE << sample[i]->nlist[j];;
+        seenDataForLine = true;
+      }
+    }
+    // write phenotype
+    if(sample[i]->missing) {
+      DELIM_FILE << delimiter << "-9" << endl;
+      nmissing++;
+    }
+    else {
+      if(par::bt) {
+        if(sample[i]->phenotype == 1) {
+          DELIM_FILE << delimiter << "0" << endl;
+          ncontrol++;
+        } 
+        else { 
+          if(sample[i]->phenotype == 2) {
+            DELIM_FILE << delimiter << "1" << endl;
+            ncase++;
+          }   
+        }
+      }
+      else {
+        DELIM_FILE << delimiter << sample[i]->phenotype << endl;
+      }
+    }
+  }
+  
+  DELIM_FILE.close();
+  
+  return true;
+}
