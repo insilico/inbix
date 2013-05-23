@@ -14,6 +14,7 @@
 #include <iostream>
 #include <string>
 #include "options.h"
+#include "CentralityRanker.h"
 
 using namespace std;
 
@@ -283,6 +284,7 @@ int par::ranker_top_n = -1;
 string par::ranker_save_file = "inbix.ranks";
 string par::ranker_save_data_file = "";
 string par::ranker_input_file = "";
+double par::ranker_centrality_gamma = -1;
 // added for data set support - bcw - 5/21/13
 bool par::exportArff = false;
 bool par::exportDelimited = false;

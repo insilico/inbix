@@ -381,6 +381,7 @@ public:
   static string ranker_save_file;
   static string ranker_save_data_file;
   static string ranker_input_file;
+  static double ranker_centrality_gamma;
 
 	// added for data set support - bcw - 5/21/13
   static bool exportArff;

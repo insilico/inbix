@@ -629,6 +629,11 @@ int main(int argc, char* argv[]) {
     if(par::do_centrality) {
       P.printLOG("Ranking by network centrality\n");
       CentralityRanker cr(par::regainFile);
+      if(par::ranker_centrality_gamma > 0) {
+        P.printLOG("Network centrality gamma set to: " + 
+          dbl2str(par::ranker_centrality_gamma) + "\n");
+        cr.SetGlobalGamma(par::ranker_centrality_gamma);
+      }
       if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
         error("Centrality ranking failed");
       }

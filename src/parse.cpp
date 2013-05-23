@@ -2892,6 +2892,10 @@ void setOptions(CArgs & a) {
     par::ranker_input_file = a.value("--rank-file");
   }
   
+  if(a.find("--rank-centrality-gamma")) {
+    par::ranker_centrality_gamma = a.value_double("--rank-centrality-gamma");
+  }
+
   // added for data set support - bcw - 5/21/13
   if(a.find("--export-arff")) {
     par::exportArff = true;
@@ -4098,6 +4102,7 @@ void setOptions(CArgs & a) {
             << "      --rank-save-ranks {file name} Save ranker results to file\n"
             << "      --rank-save-data {file name} Save ranker results to new data file\n"
             << "      --rank-file {ranker file} Load an existing ranker file\n"
+            << "      --rank-centrality-gamma {gamma} Use a specified gamma\n"
             << "\n"
             << "      --export-arff             Write data to Weka ARFF format\n"
             << "      --export-delimited        Write data to delimited format\n"
