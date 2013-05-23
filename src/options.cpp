@@ -271,7 +271,7 @@ double par::regainMatrixThresholdValue = 0.0;
 // added for modularity support - bcw - 5/13/13
 bool par::do_modularity = false;
 double par::modConnectivityThreshold = 0.0;
-bool par::modEnableConnectivityThreshold = true;
+bool par::modEnableConnectivityThreshold = false;
 bool par::modUseBinaryThreshold = false;
 string par::modSaveFile = "inbix.modules";
 bool par::modComputeHomophily = false;

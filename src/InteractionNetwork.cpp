@@ -107,7 +107,9 @@ bool InteractionNetwork::PrepareConnectivytMatrix() {
 	matrixSetDiag(A, diagZ);
 
   // determine connectivity based on threshold
-  matrixConnectivityThreshold(A, connectivityThreshold, useBinaryThreshold);
+  if(par::modEnableConnectivityThreshold) {
+    matrixConnectivityThreshold(A, connectivityThreshold, useBinaryThreshold);
+  }
 
 	// get column sums k_i = node degree
   // and m = total network connectivity
