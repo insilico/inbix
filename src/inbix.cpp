@@ -235,6 +235,12 @@ int main(int argc, char* argv[]) {
 			error("Problem reading the numeric file: [" + par::numeric_filename + "]");
 		}
 		par::have_numerics = true;
+    
+    if(par::do_numeric_summary) {
+      P.printLOG("Reporting numeric file summary statistics.\n");
+      reportNumericSummaryStats();
+      shutdown();
+    }
 	}
 
 	// Set number of individuals

@@ -2773,6 +2773,11 @@ void setOptions(CArgs & a) {
     par::do_covariance_matrix = true;
   }
 
+  // numeric attribute file summary - bcw - 5/23/13
+  if(a.find("--numeric-summary")) {
+    par::do_numeric_summary = true;
+  }
+
   // reGAIN analysis support - bcw - 4/22/13
   if(a.find("--regain")) {
     par::do_regain = true;
@@ -4026,16 +4031,16 @@ void setOptions(CArgs & a) {
 
     cout << "plink --file {fileroot}         Specify .ped and .map files \n"
             << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
-            << "      --numeric {numeric file}  Specify .num file           \n"
+            << "      --numeric-file {numeric file}  Specify numeric attribute file\n"
             << "\n"
             << "      --out {fileroot}          Specify output root filename\n"
             << "\n"
             << "      --missing-genotype {0}    Missing genotype code       \n"
             << "      --missing-phenotype {-9}  Missing phenotype code      \n"
             << "\n"
-            << "      --pheno {phenofile}       Specify .phe file           \n"
+            << "      --pheno {phenofile}       Specify phenotype file      \n"
             << "      --within {file}           Specify cluster file        \n"
-            << "      --cov {covarfile}         Specify .cov file           \n"
+            << "      --covar {covarfile}       Specify covariate file           \n"
             << "\n"
             << "      --extract {snplist}       Extract list of SNPs        \n"
             << "      --exclude {snplist}       Exclude list of SNPs        \n"
@@ -4074,6 +4079,7 @@ void setOptions(CArgs & a) {
             << "      --logistic                Logistic regression model   \n"
             << "\n"
             << "      --covariance-matrix       Compute covariance and correlation matrices\n"
+            << "      --numeric-summary         Report numeric file statistics\n"
             << "\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"

@@ -340,6 +340,7 @@ public:
 	static bool numeric_file;
 	static string numeric_filename;
   static bool do_covariance_matrix;
+  static bool do_numeric_summary;
   
 	// added for reGAIN support - bcw - 4/22/13
 	static bool do_regain;

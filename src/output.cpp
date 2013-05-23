@@ -471,12 +471,9 @@ void Plink::extractExcludeSet(bool exclude) {
 
   map<string, int>::iterator ilocus;
 
-
   //////////////////////////////////
   // Either extract a certain "GENE"
-
   if(par::dump_gene) {
-
     // Temporarily read sets -- these will get updated later
     readSet();
 
@@ -503,11 +500,9 @@ void Plink::extractExcludeSet(bool exclude) {
       printLOG("WARNING: ** Could not find [ "
             + par::dump_genename + " ] in [ "
             + par::setfile + " ]\n");
-
   }
     /////////////////////////////////////
     // OR get a list of SNPs form the command line
-
   else if(par::snp_include_from_cl) {
     NList nl(nl_all);
     vector<int> lst = nl.deparseStringList(par::snp_include_range, & mlocus);
@@ -518,13 +513,9 @@ void Plink::extractExcludeSet(bool exclude) {
     printLOG("Extracting " + int2str(lst.size()) + " SNPs\n");
 
   }
-
     /////////////////////////////////////
     // OR get a list of ranges from a file
-
   else if(par::snp_range_list) {
-
-
     string filename = exclude ? par::exclude_file : par::extract_file;
     set<int> slist;
 
@@ -550,10 +541,8 @@ void Plink::extractExcludeSet(bool exclude) {
     else
       printLOG("Extracting " + int2str(slist.size()) + " SNPs\n");
   }
-
     /////////////////////////////////////
     // OR get a list of SNPs from a file
-
   else {
     string filename = par::extract_file;
 
@@ -591,23 +580,15 @@ void Plink::extractExcludeSet(bool exclude) {
     printLOG(int2str(c) + " read\n");
   }
 
-
-
   ////////////////////////////////////////
   // Remove selected loci from locus list, 
-
   deleteSNPs(del);
-
-
-
 }
 
 void Plink::removeIndividuals(bool keep) {
 
-
   //////////////////////////////////
   // Make map of individuals FID/IID
-
   map<string, int> mperson;
   map<string, int>::iterator iperson;
   vector<bool> del(n);
@@ -620,7 +601,6 @@ void Plink::removeIndividuals(bool keep) {
 
   ///////////////////////////
   // Read list of individuals
-
   string filename = par::remove_indiv_list;
   if(keep)
     filename = par::keep_indiv_list;
@@ -2324,7 +2304,7 @@ bool Plink::outputDelimitedFile(string delimitedFilename, string delimiter) {
   
   // write data section
   int nmissing=0, ncase=0, ncontrol=0;
-  for (int i = 0; i < sample.size(); i++) {
+  for(int i=0; i < sample.size(); i++) {
     bool seenDataForLine = false;
     // write SNPs
     for(int j=0; j < nl_all; ++j) {

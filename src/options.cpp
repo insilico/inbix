@@ -245,6 +245,7 @@ bool par::have_numerics = false;
 bool par::numeric_file = false;
 string par::numeric_filename = "inbix.num";
 bool par::do_covariance_matrix = false;
+bool par::do_numeric_summary = false;
 
 // added for reGAIN support - bcw - 4/22/13, 4/24/13
 bool par::do_regain = false;

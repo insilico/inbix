@@ -1745,3 +1745,79 @@ bool matrixConnectivityThreshold(matrix_t& m, double t, bool binary) {
   
   return true;
 }
+
+bool reportNumericSummaryStats() {
+  int numInd = PP->sample.size();
+  int numVar = PP->nlistname.size();
+  
+  string outFilename = par::output_file_name + ".numeric.summary.ind.tab";
+  PP->printLOG("Writing individuals summary [ " + outFilename + " ]\n");
+  ofstream outFileI(outFilename.c_str());
+  if(outFileI.fail()) {
+    return false;
+  }
+  outFileI << "FID\tIID\tMean\tVar\tSd" << endl;
+  for(int i=0; i < numInd; i++) {
+    vector_t values;
+    for(int j=0; j < numVar; ++j) {
+      values.push_back(PP->sample[i]->nlist[j]);
+    }
+    vector_t summary;
+    vectorSummary(values, summary);
+    outFileI 
+            << PP->sample[i]->fid << "\t" 
+            << PP->sample[i]->iid << "\t"
+            << summary[0] << "\t" 
+            << summary[1] << "\t" 
+            << summary[2] << endl;
+  }
+  outFileI.close();
+  
+  outFilename = par::output_file_name + ".numeric.summary.var.tab";
+  PP->printLOG("Writing variables summary [ " + outFilename + " ]\n");
+  ofstream outFileV(outFilename.c_str());
+  if(outFileV.fail()) {
+    return false;
+  }
+  outFileV << "Var\tMean\tVar\tSd" << endl;
+  for(int i=0; i < numVar; i++) {
+    vector_t values;
+    for(int j=0; j < numInd; ++j) {
+      values.push_back(PP->sample[j]->nlist[i]);
+    }
+    vector_t summary;
+    vectorSummary(values, summary);
+    outFileV
+            << PP->nlistname[i] << "\t"
+            << summary[0] << "\t" 
+            << summary[1] << "\t" 
+            << summary[2] << endl;
+  }
+  outFileV.close();
+  
+  return true;
+}
+
+bool vectorSummary(vector_t values, vector_t& summary) {
+  double n = values.size();
+  if(!n) {
+    return false;
+  }
+  double sum = 0;
+  for(int i=0; i < values.size(); ++i) {
+    sum += values[i];
+  }
+  double mean = sum / n;
+  double SSE = 0;
+  for(int i=0; i < values.size(); ++i) {
+    double deviation = values[i] - mean;
+    SSE += deviation * deviation;
+  }
+  double var = SSE / (values.size() - 1);
+  double sd = sqrt(var);
+
+  summary.resize(3);
+  summary[0] = mean;
+  summary[1] = var;
+  summary[2] = sd;
+}

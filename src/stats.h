@@ -70,6 +70,11 @@ bool matrixAdd(matrix_t m1, matrix_t m2, matrix_t& result);
 bool matrixComputeNodeDegrees(matrix_t a, vector_t& ad);
 // threshold a matrix into a connectivity (0/1) matrix)
 bool matrixConnectivityThreshold(matrix_t& m, double t, bool binary);
+
+// added for numeric file summary stats - bcw - 5/23/13
+bool reportNumericSummaryStats();
+// return summary stats for a vector of values: mean, var, sd
+bool vectorSummary(vector_t values, vector_t& summary);
 // ----------------------------------------------------------------------------
 
 class Eigen {
