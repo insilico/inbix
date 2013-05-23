@@ -768,6 +768,7 @@ public:
   bool outputArffFile(string arffFilename);
   int getSimpleSNPValue(Individual* person, int snp);
   bool outputDelimitedFile(string delimitedFilename, string delimiter);
+  bool outputNumericExtract(string attributeFilename);
   
 	// Summary statistic / data cleaning functions
 	void filterSNPs();

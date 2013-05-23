@@ -2778,6 +2778,12 @@ void setOptions(CArgs & a) {
     par::do_numeric_summary = true;
   }
 
+  // numeric attribute extract to new file - bcw - 5/23/13
+  if(a.find("--numeric-extract")) {
+    par::do_numeric_extract = true;
+    par::numeric_extract_file = a.value("--numeric-extract");
+  }
+
   // reGAIN analysis support - bcw - 4/22/13
   if(a.find("--regain")) {
     par::do_regain = true;
@@ -4080,6 +4086,7 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --covariance-matrix       Compute covariance and correlation matrices\n"
             << "      --numeric-summary         Report numeric file statistics\n"
+            << "      --numeric-extract {file}  Extract numeric attributes\n"
             << "\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"

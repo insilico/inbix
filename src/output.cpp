@@ -2354,3 +2354,71 @@ bool Plink::outputDelimitedFile(string delimitedFilename, string delimiter) {
   
   return true;
 }
+
+bool Plink::outputNumericExtract(string attributeFilename) {
+  // read attribute names to extract
+  ifstream attrFile(attributeFilename.c_str());
+  if(attrFile.fail()) {
+    cerr << "Could not open numeric attribute file for reading." << endl;
+    return false;
+  }
+  vector<pair<string, int> > attrNameIdx;
+  while(!attrFile.eof()) {
+    // read line from text file into a vector of tokens
+    char line[par::MAX_LINE_LENGTH];
+    attrFile.getline(line, par::MAX_LINE_LENGTH, '\n');
+
+    // convert to string
+    string sline = line;
+    if(sline == "") continue;
+
+    // parse attribute names and store into a vector of name/index pairs
+    string tempName;
+    stringstream ss(sline);
+    while(ss >> tempName) {
+      // does this name exist in the numeric data
+      bool found = false;
+      int idx;
+      for(idx=0; idx < nlistname.size() && !found; ++idx) {
+        if(tempName == nlistname[idx]) {
+          attrNameIdx.push_back(make_pair(tempName, idx));
+          found = true;
+        }
+      }
+      // 
+      if(!found) {
+        cerr << "WARNING: Attribute [" << tempName << "] "
+                << "could not be found for extraction. Skipping..." << endl;
+      }
+    }
+  }
+  attrFile.close();
+
+  // make sure we have some attributes to write
+  if(!attrNameIdx.size()) {
+    cerr << "ERROR: Could not match any attributes for extraction." << endl;
+    return false;
+  }
+  
+  // write new numeric data file
+  string newFilename = par::output_file_name + ".extract.num";
+  printLOG("Writing new numeric file to [ " + newFilename + "]\n");
+  ofstream newFile(newFilename.c_str(), ios::out);
+  // write new header
+  newFile << "FID\tIID";
+  for(int i=0; i < attrNameIdx.size(); ++i) {
+    newFile << "\t" << attrNameIdx[i].first;
+  }
+  newFile << endl;
+  // write data for each individual
+  for(int i=0; i < sample.size(); i++) {
+    newFile << sample[i]->fid << "\t" << sample[i]->iid;
+    for(int j=0; j < attrNameIdx.size(); ++j) {
+      newFile << "\t" << sample[i]->nlist[attrNameIdx[j].second];
+    }
+    newFile << endl;
+  }
+  newFile.close();
+  
+  return true;
+}

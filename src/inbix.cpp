@@ -241,6 +241,13 @@ int main(int argc, char* argv[]) {
       reportNumericSummaryStats();
       shutdown();
     }
+
+    // extract attributes listed in user file to new file
+    if(par::do_numeric_extract) {
+      P.printLOG("Extracting numeric attributes to a new numeric file.\n");
+      P.outputNumericExtract(par::numeric_extract_file);
+      shutdown();
+    }
 	}
 
 	// Set number of individuals
