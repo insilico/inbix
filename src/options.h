@@ -373,13 +373,13 @@ public:
   static bool modComputeHomophily;
   static string sifFile;
   static bool sifNetwork;
+  static bool sifToGain;
   static string afni1dFile;
   static bool afniNetwork;
 
 	// added for ranking support - bcw - 5/16/13
   static bool do_ranking;
 	static string ranker_method;
-  static bool do_centrality;
   static int ranker_top_n;
   static string ranker_save_file;
   static string ranker_save_data_file;

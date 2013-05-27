@@ -16,6 +16,7 @@
 #include <cstdio>
 
 #include "plink.h"
+#include "model.h"
 
 using namespace std;
 
@@ -75,6 +76,11 @@ bool matrixConnectivityThreshold(matrix_t& m, double t, bool binary);
 bool reportNumericSummaryStats();
 // return summary stats for a vector of values: mean, var, sd
 bool vectorSummary(vector_t values, vector_t& summary);
+
+// added for regression ranker - bcw - 5/27/13
+bool rankByRegression(rankedlist_t& ranks);
+pair<double, double> fitModel(Model* m);
+
 // ----------------------------------------------------------------------------
 
 class Eigen {

@@ -53,6 +53,8 @@ typedef vector<Locus*>::iterator iLocus;
 typedef vector<CSNP*>::iterator iSNP;
 typedef vector<bool>::iterator iAllele;
 
+typedef vector<pair<double, string> > rankedlist_t;
+
 // Term types
 enum ModelTermType {
   INTERCEPT,
@@ -769,6 +771,7 @@ public:
   int getSimpleSNPValue(Individual* person, int snp);
   bool outputDelimitedFile(string delimitedFilename, string delimiter);
   bool outputNumericExtract(string attributeFilename);
+  bool outputSifToGain(string sifFilename);
   
 	// Summary statistic / data cleaning functions
 	void filterSNPs();

@@ -260,7 +260,7 @@ bool par::regainComponents = false;
 double par::regainFdr = 0.5;
 bool par::regainFdrPrune = false;
 bool par::regainSifFilter = false;
-double par::regainSifThreshold = 0.05;
+double par::regainSifThreshold = -9999999;
 bool par::regainUseBetaValues = false;
 bool par::regainPureInteractions = false;
 // regain matrix output - bcw - 4/30/13
@@ -277,12 +277,12 @@ string par::modSaveFile = "inbix.modules";
 bool par::modComputeHomophily = false;
 string par::sifFile = "";
 bool par::sifNetwork = false;
+bool par::sifToGain = false;
 string par::afni1dFile = "";
 bool par::afniNetwork = false;
 // added for ranking support - bcw - 5/16/13
 bool par::do_ranking = false;
 string par::ranker_method = "";
-bool par::do_centrality = false;
 int par::ranker_top_n = -1;
 string par::ranker_save_file = "inbix.ranks";
 string par::ranker_save_data_file = "";

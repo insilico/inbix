@@ -32,6 +32,10 @@
 #include "dcdflib.h"
 #include "ipmpar.h"
 
+#include "model.h"
+#include "linear.h"
+#include "logistic.h"
+
 #define FPMIN 1.0e-30
 
 extern ofstream LOG;
@@ -1820,4 +1824,75 @@ bool vectorSummary(vector_t values, vector_t& summary) {
   summary[0] = mean;
   summary[1] = var;
   summary[2] = sd;
+}
+
+bool rankByRegression(rankedlist_t& ranks) {
+ 	Model *mainEffectModel;
+
+  // model SNPs
+  for(int i=0; i < PP->nl_all; ++i) {
+    if(par::bt) {
+      mainEffectModel = new LogisticModel(PP);
+    } else {
+      mainEffectModel = new LinearModel(PP);
+    }
+  	mainEffectModel->setMissing();
+    pair<double, double> snpResult;
+    mainEffectModel->addAdditiveSNP(i);
+    mainEffectModel->label.push_back(PP->locus[i]->name);
+    snpResult = fitModel(mainEffectModel);
+    ranks.push_back(make_pair(snpResult.first, PP->locus[i]->name));
+    delete mainEffectModel;
+  }
+
+  // model numerics
+  for(int i=0; i < PP->nlistname.size(); ++i) {
+    if(par::bt) {
+      mainEffectModel = new LogisticModel(PP);
+    } else {
+      mainEffectModel = new LinearModel(PP);
+    }
+  	mainEffectModel->setMissing();
+    pair<double, double> numResult;
+    mainEffectModel->addNumeric(i);
+    mainEffectModel->label.push_back(PP->nlistname[i]);
+    numResult = fitModel(mainEffectModel);
+    ranks.push_back(make_pair(numResult.first, PP->nlistname[i]));
+    delete mainEffectModel;
+  }
+
+  // sort results in reverse order
+	sort(ranks.begin(), ranks.end());
+  reverse(ranks.begin(), ranks.end());
+  
+  return true;
+}
+
+pair<double, double> fitModel(Model* mainEffectModel) {
+  pair<double, double> result;
+
+  // Build design matrix
+  mainEffectModel->buildDesignMatrix();
+
+	// Fit linear model
+	int tp = 1; 
+	mainEffectModel->testParameter = tp; // single variable main effect
+	mainEffectModel->fitLM();
+
+	// Obtain estimates and statistics
+	vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+	// p-values don't include intercept term
+	vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+  double mainEffectPval = betaMainEffectCoefPvals[tp - 1];
+	vector_t mainEffectModelSE = mainEffectModel->getSE();
+
+  // always use first coefficient after intercept as main effect term
+	// double mainEffectValue = betaMainEffectCoefs[tp];
+	double mainEffectValue = betaMainEffectCoefs[tp] /
+						mainEffectModelSE[tp];
+  
+  result.first = mainEffectValue;
+  result.second = mainEffectPval;
+  
+  return result;
 }

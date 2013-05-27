@@ -14,7 +14,9 @@
 #include <fstream>
 #include <sstream>
 #include <bitset>
+#include <set>
 #include <map>
+#include <vector>
 
 #include "plink.h"
 #include "options.h"
@@ -22,6 +24,7 @@
 #include "sets.h"
 #include "helper.h"
 #include "nlist.h"
+#include "stats.h"
 
 extern ofstream LOG;
 
@@ -2421,4 +2424,74 @@ bool Plink::outputNumericExtract(string attributeFilename) {
   newFile.close();
   
   return true;
+}
+
+bool Plink::outputSifToGain(string sifFilename) {
+  // read attribute names to extract
+  ifstream sifFile(sifFilename.c_str());
+  if(sifFile.fail()) {
+    cerr << "Could not open SIF network file for reading." << endl;
+    return false;
+  }
+  set<string> varNames;
+  map<pair<string, string>, double> interactions;
+  while(!sifFile.eof()) {
+    // read line from text file into a vector of tokens
+    char line[par::MAX_LINE_LENGTH];
+    sifFile.getline(line, par::MAX_LINE_LENGTH, '\n');
+
+    // convert to string
+    string sline = line;
+    if(sline == "") continue;
+
+    // parse line into tokens
+    vector<string> tokens;
+    string temp;
+    stringstream ss(sline);
+    while(ss >> temp) {
+      tokens.push_back(temp);
+    }
+    if(tokens.size() != 3) {
+      cerr << "ERROR: SIF file has line with missing interaction parts:"
+              << endl << line << endl;
+      return false;
+    }
+    
+    // collect interaction information into a matrix and write it to file
+    varNames.insert(tokens[0]);
+    varNames.insert(tokens[2]);
+    double t = 0;
+    if(!from_string<double>(t, tokens[1], std::dec)) {
+      error("Could not convert interaction value to double: " + tokens[1]);
+    }
+    interactions[make_pair(tokens[0], tokens[2])] = t;
+  }  
+  sifFile.close();
+
+  // write interaction information
+  map<string, int> namesMap;
+  vector<string> regainNames;
+  int namesIndex = 0;
+  for(set<string>::const_iterator nit=varNames.begin(); 
+          nit != varNames.end(); ++nit, ++namesIndex) {
+    namesMap[*nit] = namesIndex;
+    regainNames.push_back(*nit);
+  }
+  int matrixDim = varNames.size();
+  matrix_t regain;
+  sizeMatrix(regain, matrixDim, matrixDim);
+  matrixFill(regain, 0);
+  map<pair<string, string>, double>::const_iterator mit;
+  for(mit=interactions.begin(); mit != interactions.end(); ++mit) {
+    pair<string, string> interactionVars = mit->first;
+    double interactionValue = mit->second;
+    int index1 = namesMap[interactionVars.first];
+    int index2 = namesMap[interactionVars.second];
+    regain[index1][index2] = interactionValue;
+    regain[index2][index1] = interactionValue;
+  }
+
+  string regainFilename = par::sifFile + ".regain";
+  printLOG("Writing new reGAIN matrix to [" + regainFilename + "]\n");
+  return(matrixWrite(regain, regainFilename, regainNames));
 }

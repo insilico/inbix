@@ -2814,10 +2814,6 @@ void setOptions(CArgs & a) {
     par::regainFdr = a.value_double("--regain-fdr");
   }
 
-  if(a.find("--regain-sif-filter")) {
-    par::regainSifFilter = true;
-  }
-
   if(a.find("--regain-sif-threshold")) {
     par::regainSifFilter = true;
     par::regainSifThreshold = a.value_double("--regain-sif-threshold");
@@ -2845,6 +2841,10 @@ void setOptions(CArgs & a) {
     par::regainFile = a.value("--regain-file");
   }
 
+  if(a.find("--sif-to-regain")) {
+    par::sifToGain = true;
+  }
+
   // added for modularity support - bcw - 5/13/13
   if(a.find("--sif-file")) {
     par::sifFile = a.value("--sif-file");
@@ -2866,6 +2866,7 @@ void setOptions(CArgs & a) {
   }
 
   if(a.find("--modularity-binary-threshold")) {
+    par::modEnableConnectivityThreshold= true;
     par::modUseBinaryThreshold= true;
   }
 
@@ -2882,9 +2883,6 @@ void setOptions(CArgs & a) {
   if(a.find("--rank-by")) {
     par::do_ranking = true;
     par::ranker_method = a.value("--rank-by");
-    if(par::ranker_method == "centrality") {
-      par::do_centrality = true;
-    }
   }
 
   if(a.find("--rank-top-n")) {
@@ -4096,7 +4094,6 @@ void setOptions(CArgs & a) {
             << "      --regain-components       Write reGAIN components     \n"
             << "      --regain-fdr {rate}       Set reGAIN FDR              \n"
             << "      --regain-fdr-prune        Perform reGAIN FDR pruning  \n"
-            << "      --regain-sif-filter       Filter reGAIN SIF output    \n"
             << "      --regain-sif-threshold {threshold}  Filter reGAIN SIF \n"
             << "      --regain-matrix-threshold-value {threshold}  Filter reGAIN output\n"
             << "      --regain-matrix-format {format}  reGAIN output format \n"
@@ -4108,6 +4105,7 @@ void setOptions(CArgs & a) {
             << "      --modularity-save-file {file name} Save network modules to file\n"
             << "      --modularity-homophily    Compute module homophilies\n"
             << "      --sif-file {SIF file}     Read network from a SIF file\n"
+            << "      --sif-to-regain           Convert SIF network to reGAIN\n"
             << "      --afni-1d-file {1D file}  Read network from AFNI 1D file\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"

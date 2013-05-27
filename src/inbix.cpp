@@ -197,6 +197,14 @@ int main(int argc, char* argv[]) {
 	}
 
 	////////////////////////////////////////////
+	// A SIF file specified? - bcw - 5/23/13
+  if(par::sifNetwork && par::sifToGain) {
+    P.printLOG("Converting SIF network to reGAIN\n");
+    P.outputSifToGain(par::sifFile);
+    shutdown();
+  }
+  
+	////////////////////////////////////////////
 	// A numeric file specified? - bcw - 4/20/13
 	if(par::numeric_file) {
     // check for SNPs already loaded
@@ -585,12 +593,12 @@ int main(int argc, char* argv[]) {
   // NOTE:: some methods do not require SNP and/or numeric data to be loaded,
   // so do not exit with an error when these conditions are detected.
 	if((P.nl_all == 0) && (P.nlistname.size() == 0) && 
-          (!par::do_modularity) && (!par::do_centrality)) {
+          (!par::do_modularity) && (!par::do_ranking)) {
 		error("Stopping as there are no SNPs or numeric attributes "
             "left for analysis\n");
   }
 
-	if((P.n == 0) && (!par::do_modularity) && (!par::do_centrality)) {
+	if((P.n == 0) && (!par::do_modularity) && (!par::do_ranking)) {
 		error("Stopping as there are no individuals left for analysis\n");
   }
   
@@ -635,11 +643,12 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////
 	// variable ranking requested - bcw - 5/16/13
 	if(par::do_ranking) {
-    if(!par::do_regain_post) {
-      error("Ranking requires a reGAIN file");
-    }
     P.printLOG("Performing variable ranking\n");
-    if(par::do_centrality) {
+    P.SNP2Ind();
+    if(par::ranker_method == "centrality") {
+      if(!par::do_regain_post) {
+        error("Centrality ranking requires a reGAIN file");
+      }
       P.printLOG("Ranking by network centrality\n");
       CentralityRanker cr(par::regainFile);
       if(par::ranker_centrality_gamma > 0) {
@@ -655,17 +664,42 @@ int main(int argc, char* argv[]) {
       }
       cr.WriteToFile(par::ranker_save_file, par::ranker_top_n);
     }
-    else {
-      if(par::ranker_method == "relieff") {
-        P.printLOG("Ranking Relief-F\n");
-        P.printLOG("***** Relief-F not implemented *****\n");
+    if(par::ranker_method == "regression") {
+      if(par::bt) {
+        P.printLOG("Ranking by logistic regression\n");
+      } else {
+        P.printLOG("Ranking by linear regression\n");
+      }
+      rankedlist_t ranks;
+      rankByRegression(ranks);
+      string outFile = par::ranker_save_file;
+      P.printLOG("Writing scores to [" + outFile + "]\n");
+    	ofstream outputFileHandle(outFile.c_str());
+      int numToWrite = ranks.size();
+      int topN = par::ranker_top_n;
+      if((topN > 0) && (topN <= ranks.size())) {
+        numToWrite = topN;
       }
       else {
-        if(par::ranker_method == "random") {
-          P.printLOG("Ranking Random\n");
-          P.printLOG("***** Random ranking not implemented *****\n");
+        if(topN != -1) {
+          cout << "WARNING: Attempting to use top N outside valid range: " 
+                  << topN << ". Using all ranks." << endl;
         }
       }
+      for(int i = 0; i < numToWrite; i++) {
+        double score = ranks[i].first;
+        string name = ranks[i].second;
+        outputFileHandle << name << "\t" << score << endl;
+      }
+      outputFileHandle.close();
+    }
+    if(par::ranker_method == "relieff") {
+      P.printLOG("Ranking Relief-F\n");
+      P.printLOG("***** Relief-F not implemented *****\n");
+    }
+    if(par::ranker_method == "random") {
+      P.printLOG("Ranking Random\n");
+      P.printLOG("***** Random ranking not implemented *****\n");
     }
     shutdown();
   }
