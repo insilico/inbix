@@ -24,7 +24,7 @@ FORCE_DYNAMIC =
 
 # Put C++ compiler here; Windows has it's own specific version
 CXX_UNIX = g++
-CXX_WIN = c:\bin\mingw\bin\mingw32-g++.exe
+CXX_WIN = g++.exe
 
 # Any other compiler flags here ( -Wall, -g, etc)
 CXXFLAGS = 
@@ -46,10 +46,10 @@ OUTPUT = inbix
 
 # Some system specific flags
 ifeq ($(SYS),WIN)
- CXXFLAGS += -DWIN -static
+ CXXFLAGS += -DWIN
  CXX = $(CXX_WIN)
  ifndef FORCE_DYNAMIC
-  CXXFLAGS += -static
+  CXXFLAGS += -static -fopenmp
  endif
 endif
 

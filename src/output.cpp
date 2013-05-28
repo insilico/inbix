@@ -17,6 +17,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <ctime>
 
 #include "plink.h"
 #include "options.h"
