@@ -45,6 +45,7 @@ Regain::Regain(bool compr, double sifthr, bool compo) {
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
   outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
   pureInteractions = false;
+  failureValue = 0;
 }
 
 Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
@@ -152,6 +153,11 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
   outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
   
   pureInteractions = false;
+  failureValue = 0;
+}
+
+void Regain::setFailureValue(double fValue) {
+  failureValue - fValue;
 }
 
 void Regain::performPureInteraction(bool flag) {
@@ -196,6 +202,7 @@ void Regain::logOutputOptions() {
       PP->printLOG("Output format [ full matrix ]\n");
       break;
   }
+  PP->printLOG("Regression failure value [ " + dbl2str(failureValue) + " ]\n");
 }
 
 Regain::~Regain() {
@@ -437,14 +444,17 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
 	mainEffectModel->fitLM();
 
 	// Was the model fitting method successful?
+  bool useFailureValue = false;
 	if(!mainEffectModel->isValid()) {
-		PP->printLOG("\nERROR: Invalid main effect regression fit for variable [" +
+		PP->printLOG("WARNING: Invalid main effect regression fit for variable [" +
 						coefLabel + "]\n");
-    vector<bool> vp = mainEffectModel->validParameters();
-    cout << "Parameter flags (0=false, 1=true):" << endl;
-    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
-    cout << endl;
-		shutdown();
+//    vector<bool> vp = mainEffectModel->validParameters();
+//    cout << "Parameter flags (0=false, 1=true):" << endl;
+//    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
+//    cout << endl;
+		//shutdown();
+    //PP->printLOG("Using failure value.\n");
+    useFailureValue = true;
 	}
 
 	// Obtain estimates and statistics
@@ -489,8 +499,15 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
       mainEffectValueTransformed = abs(mainEffectValue);
       break;
   }
-	regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
-	regainPMatrix[varIndex][varIndex] = mainEffectPval;
+
+  if(useFailureValue) {
+    regainMatrix[varIndex][varIndex] = failureValue;
+    regainPMatrix[varIndex][varIndex] = 1.0;
+  }
+  else {
+    regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
+    regainPMatrix[varIndex][varIndex] = mainEffectPval;
+  }
 
 	// update main effect betas file
 	if(varIsNumeric) {
@@ -591,14 +608,17 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
 	interactionModel->fitLM();
 
 	// Was the model fitting method successful?
+  bool useFailureValue = false;
   if(!interactionModel->isValid()) {
-    PP->printLOG("\nWARNING: Invalid regression fit for interaction "
+    PP->printLOG("WARNING: Invalid regression fit for interaction "
       "variables [" + coef1Label + "], [" + coef2Label + "]\n");
-    vector<bool> vp = interactionModel->validParameters();
-    cout << "Parameter flags (0=false, 1=true):" << endl;
-    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
-    cout << endl;
-    shutdown();
+//    vector<bool> vp = interactionModel->validParameters();
+//    cout << "Parameter flags (0=false, 1=true):" << endl;
+//    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
+//    cout << endl;
+    //shutdown();
+    //PP->printLOG("Using failure value.\n");
+    useFailureValue = true;
   }
 
 #pragma omp critical
@@ -649,11 +669,20 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
         interactionValueTransformed = abs(interactionValue);
         break;
     }
-		regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
-		regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
-		regainPMatrix[varIndex1][varIndex2] = interactionPval;
-		regainPMatrix[varIndex2][varIndex1] = interactionPval;
-
+    
+    if(useFailureValue) {
+      regainMatrix[varIndex1][varIndex2] = failureValue;
+      regainMatrix[varIndex2][varIndex1] = failureValue;
+      regainPMatrix[varIndex1][varIndex2] = 1.0;
+      regainPMatrix[varIndex2][varIndex1] = 1.0;
+    }
+    else {
+      regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
+      regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+      regainPMatrix[varIndex1][varIndex2] = interactionPval;
+      regainPMatrix[varIndex2][varIndex1] = interactionPval;
+    }
+    
     // !!!!! DEBUGGING RAW VALUES !!!!!
 #if defined(DEBUG_REGAIN)
     cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")

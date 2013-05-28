@@ -263,6 +263,7 @@ bool par::regainSifFilter = false;
 double par::regainSifThreshold = -9999999;
 bool par::regainUseBetaValues = false;
 bool par::regainPureInteractions = false;
+double par::regainFailValue = 0;
 // regain matrix output - bcw - 4/30/13
 string par::regainMatrixTransform = "none";
 string par::regainMatrixFormat = "full";

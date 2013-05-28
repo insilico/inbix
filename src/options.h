@@ -358,6 +358,7 @@ public:
 	static double regainSifThreshold;
 	static bool regainUseBetaValues;
   static bool regainPureInteractions;
+  static double regainFailValue;
   // regain matrix output - bcw - 4/30/13
   static string regainMatrixTransform;
   static string regainMatrixFormat;

@@ -2797,6 +2797,10 @@ void setOptions(CArgs & a) {
     par::regainPureInteractions = true;
   }
 
+  if(a.find("--regain-fail-value")) {
+    par::regainFailValue = a.value_double("--regain-fail-value");
+  }
+
   if(a.find("--regain-compress")) {
     par::regainCompress = true;
   }
@@ -4090,6 +4094,7 @@ void setOptions(CArgs & a) {
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions Exclude main effects from interactions\n"
+            << "      --regain-fail-value {value} Value to use if regression failure\n"
             << "      --regain-compress         Compress reGAIN output      \n"
             << "      --regain-components       Write reGAIN components     \n"
             << "      --regain-fdr {rate}       Set reGAIN FDR              \n"

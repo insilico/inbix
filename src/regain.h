@@ -86,6 +86,8 @@ public:
 	static bool mainEffectComparator(const matrixElement &l, const matrixElement &r);
   // set flag to include main effects in the interaction model or not
   void performPureInteraction(bool flag);
+  // set the value to use when regression procedure fails
+  void setFailureValue(double fValue);
 private:
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
@@ -127,5 +129,7 @@ private:
 	vector<matrixElement> gainIntPvals;
   // regression warnings - bcw - 4/30/13
   vector<string> warnings;
+  // value to use when regression fails
+  double failureValue;
 };
 #endif
