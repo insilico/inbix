@@ -2893,10 +2893,6 @@ void setOptions(CArgs & a) {
     par::ranker_top_n = a.value_int("--rank-top-n");
   }
 
-  if(a.find("--rank-save-ranks")) {
-    par::ranker_save_file = a.value("--rank-save-ranks");
-  }
-
   if(a.find("--rank-save-data")) {
     par::ranker_save_data_file = a.value("--rank-save-data");
   }
@@ -4115,7 +4111,6 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
-            << "      --rank-save-ranks {file name} Save ranker results to file\n"
             << "      --rank-save-data {file name} Save ranker results to new data file\n"
             << "      --rank-file {ranker file} Load an existing ranker file\n"
             << "      --rank-centrality-gamma {gamma} Use a specified gamma\n"

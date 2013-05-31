@@ -2172,7 +2172,7 @@ void Plink::writeSetFile() {
 }
 
 bool Plink::outputArffFile(string arffFilename) {
-  printLOG("Writing Weka ARFF file to [ " + arffFilename + "]\n");
+  printLOG("Writing Weka ARFF file to [ " + arffFilename + " ]\n");
   ofstream ARFF(arffFilename.c_str(), ios::out);
 
   // write header section
@@ -2190,6 +2190,10 @@ bool Plink::outputArffFile(string arffFilename) {
   // write numeric attributes
   for(int i=0; i < nlistname.size(); ++i) {
     ARFF << "@ATTRIBUTE " << nlistname[i] << " numeric" << endl;
+  }
+  // write covariates as attributes
+  for(int i=0; i < clistname.size(); ++i) {
+    ARFF << "@ATTRIBUTE " << clistname[i] << " numeric" << endl;
   }
   // write phenotype attributes
   if(par::bt) {
@@ -2221,6 +2225,16 @@ bool Plink::outputArffFile(string arffFilename) {
       }
       else {
         ARFF << sample[i]->nlist[j];;
+        seenDataForLine = true;
+      }
+    }
+    // write covariates
+    for(int j=0; j < clistname.size(); ++j) {
+      if(seenDataForLine) {
+        ARFF << "," << sample[i]->clist[j];
+      }
+      else {
+        ARFF << sample[i]->clist[j];;
         seenDataForLine = true;
       }
     }
@@ -2406,7 +2420,7 @@ bool Plink::outputNumericExtract(string attributeFilename) {
   
   // write new numeric data file
   string newFilename = par::output_file_name + ".extract.num";
-  printLOG("Writing new numeric file to [ " + newFilename + "]\n");
+  printLOG("Writing new numeric file to [ " + newFilename + " ]\n");
   ofstream newFile(newFilename.c_str(), ios::out);
   // write new header
   newFile << "FID\tIID";

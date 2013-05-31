@@ -425,10 +425,7 @@ bool CentralityRanker::GaussEliminationSolver()
   display(w);
 #endif
 	if(!svdcmp(u, w, v)) {
-    display(u);
-    display(w);
-    display(v);
-    error("SVD solver failed");
+    error("SVD solver failed: svdcmp");
 	}
 #ifdef DEBUG_CENTRALITY_SOLVER
   display(u);
@@ -474,10 +471,14 @@ bool CentralityRanker::GaussEliminationSolver()
 
 bool CentralityRanker::PowerMethodSolver()
 {
+#ifdef DEBUG_CENTRALITY
+  cout << "In PowerMethodSolver" << endl;
 	// compute initial T, Markov chain transition matrix
 	// first term (gamma * G * D) is zero when d_j = 0
 	// for right hand term of T, Gdiag is nx1 and T_nz is 1xn
 	// initialize second term multiplier as a row vector of 1s
+  cout << "Column sums" << endl;
+#endif
 	vector_t diag_T_nz(n, 1);
   for(int i=0; i < n; ++i) {
     diag_T_nz[i] /= n;
@@ -494,9 +495,16 @@ bool CentralityRanker::PowerMethodSolver()
       colsum_nzidx.push_back(i);
     }
   }
+#ifdef DEBUG_CENTRALITY
+  cout << "colsum_nzidx:" << endl;
+	display(colsum_nzidx);
+#endif
 
 	// D is an n x n sparse matrix with values 1/colsum for nonzero elements
 	// of colsum indices given by colsum_nzidx.  Other elements are zero.
+#ifdef DEBUG_CENTRALITY
+  cout << "Creating D" << endl;
+#endif
   sizeMatrix(D, n, n);
   matrixFill(D, 0);
 	// D = zeros<matrix_t>(n, n);
@@ -510,8 +518,10 @@ bool CentralityRanker::PowerMethodSolver()
   }
 #ifdef DEBUG_CENTRALITY
 	display(D);
+	display(Gdiag);
+  cout << "Finding nonzero indexes" << endl;
 #endif
-
+  cout << "gamma = " << gamma << endl;
 	for (int i = 0; i < colsum_nzidx.size(); i++){
 		diag_T_nz[colsum_nzidx[i]] = (1 - gamma) / n;
 	}
@@ -520,9 +530,21 @@ bool CentralityRanker::PowerMethodSolver()
 	intvec_t diag_nzidx;
   for(int i=0; i < n; ++i) {
     if(Gdiag[i][i]) {
-      diag_nzidx.push_back((1 - gamma) * Gdiag[i][i] / n);
+      diag_nzidx.push_back(i);
     }
   }
+  
+	for(int i = 0; i < diag_nzidx.size(); i++){
+    int nzidx = diag_nzidx[i];
+		diag_T_nz[nzidx] = (1 - gamma) * Gdiag[nzidx][nzidx] / n;
+	}
+
+#ifdef DEBUG_CENTRALITY
+  cout << "diag_T_nz:" << endl;
+	display(diag_T_nz);
+  cout << "diag_nzidx:" << endl;
+  display(diag_nzidx);
+#endif
 	// (C) for non-zero diag elements, gives (1-gamma)gii/n,
 	// which supercedes (A) and (B)
 
@@ -531,31 +553,48 @@ bool CentralityRanker::PowerMethodSolver()
   //		diag_T_nz(diag_nzidx[i]) = (1 - gamma) * Gdiag(diag_nzidx[i]) / n;
   //	}
 
-	vector_t e(n, 1);
-	matrix_t T;
-  sizeMatrix(T, n, n);
-  
   matrix_t GD;
   multMatrix(G, D, GD);
+  //matrixMultiply(G, D, GD);
+#ifdef DEBUG_CENTRALITY
+  cout << "Creating GD" << endl;
+	display(GD);
+#endif
   matrixMultiplyScalar(GD, gamma);
-  matrix_t ed(n);
-  for(int i=0; i < n; ++i) {
-    for(int j=0; j < n; ++j) {
+#ifdef DEBUG_CENTRALITY
+	display(GD);
+  cout << "Creating ed" << endl;
+#endif
+	vector_t e(n, 1);
+  matrix_t ed;
+  sizeMatrix(ed, n, n);
+  int i, j;
+  for(i=0; i < n; ++i) {
+    for(j=0; j < n; ++j) {
       ed[i][j] = e[i] * diag_T_nz[j];
     }
   }
+#ifdef DEBUG_CENTRALITY
+	display(ed);
+  cout << "Creating T" << endl;
+#endif
+	matrix_t T;
+  sizeMatrix(T, n, n);
 	if(Gtrace == 0.0) {
     matrixAdd(GD, ed, T);
 	}
 	else {
+    matrixDivideScalar(ed, Gtrace);
     matrixAdd(GD, ed, T);
-		matrixDivideScalar(T, Gtrace);
 	}
+#ifdef DEBUG_CENTRALITY
+	display(T);
+#endif
 
 	// initialize size of vector r to store centrality scores
   //	r.set_size(G.size());
   //	r.fill(1.0 / G.size());
-  r.resize(n, 1 / n);
+  r.resize(n, 1.0 / n);
 	double threshold = 1.0E-4;
 	double lambda = 0.0;
 	bool converged = false;
@@ -563,16 +602,28 @@ bool CentralityRanker::PowerMethodSolver()
 
 	// if the absolute value of the difference between old and current r
 	// vector is < threshold, we have converged
+  int iterations = 0;
+  cout << "Entering convergence loop" << endl;
 	while(!converged) {
+    ++iterations;
+    
 		r_old = r;
 		// r = T * r;
+#ifdef DEBUG_CENTRALITY
+	display(r);
+#endif
+    vector_t r_new(n);
     for(int i=0; i < n; ++i) {
       double tempSum = 0;
       for(int j=0; j < n; ++j) {
         tempSum += T[i][j] * r[j];
       }
-      r[i] = tempSum;
+      r_new[i] = tempSum;
     }
+    r = r_new;
+#ifdef DEBUG_CENTRALITY
+	display(r);
+#endif
 
 		// sum of r elements
 		lambda = 0;
@@ -593,14 +644,21 @@ bool CentralityRanker::PowerMethodSolver()
     //		else {
     //			converged = false;
     //		}
+    int numConverged = 0;
     for(int i=0; i < r.size(); ++i) {
-      if(fabs(r[i] - r_old[i]) > threshold) {
-        converged = false;
-        continue;
+      if(fabs(r[i] - r_old[i]) < threshold) {
+        ++numConverged;
       }
     }
-
+    if(numConverged == r.size()) {
+      converged = true;
+      cout << "Converged in " << iterations << " iterations" << endl;
+    }
 	}
+
+  for(int i=0; i < r.size(); ++i) {
+    ranks.push_back(make_pair(r[i], i));
+  }
 
 	return converged;
 }

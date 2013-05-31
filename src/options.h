@@ -350,6 +350,7 @@ public:
   static string regainFile;
   static const double regainLargeCoefPvalue;
   static const double regainLargeCoefTvalue;
+  static const double regainMaxBetaValue;
 	static bool regainCompress;
 	static bool regainComponents;
 	static double regainFdr;
@@ -382,7 +383,6 @@ public:
   static bool do_ranking;
 	static string ranker_method;
   static int ranker_top_n;
-  static string ranker_save_file;
   static string ranker_save_data_file;
   static string ranker_input_file;
   static double ranker_centrality_gamma;

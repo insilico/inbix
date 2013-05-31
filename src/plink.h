@@ -69,6 +69,11 @@ enum ModelTermType {
   NUMERIC
 };
 
+// regression ranking modes
+enum RegressionRankType {
+  REGRESSION_RANK_STAT, REGRESSION_RANK_BETA, REGRESSION_RANK_PVAL
+};
+
 typedef pair<int, ModelTermType> interactionVar_t;
 typedef pair<interactionVar_t, interactionVar_t> interaction_t;
 

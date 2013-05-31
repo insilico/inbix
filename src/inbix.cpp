@@ -645,34 +645,59 @@ int main(int argc, char* argv[]) {
 	if(par::do_ranking) {
     P.printLOG("Performing variable ranking\n");
     P.SNP2Ind();
-    if(par::ranker_method == "centrality") {
+    if(par::ranker_method == "centrality" || 
+            par::ranker_method == "centrality_power" ||
+            par::ranker_method == "centrality_gauss") {
       if(!par::do_regain_post) {
         error("Centrality ranking requires a reGAIN file");
       }
-      P.printLOG("Ranking by network centrality\n");
+      P.printLOG("Ranking by network centrality: " + par::ranker_method + "\n");
       CentralityRanker cr(par::regainFile);
       if(par::ranker_centrality_gamma > 0) {
         P.printLOG("Network centrality gamma set to: " + 
           dbl2str(par::ranker_centrality_gamma) + "\n");
         cr.SetGlobalGamma(par::ranker_centrality_gamma);
       }
-      if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
-        error("Centrality ranking failed");
+      if(par::ranker_method == "centrality_power") {
+        cr.SetGlobalGamma(0.85);
+        if(!cr.CalculateCentrality(POWER_METHOD)) {
+          error("Centrality ranking failed");
+        }
+      }
+      if(par::ranker_method == "centrality" || 
+              par::ranker_method == "centrality_gauss") {
+        if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
+          error("Centrality ranking failed");
+        }
       }
       if(par::verbose) {
         cr.WriteToConsole(par::ranker_top_n);
       }
-      cr.WriteToFile(par::ranker_save_file, par::ranker_top_n);
+      string saveFilename = par::output_file_name + ".ranks";
+      cr.WriteToFile(saveFilename, par::ranker_top_n);
     }
-    if(par::ranker_method == "regression") {
+    if(par::ranker_method == "regressions" ||
+            par::ranker_method == "regressionb" ||
+            par::ranker_method == "regressionp") {
       if(par::bt) {
         P.printLOG("Ranking by logistic regression\n");
       } else {
         P.printLOG("Ranking by linear regression\n");
       }
       rankedlist_t ranks;
-      rankByRegression(ranks);
-      string outFile = par::ranker_save_file;
+      if(par::ranker_method == "regressions") {
+        P.printLOG("Using regression statistic values\n");
+        rankByRegression(REGRESSION_RANK_STAT, ranks);
+      }
+      if(par::ranker_method == "regressionb") {
+        P.printLOG("Using regression beta coefficient values\n");
+        rankByRegression(REGRESSION_RANK_BETA, ranks);
+      }
+      if(par::ranker_method == "regressionp") {
+        P.printLOG("Using regression -log10(p-values)\n");
+        rankByRegression(REGRESSION_RANK_PVAL, ranks);
+      }
+      string outFile = par::output_file_name + ".ranks";
       P.printLOG("Writing scores to [" + outFile + "]\n");
     	ofstream outputFileHandle(outFile.c_str());
       int numToWrite = ranks.size();
@@ -813,6 +838,7 @@ int main(int argc, char* argv[]) {
 		}
     // write output options to stdout and log file - bcw - 5/1/13
     regain->logOutputOptions();
+    regain->logMatrixStats();
   	regain->writeRegain(false, par::regainFdrPrune);
 		regain->writeRegain(true);
 		delete regain;

@@ -46,6 +46,12 @@ Regain::Regain(bool compr, double sifthr, bool compo) {
   outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
   pureInteractions = false;
   failureValue = 0;
+  nanCount = 0;
+  infCount = 0;
+  minMainEffect = 0;
+  maxMainEffect = 0;
+  minInteraction = 0;
+  maxInteraction = 0;
 }
 
 Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
@@ -154,6 +160,12 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
   
   pureInteractions = false;
   failureValue = 0;
+  nanCount = 0;
+  infCount = 0;
+  minMainEffect = 0;
+  maxMainEffect = 0;
+  minInteraction = 0;
+  maxInteraction = 0;
 }
 
 void Regain::setFailureValue(double fValue) {
@@ -202,7 +214,8 @@ void Regain::logOutputOptions() {
       PP->printLOG("Output format [ full matrix ]\n");
       break;
   }
-  PP->printLOG("Regression failure value [ " + dbl2str(failureValue) + " ]\n");
+  PP->printLOG("Regression failure substitution value [ " + 
+    dbl2str(failureValue) + " ]\n");
 }
 
 Regain::~Regain() {
@@ -392,10 +405,33 @@ void Regain::run() {
   // report warnings to stdout - bcw - 4/30/13
   if(warnings.size()) {
     cout << "WARNINGS in regression models:" << endl;
+    for(vector<string>::const_iterator wIt = warnings.begin();
+            wIt != warnings.end(); ++wIt) {
+      cout << *wIt << endl;
+    }
   }
-  for(vector<string>::const_iterator wIt = warnings.begin();
-          wIt != warnings.end(); ++wIt) {
-    cout << *wIt << endl;
+  
+  if(failures.size()) {
+    double numCombinations = (numAttributes * (numAttributes-1)) / 2.0;
+    double numFailures = (double) failures.size();
+    double percentFailures = (numFailures / numCombinations) * 100.0;
+    PP->printLOG(dbl2str(numFailures) + " failures in regression models " 
+      + dbl2str(percentFailures) + "%\n");
+    string failureFilename = par::output_file_name + ".regression.failures";
+    PP->printLOG("Writing failure messages to [ " + failureFilename + " ]\n");
+    ofstream failureFile(failureFilename.c_str());
+    for(vector<string>::const_iterator fIt = failures.begin();
+            fIt != failures.end(); ++fIt) {
+      failureFile << *fIt << endl;
+    }
+    failureFile.close();
+  }
+  
+  if(nanCount) {
+    PP->printLOG("Detected [ " + int2str(nanCount) + " ] NaN's\n");
+  }
+  if(infCount) {
+    PP->printLOG("Detected [ " + int2str(infCount) + " ] Inf's\n");
   }
 }
 
@@ -446,15 +482,13 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
 	// Was the model fitting method successful?
   bool useFailureValue = false;
 	if(!mainEffectModel->isValid()) {
-		PP->printLOG("WARNING: Invalid main effect regression fit for variable [" +
-						coefLabel + "]\n");
-//    vector<bool> vp = mainEffectModel->validParameters();
-//    cout << "Parameter flags (0=false, 1=true):" << endl;
-//    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
-//    cout << endl;
-		//shutdown();
-    //PP->printLOG("Using failure value.\n");
+#pragma omp critical
+  	{
+    string failMsg = "WARNING: Invalid main effect regression fit for variable [" +
+						coefLabel + "]";
+		failures.push_back(failMsg);
     useFailureValue = true;
+    }
 	}
 
 	// Obtain estimates and statistics
@@ -474,6 +508,15 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
       ss << "Large p-value [" << mainEffectPval 
               << "] on coefficient for variable [" << coefLabel << "]";
       warnings.push_back(ss.str());
+      mainEffectValue = 0;
+    }
+    if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
+      mainEffectValue = par::regainLargeCoefTvalue;
+      ++infCount;
+    }
+    if(isnan(mainEffectValue)) {
+      mainEffectValue = 0;
+      ++nanCount;
     }
 	} else {
 		mainEffectValue = betaMainEffectCoefs[tp] /
@@ -484,8 +527,18 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
       ss << "Large test statistic value [" << mainEffectValue 
               << "] on coefficient for variable ["  << coefLabel << "]";
       warnings.push_back(ss.str());
+      mainEffectValue = par::regainLargeCoefTvalue;
+    }
+    if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
+      mainEffectValue = par::regainLargeCoefTvalue;
+      ++infCount;
+    }
+    if(isnan(mainEffectValue)) {
+      mainEffectValue = 0;
+      ++nanCount;
     }
 	}
+
   double mainEffectValueTransformed = mainEffectValue;
   switch(outputTransform) {
     case REGAIN_OUTPUT_TRANSFORM_NONE:
@@ -610,15 +663,13 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
 	// Was the model fitting method successful?
   bool useFailureValue = false;
   if(!interactionModel->isValid()) {
-    PP->printLOG("WARNING: Invalid regression fit for interaction "
-      "variables [" + coef1Label + "], [" + coef2Label + "]\n");
-//    vector<bool> vp = interactionModel->validParameters();
-//    cout << "Parameter flags (0=false, 1=true):" << endl;
-//    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
-//    cout << endl;
-    //shutdown();
-    //PP->printLOG("Using failure value.\n");
+#pragma omp critical
+  	{
+    string failMsg = "WARNING: Invalid regression fit for interaction "
+      "variables [" + coef1Label + "], [" + coef2Label + "]";
+    failures.push_back(failMsg);
     useFailureValue = true;
+    }
   }
 
 #pragma omp critical
@@ -639,23 +690,48 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
 		double interactionValue = 0;
 		if(par::regainUseBetaValues) {
 			interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-      if(interactionPval > par::regainLargeCoefPvalue) {
+       if(interactionPval > par::regainLargeCoefPvalue) {
         stringstream ss;
         ss << "Large p-value [" << interactionPval 
                 << "] on coefficient for interaction variables [" 
                 << coef1Label << "][" << coef2Label << "]";
         warnings.push_back(ss.str());
+        interactionValue = 0;
       }
+      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        interactionValue = par::regainMaxBetaValue;
+        ++infCount;
+      }
+      if(isnan(interactionValue)) {
+        interactionValue = 0;
+        ++nanCount;
+      }
+      // TODO: is there a maximum beta value to threshold?
 		} else {
 			interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-      if(interactionValue > par::regainLargeCoefTvalue) {
+      if(abs(interactionValue) > par::regainLargeCoefTvalue) {
         stringstream ss;
         ss << "Large test statistic value [" << interactionValue 
                 << "] on coefficient for interaction variables [" 
                 << coef1Label << "][" << coef2Label << "]";
         warnings.push_back(ss.str());
+        if(interactionValue < 0) {
+          interactionValue = -par::regainLargeCoefTvalue;
+        }
+        else {
+          interactionValue = par::regainLargeCoefTvalue;
+        }
+      }
+      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        interactionValue = par::regainLargeCoefTvalue;
+        ++infCount;
+      }
+      if(isnan(interactionValue)) {
+        interactionValue = 0;
+        ++nanCount;
       }
 		}
+
     double interactionValueTransformed = interactionValue;
     switch(outputTransform) {
       case REGAIN_OUTPUT_TRANSFORM_NONE:
@@ -821,14 +897,15 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 	interactionModel->fitLM();
 
 	// Was the model fitting method successful?
+  bool useFailureValue = false;
   if(!interactionModel->isValid()) {
-    PP->printLOG("\nWARNING: Invalid regression fit for interaction "
-      "variables [" + coef1Label + "], [" + coef2Label + "]\n");
-    vector<bool> vp = interactionModel->validParameters();
-    cout << "Parameter flags (0=false, 1=true):" << endl;
-    copy(vp.begin(), vp.end(), ostream_iterator<bool>(cout, "\n"));
-    cout << endl;
-    shutdown();
+#pragma omp critical
+  	{
+    string failMsg = "\nWARNING: Invalid regression fit for interaction "
+      "variables [" + coef1Label + "], [" + coef2Label + "]";
+    failures.push_back(failMsg);
+    useFailureValue = true;
+    }
   }
 
 #pragma omp critical
@@ -842,8 +919,14 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
 		vector_t::const_iterator bIt = betaInteractionCoefs.begin();
 		vector_t::const_iterator sIt = interactionModelSE.begin();
 		vector_t regressTestStatValues;
+    double beta = 0;
+    double se = 0;
+    double stat = 0;
 		for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
-			regressTestStatValues.push_back(*bIt / *sIt);
+      beta = *bIt;
+      se = *sIt;
+      stat = beta / se; 
+			regressTestStatValues.push_back(stat);
 		}
 
 		double interactionValue = 0;
@@ -855,17 +938,42 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
                 << "] on coefficient for interaction variables [" 
                 << coef1Label << "][" << coef2Label << "]";
         warnings.push_back(ss.str());
+        interactionValue = 0;
       }
+      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        interactionValue = par::regainLargeCoefTvalue;
+        ++infCount;
+      }
+      if(isnan(interactionValue)) {
+        interactionValue = 0;
+        ++nanCount;
+      }
+      // TODO: is there a maximum beta value to threshold?
 		} else {
 			interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-      if(interactionValue > par::regainLargeCoefTvalue) {
+      if(abs(interactionValue) > par::regainLargeCoefTvalue) {
         stringstream ss;
         ss << "Large test statistic value [" << interactionValue 
                 << "] on coefficient for interaction variables [" 
                 << coef1Label << "][" << coef2Label << "]";
         warnings.push_back(ss.str());
+        if(interactionValue < 0) {
+          interactionValue = -par::regainLargeCoefTvalue;
+        }
+        else {
+          interactionValue = par::regainLargeCoefTvalue;
+        }
+      }
+      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        interactionValue = par::regainLargeCoefTvalue;
+        ++infCount;
+      }
+      if(isnan(interactionValue)) {
+        interactionValue = 0;
+        ++nanCount;
       }
 		}
+
     double interactionValueTransformed = interactionValue;
     switch(outputTransform) {
       case REGAIN_OUTPUT_TRANSFORM_NONE:
@@ -879,10 +987,19 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         interactionValueTransformed = abs(interactionValue);
         break;
     }
-		regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
-		regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
-		regainPMatrix[varIndex1][varIndex2] = interactionPval;
-		regainPMatrix[varIndex2][varIndex1] = interactionPval;
+
+    if(useFailureValue) {
+      regainMatrix[varIndex1][varIndex2] = failureValue;
+      regainMatrix[varIndex2][varIndex1] = failureValue;
+      regainPMatrix[varIndex1][varIndex2] = 1.0;
+      regainPMatrix[varIndex2][varIndex1] = 1.0;
+    }
+    else {
+      regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
+      regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+      regainPMatrix[varIndex1][varIndex2] = interactionPval;
+      regainPMatrix[varIndex2][varIndex1] = interactionPval;
+    }
 
     // !!!!! DEBUGGING RAW VALUES !!!!!
 #if defined(DEBUG_REGAIN)
@@ -1213,4 +1330,43 @@ void Regain::writeRcomm(double T, double fdr) {
 bool Regain::mainEffectComparator(const matrixElement &l, 
         const matrixElement &r) {
 	return l.first < r.first;
+}
+
+bool Regain::updateStats() {
+  minMainEffect = maxMainEffect = regainMatrix[0][0];
+  minInteraction = maxInteraction = regainMatrix[0][1];
+	for(int i = 0; i < numAttributes; ++i) {
+		for(int j = i; j < numAttributes; ++j) {
+      if(i == j) {
+        if(regainMatrix[i][j] < minMainEffect) {
+          minMainEffect = regainMatrix[i][j];
+        }
+        if(regainMatrix[i][j] > maxMainEffect) {
+          maxMainEffect = regainMatrix[i][j];
+        }
+      }
+      else {
+        if(regainMatrix[i][j] < minInteraction) {
+          minInteraction = regainMatrix[i][j];
+        }
+        if(regainMatrix[i][j] > maxInteraction) {
+          maxInteraction = regainMatrix[i][j];
+        }
+      }
+    }
+  }
+  
+  return true;
+}
+
+bool Regain::logMatrixStats() {
+  updateStats();
+
+  PP->printLOG("reGAIN matrix statistics:\n");
+  PP->printLOG("minimum main effect [ " + dbl2str(minMainEffect) + " ]\n");
+  PP->printLOG("maximum main effect [ " + dbl2str(maxMainEffect) + " ]\n");
+  PP->printLOG("minimum interaction [ " + dbl2str(minInteraction) + " ]\n");
+  PP->printLOG("maximum interaction [ " + dbl2str(maxInteraction) + " ]\n");
+
+  return true;
 }

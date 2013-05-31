@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_blas.h>
+
 #include "stats.h"
 
 // #ifdef WITH_LAPACK
@@ -1514,8 +1517,9 @@ bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix,
 }
 
 bool matrixFill(matrix_t& m, double f) {
-  for(int i=0; i < m.size(); ++i) {
-    for(int j=0; j < m[0].size(); ++j) {
+  int i, j;
+  for(i=0; i < m.size(); ++i) {
+    for(j=0; j < m[0].size(); ++j) {
       m[i][j] = f;
     }
   }
@@ -1523,8 +1527,9 @@ bool matrixFill(matrix_t& m, double f) {
 }
 
 bool matrixMultiplyScalar(matrix_t& m, double s) {
-  for(int i=0; i < m.size(); ++i) {
-    for(int j=0; j < m[0].size(); ++j) {
+  int i, j;
+  for(i=0; i < m.size(); ++i) {
+    for(j=0; j < m[0].size(); ++j) {
       m[i][j] *= s;
     }
   }
@@ -1532,8 +1537,9 @@ bool matrixMultiplyScalar(matrix_t& m, double s) {
 }
 
 bool matrixDivideScalar(matrix_t& m, double s) {
-  for(int i=0; i < m.size(); ++i) {
-    for(int j=0; j < m[0].size(); ++j) {
+  int i, j;
+  for(i=0; i < m.size(); ++i) {
+    for(j=0; j < m[0].size(); ++j) {
       m[i][j] /= s;
     }
   }
@@ -1554,8 +1560,9 @@ bool matrixAdd(matrix_t m1, matrix_t m2, matrix_t& result) {
     error("Error in matrixSubtract, rows sizes are not compatible");
   }
   
-  for(int i=0; i < m1Rows; ++i) {
-    for(int j=0; j < m1Cols; ++j) {
+  int i, j;
+  for(i=0; i < m1Rows; ++i) {
+    for(j=0; j < m1Cols; ++j) {
       result[i][j] = m1[i][j] + m2[i][j];
     }
   }
@@ -1575,9 +1582,10 @@ bool matrixSubtract(matrix_t m1, matrix_t m2, matrix_t& result) {
   if(m1Cols != m2Cols) {
     error("Error in matrixSubtract, rows sizes are not compatible");
   }
-  
-  for(int i=0; i < m1Rows; ++i) {
-    for(int j=0; j < m1Cols; ++j) {
+
+  int i, j;
+  for(i=0; i < m1Rows; ++i) {
+    for(j=0; j < m1Cols; ++j) {
       result[i][j] = m1[i][j] - m2[i][j];
     }
   }
@@ -1589,8 +1597,9 @@ bool matrixTranspose(matrix_t in, matrix_t& out) {
   int inCols = in[0].size();
   sizeMatrix(out, inCols, inRows);
   
-  for(int i=0; i < inRows; ++i) {
-    for(int j=0; j < inCols; ++j) {
+  int i, j;
+  for(i=0; i < inRows; ++i) {
+    for(j=0; j < inCols; ++j) {
       out[j][i] = in[i][j];
     }
   }
@@ -1720,8 +1729,10 @@ bool matrixElementWiseMultiply(matrix_t m, matrix_t n, matrix_t& m_out) {
   int nCol = n[0].size();
   if((mRow == nRow) && (mCol == nCol)) {
     sizeMatrix(m_out, nRow, nCol);
-    for(int i=0; i < nRow; ++i) {
-      for(int j=0; j < nCol; ++j) {
+
+    int i, j;
+    for(i=0; i < nRow; ++i) {
+      for(j=0; j < nCol; ++j) {
         m_out[i][j] = m[i][j] * n[i][j];
       }
     }
@@ -1826,7 +1837,7 @@ bool vectorSummary(vector_t values, vector_t& summary) {
   summary[2] = sd;
 }
 
-bool rankByRegression(rankedlist_t& ranks) {
+bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks) {
  	Model *mainEffectModel;
 
   // model SNPs
@@ -1856,8 +1867,41 @@ bool rankByRegression(rankedlist_t& ranks) {
     pair<double, double> numResult;
     mainEffectModel->addNumeric(i);
     mainEffectModel->label.push_back(PP->nlistname[i]);
-    numResult = fitModel(mainEffectModel);
-    ranks.push_back(make_pair(numResult.first, PP->nlistname[i]));
+
+    // Build design matrix
+    mainEffectModel->buildDesignMatrix();
+
+    // Fit linear model
+    int tp = 1; 
+    mainEffectModel->testParameter = tp; // single variable main effect
+    mainEffectModel->fitLM();
+
+    // Obtain estimates and statistics
+    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+    // p-values don't include intercept term
+    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+    double mainEffectValueP = betaMainEffectCoefPvals[tp - 1];
+    vector_t mainEffectModelSE = mainEffectModel->getSE();
+
+    // always use first coefficient after intercept as main effect term
+    double mainEffectValueB = betaMainEffectCoefs[tp];
+    double mainEffectValueS = betaMainEffectCoefs[tp] /
+              mainEffectModelSE[tp];
+
+    double rankValue = 0;
+    switch(rankType) {
+      case REGRESSION_RANK_STAT:
+        rankValue = mainEffectValueS;
+        break;
+      case REGRESSION_RANK_BETA:
+        rankValue = mainEffectValueB;
+        break;
+      case REGRESSION_RANK_PVAL:
+        rankValue = -log10(mainEffectValueP);
+        break;
+    }
+    ranks.push_back(make_pair(rankValue, PP->nlistname[i]));
+
     delete mainEffectModel;
   }
 
@@ -1895,4 +1939,59 @@ pair<double, double> fitModel(Model* mainEffectModel) {
   result.second = mainEffectPval;
   
   return result;
+}
+
+bool matrixMultiply(matrix_t a, matrix_t b, matrix_t& c) {
+  int ar = a.size();
+  int br = b.size();
+  if(ar == 0 || br == 0) {
+    error("Internal error: multiplying 0-sized matrices");
+  }
+  
+  int ac = a[0].size();
+  int bc = b[0].size();
+  if(ac != br) {
+    error("Internal error: non-conformable matrices in multMatrix()");
+  }
+  
+  // cout << "1 - Init A and B" << endl;
+  double* A = new double[ar*ac];
+  double* B = new double[ar*ac];
+  int i, j;
+  for(i = 0; i < ar; i++) {
+    for(j = 0; j < ac; j++) {
+      A[i*ac+j] = a[i][j];
+    }
+  }
+  for(i = 0; i < br; i++) {
+    for(j = 0; j < bc; j++) {
+      B[i*bc+j] = b[i][j];
+    }
+  }
+  
+  int cr = ar;
+  int cc = bc;
+
+  // cout << "2 - dgemm" << endl;
+  double alpha = 1., beta = 0.;
+  gsl_matrix_view A_m = gsl_matrix_view_array(A, ar, ac);
+  gsl_matrix_view B_m = gsl_matrix_view_array(B, br, bc);
+  gsl_matrix *C = gsl_matrix_alloc(cr, cc);
+  gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, alpha, &A_m.matrix, 
+      &B_m.matrix, beta, C);
+
+  // cout << "3 - load c" << endl;
+  c.clear();
+  sizeMatrix(c, cr, cc);
+  for(i = 0; i < cr; i++) {
+    for(j = 0; j < cc; j++) {
+      c[i][j] = gsl_matrix_get(C, i, j);
+    }
+  }
+
+  gsl_matrix_free(C);
+  delete B;
+  delete A;
+ 
+  return true;
 }

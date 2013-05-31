@@ -38,9 +38,9 @@ LIB_IGRAPH = /usr/lib/libigraph.so
 # --------------------------------------------------------------------
 
 # optimized mode
-CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wwrite-strings
+CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings
 # debug mode
-#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY_SOLVER
+#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY
 
 OUTPUT = inbix
 
@@ -138,6 +138,8 @@ HDR += lapackf.h
 SRC += lapackf.cpp
 LIB += $(LIB_LAPACK) 
 endif
+
+LIB += -lm -lgsl -lgslcblas
 
 OBJ = $(SRC:.cpp=.o)
 

@@ -88,6 +88,8 @@ public:
   void performPureInteraction(bool flag);
   // set the value to use when regression procedure fails
   void setFailureValue(double fValue);
+  bool updateStats();
+  bool logMatrixStats();
 private:
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
@@ -129,7 +131,16 @@ private:
 	vector<matrixElement> gainIntPvals;
   // regression warnings - bcw - 4/30/13
   vector<string> warnings;
+  // regression failures - bcw - 5/29/13
+  vector<string> failures;
   // value to use when regression fails
   double failureValue;
+  int nanCount;
+  int infCount;
+  // some regain calculation stats
+  double minMainEffect;
+  double maxMainEffect;
+  double minInteraction;
+  double maxInteraction;
 };
 #endif
