@@ -554,8 +554,8 @@ bool CentralityRanker::PowerMethodSolver()
   //	}
 
   matrix_t GD;
-  multMatrix(G, D, GD);
-  //matrixMultiply(G, D, GD);
+  //multMatrix(G, D, GD);
+  matrixMultiply(G, D, GD);
 #ifdef DEBUG_CENTRALITY
   cout << "Creating GD" << endl;
 	display(GD);
