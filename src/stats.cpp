@@ -1779,12 +1779,14 @@ bool reportNumericSummaryStats() {
     }
     vector_t summary;
     vectorSummary(values, summary);
+    double coefOfVar = summary[2] / summary[0];
     outFileI 
             << PP->sample[i]->fid << "\t" 
             << PP->sample[i]->iid << "\t"
             << summary[0] << "\t" 
             << summary[1] << "\t" 
-            << summary[2] << endl;
+            << summary[2] 
+            << endl;
   }
   outFileI.close();
   
@@ -1794,7 +1796,7 @@ bool reportNumericSummaryStats() {
   if(outFileV.fail()) {
     return false;
   }
-  outFileV << "Var\tMean\tVar\tSd" << endl;
+  outFileV << "Variable\tMean\tVar\tSd\tCV" << endl;
   for(int i=0; i < numVar; i++) {
     vector_t values;
     for(int j=0; j < numInd; ++j) {
@@ -1802,11 +1804,14 @@ bool reportNumericSummaryStats() {
     }
     vector_t summary;
     vectorSummary(values, summary);
+    double coefOfVar = summary[2] / summary[0];
     outFileV
             << PP->nlistname[i] << "\t"
             << summary[0] << "\t" 
             << summary[1] << "\t" 
-            << summary[2] << endl;
+            << summary[2] << "\t"
+            << coefOfVar
+            << endl;
   }
   outFileV.close();
   
