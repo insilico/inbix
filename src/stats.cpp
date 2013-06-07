@@ -1896,7 +1896,7 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks) {
     double rankValue = 0;
     switch(rankType) {
       case REGRESSION_RANK_STAT:
-        rankValue = mainEffectValueS;
+        rankValue = abs(mainEffectValueS);
         break;
       case REGRESSION_RANK_BETA:
         rankValue = mainEffectValueB;

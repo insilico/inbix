@@ -1036,7 +1036,7 @@ double par::MAX_PIHAT = 1.0000;
 double par::MAX_CORR_PIHAT_PIHAT_G = 0.9;
 double par::MAX_GENO_MISSING = 0.1;
 double par::MAX_IND_MISSING = 0.1;
-int par::MAX_LINE_LENGTH = 1000000;
+int par::MAX_LINE_LENGTH = 2000000;
 
 bool par::remove_indiv = false;
 bool par::keep_indiv = false;

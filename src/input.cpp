@@ -1065,7 +1065,7 @@ bool Plink::readNumericFile() {
     // convert to string
     string sline = nline;
     if(sline == "") continue;
-
+    
     // read line from text file into a vector of tokens
     string buf;
     stringstream ss(sline);
@@ -1084,9 +1084,14 @@ bool Plink::readNumericFile() {
       continue;
     } else {
       if(tokens.size() != (numNumerics + 2)) {
-        printLOG("Line:\n" + sline + "\n");
+        //printLOG("Line:\n" + sline + "\n");
+        cerr << endl 
+                << "Line has size: " << tokens.size() 
+                << " != " 
+                << "Header size: " << (numNumerics + 2) 
+                << endl;
         NUMERIC.close();
-        return false;
+        exit(1);
       }
     }
 
