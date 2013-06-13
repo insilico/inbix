@@ -3179,3 +3179,60 @@ map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges,
 
 	return newRanges;
 }
+
+bool matrixGetNumericAll(matrix_t& X) {
+	int numNumerics = PP->nlistname.size();
+	sizeMatrix(X, numNumerics, numNumerics);
+	
+	// load numerics into passed matrix
+	for(int i=0; i < PP->sample.size(); i++) {
+		for(int j=0; j < numNumerics; ++j) {
+			X[i][j] = PP->sample[i]->nlist[j];
+		}
+	}
+	
+	return true;
+}
+
+bool matrixGetNumericCaseControl(matrix_t& X, matrix_t& Y) {
+	
+	// determine the number of affected and unaffected individuals
+	int nAff = 0;
+	int nUnaff = 0;
+	for(int i=0; i < PP->sample.size(); i++) {
+		if(PP->sample[i]->aff) {
+			++nAff;
+		}
+		else {
+			++nUnaff;
+		}
+	}
+	PP->printLOG("Detected " + int2str(nAff) + " affected and " + 
+					int2str(nUnaff) + " unaffected individuals\n");
+	// size matrices
+	int numNumerics = PP->nlistname.size();
+	sizeMatrix(X, nAff, numNumerics);
+	sizeMatrix(Y, nUnaff, numNumerics);
+	
+	// load numerics into passed matrices
+	PP->printLOG("Loading case and control matrices\n");
+	int aIdx = 0;
+	int uIdx = 0;
+	for(int i=0; i < PP->sample.size(); i++) {
+		for(int j=0; j < numNumerics; ++j) {
+			if(PP->sample[i]->aff) {
+				X[aIdx][j] = PP->sample[i]->nlist[j];
+			} else {
+				Y[uIdx][j] = PP->sample[i]->nlist[j];
+			}
+		}
+		if(PP->sample[i]->aff) {
+			++aIdx;
+		}
+		else {
+			++uIdx;
+		}
+	}
+	
+	return true;
+}

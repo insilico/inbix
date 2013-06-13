@@ -48,6 +48,8 @@ public:
   bool readRegainFromFile(string regainFilename);
   // write reGAIN matrix to a new file
   bool writeRegainToFile(string newRegainFilename);
+  // write reGAIN matrix to a new SIF file
+  bool writeRegainToSifFile(string newSifFilename);
   // set output threshold
   bool setOutputThreshold(double threshold);
   // set output format

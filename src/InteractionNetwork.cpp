@@ -19,6 +19,8 @@
 #include <cmath>
 #include <numeric>
 
+#include <armadillo>
+
 #include "plink.h"
 #include "helper.h"
 #include "stats.h"
@@ -28,6 +30,7 @@
 
 using namespace std;
 using namespace Insilico;
+using namespace arma;
 
 InteractionNetwork::InteractionNetwork(string matrixFileParam,
 		 MatrixFileType fileType, bool isUpperTriangular, Plink* pp)
@@ -76,11 +79,11 @@ InteractionNetwork::InteractionNetwork(double** variablesMatrix,
   inbixEnv = pp;
 
 	// setup G matrix for SNPrank algorithm
-	sizeMatrix(adjMatrix, dim, dim);
+	adjMatrix.resize(dim, dim);
 	// copy variable matrix values into G
 	for(unsigned int i=0; i < dim; ++i) {
 		for(unsigned int j=0; j < dim; ++j) {
-			adjMatrix[i][j] = adjMatrix[j][i] = variablesMatrix[i][j];
+			adjMatrix(i , j) = adjMatrix(j , i) = variablesMatrix[i][j];
 		}
 	}
 	for(unsigned int i=0; i < dim; ++i) {
@@ -100,24 +103,25 @@ bool InteractionNetwork::PrepareConnectivytMatrix() {
 
 	// keep original adjacency matrix
 	A = adjMatrix;
-	n = A.size();
+	n = A.n_cols;
 
-	// zero the diagonal, since only want interaction connections
-  vector_t diagZ(n, 0);
-	matrixSetDiag(A, diagZ);
+	// convert the adjacency matrix to a connectivity matrix
+	A.diag() = zeros<vec>(n);
+	for(unsigned int i=0; i < n; ++i) {
+		for(unsigned int j=0; j < n; ++j) {
+			if(A(i, j) <= connectivityThreshold) {
+				A(i, j) = 0.0;
+			}
+			else {
+        if(useBinaryThreshold) {
+          A(i, j) = 1.0;
+        }
+			}
+		}
+	}
 
-  // determine connectivity based on threshold
-  if(par::modEnableConnectivityThreshold) {
-    matrixConnectivityThreshold(A, connectivityThreshold, useBinaryThreshold);
-  }
-
-	// get column sums k_i = node degree
-  // and m = total network connectivity
-  matrixSums(A, k, 1);
-  for(int i=0; i < k.size(); ++i) {
-    m += k[i];
-  }
-	m *= 0.5;
+	k = sum(A, 0);
+	m = 0.5 * sum(k);
 
   return true;
 }
@@ -135,10 +139,10 @@ bool InteractionNetwork::SetBinaryThresholding(bool binaryFlag) {
 
 unsigned int InteractionNetwork::NumNodes()
 {
-	return adjMatrix.size();
+	return adjMatrix.n_cols;
 }
 
-matrix_t InteractionNetwork::GetAdjacencyMatrix() {
+arma::mat InteractionNetwork::GetAdjacencyMatrix() {
 	return adjMatrix;
 }
 
@@ -151,10 +155,10 @@ void InteractionNetwork::PrintAdjacencyMatrix() {
 		cout << setw(12) << nodeNames[i];
 	}
 	cout << endl;
-	for(unsigned int i=0; i < adjMatrix.size(); ++i) {
-		for(unsigned int j=0; j < adjMatrix.size(); ++j) {
+	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
 			if(j <= i) {
-				printf("%8.6f\t", adjMatrix[i][j]);
+				printf("%8.6f\t", adjMatrix(i, j));
 			}
 		}
 		cout << endl;
@@ -163,18 +167,18 @@ void InteractionNetwork::PrintAdjacencyMatrix() {
 
 void InteractionNetwork::PrintSummary()
 {
-	unsigned int n = adjMatrix.size();
+	unsigned int n = adjMatrix.n_cols;
 	inbixEnv->printLOG("Adjacency Matrix: "	+ int2str(n) + " x " + 
     int2str(n) + "\n");
-	double minElement = adjMatrix[0][0];
-	double maxElement = adjMatrix[0][0];
-  for(int i=0; i < adjMatrix.size(); ++i) {
-    for(int j=0; j < adjMatrix.size(); ++j) {
-      if(adjMatrix[i][j] < minElement) {
-        minElement = adjMatrix[i][j];
+	double minElement = adjMatrix(0 , 0);
+	double maxElement = adjMatrix(0 , 0);
+  for(int i=0; i < adjMatrix.n_cols; ++i) {
+    for(int j=0; j < adjMatrix.n_cols; ++j) {
+      if(adjMatrix(i , j) < minElement) {
+        minElement = adjMatrix(i , j);
       }
-      if(adjMatrix[i][j] > maxElement) {
-        maxElement = adjMatrix[i][j];
+      if(adjMatrix(i , j) > maxElement) {
+        maxElement = adjMatrix(i , j);
       }
     }
   }
@@ -217,13 +221,13 @@ bool InteractionNetwork::WriteDelimitedFile(string outFilename, string delimiter
 		}
 	}
 	outputFileHandle << endl << setiosflags(ios::fixed) << setprecision(8);
-	for(unsigned int i=0; i < adjMatrix.size(); ++i) {
-		for(unsigned int j=0; j < adjMatrix.size(); ++j) {
+	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
 			if(j) {
-				outputFileHandle << delimiter << adjMatrix[i][j];
+				outputFileHandle << delimiter << adjMatrix(i , j);
 			}
 			else {
-				outputFileHandle << adjMatrix[i][j];
+				outputFileHandle << adjMatrix(i , j);
 			}
 		}
 		outputFileHandle << endl;
@@ -236,11 +240,11 @@ bool InteractionNetwork::WriteDelimitedFile(string outFilename, string delimiter
 bool InteractionNetwork::WriteSifFile(string outFilename)
 {
 	ofstream outputFileHandle(outFilename.c_str());
-	for(unsigned int i=0; i < adjMatrix.size(); ++i) {
-		for(unsigned int j=i+1; j < adjMatrix.size(); ++j) {
-			if(adjMatrix[i][j]) {
+	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+		for(unsigned int j=i+1; j < adjMatrix.n_cols; ++j) {
+			if(adjMatrix(i , j)) {
 				outputFileHandle
-					<< nodeNames[i] << "\t" << adjMatrix[i][j] << nodeNames[j] << endl;
+					<< nodeNames[i] << "\t" << adjMatrix(i , j) << nodeNames[j] << endl;
 			}
 		}
 	}
@@ -257,21 +261,21 @@ bool InteractionNetwork::Merge(
 		double threshold
 		)
 {
-	if(toMerge.NumNodes() != adjMatrix.size()) {
+	if(toMerge.NumNodes() != adjMatrix.n_cols) {
 		cerr << "ERROR: Cannot merge networks of different sizes." << endl;
 		return false;
 	}
-	matrix_t otherAdjacencyMatrix = toMerge.GetAdjacencyMatrix();
+	arma::mat otherAdjacencyMatrix = toMerge.GetAdjacencyMatrix();
 
 	double posteriorProb = 0.0;
-	for(unsigned int i=0; i < adjMatrix.size(); ++i) {
-		for(unsigned int j=i; j < adjMatrix.size(); ++j) {
+	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+		for(unsigned int j=i; j < adjMatrix.n_cols; ++j) {
 //			if(i == j) {
-//				adjMatrix[i][j] = 0;
+//				adjMatrix(i , j) = 0;
 //				continue;
 //			}
-			double beta_ij_1 = adjMatrix[i][j];
-			double beta_ij_2 = otherAdjacencyMatrix[i][j];
+			double beta_ij_1 = adjMatrix(i , j);
+			double beta_ij_2 = otherAdjacencyMatrix(i , j);
 			double probWgE1 = alpha * (1.0 - exp(-omega * beta_ij_1));
 			double probWgE2 = alpha * (1.0 - exp(-omega * beta_ij_2));
 			posteriorProb = probWgE1 * probWgE2 * priorProbEdges;
@@ -283,12 +287,12 @@ bool InteractionNetwork::Merge(
 //				<< "posterior: " << posteriorProb
 //				<< endl;
 			if(posteriorProb > threshold) {
-				adjMatrix[i][j] = posteriorProb;
-				adjMatrix[j][i] = posteriorProb;
+				adjMatrix(i , j) = posteriorProb;
+				adjMatrix(j , i) = posteriorProb;
 			}
 			else {
-				adjMatrix[i][j] = 0;
-				adjMatrix[j][i] = 0;
+				adjMatrix(i , j) = 0;
+				adjMatrix(j , i) = 0;
 			}
 		}
 	}
@@ -324,7 +328,7 @@ bool InteractionNetwork::ReadCsvFile(string matrixFilename)
       cerr << "ERROR: Could not parse header values" << endl;
       return false;
   }
-  sizeMatrix(adjMatrix, adjDim, adjDim);
+  adjMatrix.resize(adjDim, adjDim);
 
   // read the rest of the file as adjacency matrix values
   unsigned int row = 0;
@@ -348,7 +352,7 @@ bool InteractionNetwork::ReadCsvFile(string matrixFilename)
 				if(!from_string<double>(t, lineParts[col], std::dec)) {
 					error("Parsing CSV line " + line);
 				}
-        adjMatrix[row][col] = t;
+        adjMatrix(row, col) = t;
       }
     row++;
   }
@@ -385,7 +389,7 @@ bool InteractionNetwork::ReadGainFile(string gainFilename, bool isUpperTriangula
 		cerr << "ERROR: Could not parse SNP names from (re)GAIN file header" << endl;
 		return false;
 	}
-	sizeMatrix(adjMatrix, numVars, numVars);
+	adjMatrix.resize(numVars, numVars);
 
 	// read numeric data into G
 	size_t row = 0;
@@ -415,9 +419,9 @@ bool InteractionNetwork::ReadGainFile(string gainFilename, bool isUpperTriangula
 			if(!from_string<double>(t, token, std::dec)) {
 				error("Parsing failed in REGAIN line:\n" + line);
 			}
-			adjMatrix[row][col] = t;
+			adjMatrix(row, col) = t;
 			if((row != col) && isUpperTriangular) {
-				adjMatrix[col][row] = t;
+				adjMatrix(col, row) = t;
 			}
 		}
 		row++;
@@ -482,16 +486,16 @@ bool InteractionNetwork::ReadSifFile(string sifFilename)
   }
 
   // set symmetric adjacency matrix for the edges
-  sizeMatrix(adjMatrix, nodeNameSet.size(), nodeNameSet.size());
-  matrixFill(adjMatrix, 0.0);
+  adjMatrix.resize(nodeNameSet.size(), nodeNameSet.size());
+  adjMatrix.fill(0.0);
   vector<pair<pair<string, string>, double> >::const_iterator edgeIt;
   for(edgeIt = edges.begin(); edgeIt != edges.end(); ++edgeIt) {
   	pair<string, string> nodeNames = edgeIt->first;
   	double weight = edgeIt->second;
   	unsigned int node1Index = nodeNameMap[nodeNames.first];
   	unsigned int node2Index = nodeNameMap[nodeNames.second];
-  	adjMatrix[node1Index][node2Index] = weight;
-  	adjMatrix[node2Index][node1Index] = weight;
+  	adjMatrix(node1Index, node2Index) = weight;
+  	adjMatrix(node2Index, node1Index) = weight;
   }
 
   return true;
@@ -523,7 +527,7 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 				<< endl;
 		return false;
   }
-  sizeMatrix(adjMatrix, adjDim, adjDim);
+  adjMatrix.resize(adjDim, adjDim);
 
   vector<string>::const_iterator hIt = headerValues.begin();
   unsigned int hIndex = 0;
@@ -554,7 +558,7 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 			if(!from_string<double>(t, trimmedCor, std::dec)) {
 				error("Parsing Corr1D line " + line);
 			}
-			adjMatrix[row][col] = t;
+			adjMatrix(row, col) = t;
 		}
     row++;
   }
@@ -566,20 +570,10 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 pair<double, vector<vector<unsigned int> > >
 	InteractionNetwork::ModularityLeadingEigenvector() {
 
-  // prepare the connectivity matrix for module detection
-  // sets up: A, k and m
-  PrepareConnectivytMatrix();
-  
-	// create a real symmetric modularity matrix B
-  // B = A - k_vec * k_vec.t() / (2.0 * m);
-	matrix_t B;
-  sizeMatrix(B, n, n);
-  double scaleFactor = 1.0 / (2.0 * m);
-  for(int i=0; i < n; ++i) {
-    for(int j=0; j < n; ++j) {
-      B[i][j] = A[i][j] - k[i] * k[j] * scaleFactor;
-    }
-  }
+	// real symmetric modularity matrix B
+	B.resize(n, n);
+	colvec k_vec = k.t();
+	B = A - k_vec * k_vec.t() / (2.0 * m);
   
 	// ------------------------- I T E R A T I O N ------------------------------
 
@@ -593,7 +587,7 @@ pair<double, vector<vector<unsigned int> > >
 	processStack.push(firstModule);
 
 	// iterate until stack is empty
-	unsigned int iteration = 1;
+	unsigned int iteration = 0;
 	while(!processStack.empty()) {
 		++iteration;
 
@@ -602,33 +596,30 @@ pair<double, vector<vector<unsigned int> > >
 		unsigned int newDim = thisModule.size();
 
 		// get the submatrix Bg defined by the indices of this module (Eqn 6)
-		matrix_t Bg;
-    sizeMatrix(Bg, newDim, newDim);
+		mat Bg(newDim, newDim);
 		for(unsigned int l1=0; l1 < newDim; ++l1) {
 			for(unsigned int l2=0; l2 < newDim; ++l2) {
-				Bg[l1][l2] = B[thisModule[l1]][thisModule[l2]];
+				Bg(l1, l2) = B(thisModule[l1], thisModule[l2]);
 			}
 		}
 
 		// adjust the diagonal
-		matrix_t BgRowSumDiag;
-    sizeMatrix(BgRowSumDiag, Bg.size(), Bg.size());
-    vector_t rowsums;
-    matrixSums(Bg, rowsums, 0);
+		mat BgRowSumDiag(Bg.n_cols, Bg.n_cols);
+		rowvec rowsums = arma::sum(Bg, 0);
 		for(unsigned int i=0; i < rowsums.size(); ++i) {
-			Bg[i][i] = Bg[i][i] - rowsums[i];
+			Bg(i, i) = Bg(i, i) - rowsums(i);
 		}
 
 		// call the community finding/modularity function
-		pair<double, vector_t> sub_modules = ModularityBestSplit(Bg, m);
+		pair<double, vec> sub_modules = ModularityBestSplit(Bg, m);
 		double deltaQ = sub_modules.first;
-		vector_t s = sub_modules.second;
+		vec s = sub_modules.second;
 
 		// find the split indices
 		vector<unsigned int> s1;
 		vector<unsigned int> s2;
 		for(unsigned int mi=0; mi < s.size(); ++mi) {
-			if(s[mi] > 0) {
+			if(s(mi) > 0) {
 				s1.push_back(thisModule[mi]);
 			}
 			else {
@@ -639,7 +630,7 @@ pair<double, vector<vector<unsigned int> > >
 		// have we hit any stopping criteria?
 		if((s1.size() == 0) || (s2.size() == 0)) {
 			modules.push_back(thisModule);
-			if(Q == 0) {
+			if(iteration == 1) {
 				Q = deltaQ;
 			}
 		}
@@ -664,65 +655,49 @@ pair<double, vector<double> >	InteractionNetwork::Homophily() {
   if(!modules.size()) {
     error("Cannot compute homphily: no modules exist");
   }
-  
+
+	pair<double, vector<double> > results;  
 	double globalHomophily = 0.0;
 	vector<double> localHomophilies;
 
-	unsigned int totalNodes = adjMatrix.size();
-//	cout << "Total nodes: " << totalNodes << endl;
+	unsigned int totalNodes = adjMatrix.n_cols;
+	// cout << "Total nodes: " << totalNodes << endl;
 
 	// for each module in the modules list
-//	cout << "Number of module: " << modules.size() << endl;
-	for(unsigned int curModule=0; curModule < modules.size(); ++curModule) {
+	for(unsigned int i=0; i < modules.size(); ++i) {
 
 		// get the indices of the nodes in the module
-		unsigned int modSize = modules[curModule].size();
-//		cout << "Module size: " << modSize << endl;
+		unsigned int modSize = modules[i].size();
+		// cout << "Module size: " << modSize << endl;
 
-		intvec_t modIndices(modSize);
+		uvec modIndices;
+		modIndices.set_size(modSize);
 		for(unsigned int mi=0; mi < modSize; ++mi) {
-			modIndices[mi] = modules[curModule][mi];
+			modIndices(mi) = modules[i][mi];
 		}
+		// modIndices.print("module indices");
 
 		// get the indices of the nodes not in the module
-		intvec_t notIndices(totalNodes - modSize);
+		uvec notIndices;
 		unsigned int notIndex = 0;
+		notIndices.set_size(totalNodes - modSize);
 		for(unsigned int j=0; j < modules.size(); ++j) {
-			if(j != curModule) {
+			if(j != i) {
 				for(unsigned int k=0; k < modules[j].size(); ++k) {
-					notIndices[notIndex] = modules[j][k];
+					notIndices(notIndex) = modules[j][k];
 					++notIndex;
 				}
 			}
 		}
-//    cout << "Module indices:" << endl;
-//    display(modIndices);
-//    cout << "Not in module indices:" << endl;
-//    display(notIndices);
+		// notIndices.print("indices NOT in module");
 
 		// get the number of internal connections
-		// matrix_t modMatrix = adjMatrix(modIndices, modIndices);
-    matrix_t modMatrix;
-    matrixExtractRowColIdx(adjMatrix, modIndices, modIndices, modMatrix);
-		// double internalConnections = sum(sum(trimatu(modMatrix)));
-    // sum the column sums of the upper triangular
-    double internalConnections = 0;
-    for(int j=0; j < modMatrix[0].size(); ++j) {
-      for(int i=0; i < j; ++i) {
-        internalConnections += modMatrix[i][j];
-      }
-    }
-    
+		mat modMatrix = adjMatrix(modIndices, modIndices);
+		double internalConnections = sum(sum(trimatu(modMatrix)));
+
 		// get the number of external connections
-		matrix_t notMatrix;
-    matrixExtractRowColIdx(adjMatrix, modIndices, notIndices, notMatrix);
-    vector_t notSums;
-    matrixSums(notMatrix, notSums, 1);
-		//double externalConnections = sum(sum(notMatrix));
-    double externalConnections = 0;
-    for(int i=0; i < notSums.size(); ++i) {
-      externalConnections += notSums[i];
-    }
+		mat notMatrix = adjMatrix(modIndices, notIndices);
+		double externalConnections = sum(sum(notMatrix));
 
 //		cout << "int: " << internalConnections
 //				<< ", ext: " << externalConnections << endl;
@@ -733,19 +708,18 @@ pair<double, vector<double> >	InteractionNetwork::Homophily() {
 			modHomophily = (internalConnections - externalConnections) /
 					(internalConnections + externalConnections);
 		}
-//		cout << "Module homophily: " << modHomophily << endl;
+		// cout << "Module homophily: " << modHomophily << endl;
 		double localHomophily = modSize * modHomophily / totalNodes;
-//		cout << "Module frac: " << localHomophily << endl;
+		// cout << "Module frac: " << localHomophily << endl;
 		localHomophilies.push_back(localHomophily);
 
 		// update global homophily
 		globalHomophily += localHomophily;
 	}
 
-  pair<double, vector<double> > results;
 	results.first = globalHomophily;
 	results.second.resize(localHomophilies.size());
-	copy(localHomophilies.begin(), localHomophilies.end(), results.second.begin());
+	results.second = localHomophilies;
 
 	return results;
 }
@@ -763,32 +737,36 @@ void InteractionNetwork::ShowHomophily() {
 }
 
 double InteractionNetwork::ComputeQ() {
-	intvec_t allModules = FlattenModules();
-	sort(allModules.begin(), allModules.end());
-  display(allModules);
-	
-  vector_t k;
-  matrixSums(adjMatrix, k, 1);
-  // double m = sum(sum(adjMatrix)) / 2.0;
-  double m = 0;
-  for(int i=0; i < k.size(); ++i) {
-    m += k[i];
-  }
-  m /= 2;
-  //cout << m << endl;
-  //display(k);
+	vector<unsigned int> allModules = FlattenModules();
+	if(modules.size() < 2) {
+		if(modules.size() < 1) {
+			cerr << "ERROR: No modules detected." << endl;
+			return 0;
+		}
+		else {
+			cerr << "WARNING: Only one module detected." << endl;
+		}
+	}
+	// sort(allModules.begin(), allModules.end());
+  //cout << allModules << endl;
+
+	// m = number of edges
+  double m = sum(sum(A)) / 2.0;
+  // rowvec k = sum(B);
+  cout << m << endl;
+  cout << k << endl;
   
   double q = 0.0;
-  for(int i=0; i < adjMatrix.size(); ++i) {
-    for(int j=0; j < adjMatrix[0].size(); ++j) {
-      double temp = (adjMatrix[i][j] - k[i] * k[j] / (2.0 * m)) *
+  for(unsigned int i=0; i < A.n_cols; ++i) {
+    for(unsigned int j=0; j < A.n_cols; ++j) {
+      double temp = (A(i, j) - k(i) * k(j) / (2.0 * m)) *
 					((double) (allModules[i] == allModules[j]) - 0.5) * 2.0;
-      cout << temp << endl;
+      // cout << temp << endl;
       q += temp;
     }
   }
   q /= (4.0 * m);
-  
+
   return q;
 }
 
@@ -858,77 +836,48 @@ void InteractionNetwork::SaveModules(string saveFilename) {
 	outputFileHandle.close();
 }
 
-pair<double, vector_t> 
-  InteractionNetwork::ModularityBestSplit(matrix_t& B, double m) {
+pair<double, vec> 
+  InteractionNetwork::ModularityBestSplit(arma::mat& B, double m) {
 
-  // Armadillo version:
-  //	eig_sym(eigval, eigvec, B);
-  //	uword  maxeig_idx;
-  //	eigval.max(maxeig_idx);
-  //	colvec s_out = eigvec.col(maxeig_idx);
+ 	vec eigval;
+	mat eigvec;
+	eig_sym(eigval, eigvec, B);
+  //cout << eigvec << endl;
+  //cout << eigval << endl;
 
-  // eigenvectors changes B!!!
-  matrix_t tempB(B);
-  
-  // compute eigenvectors and eigenvalues
-  Eigen eigen = eigenvectors(tempB);
-  vector_t eigval = eigen.d;
-  matrix_t eigvec = eigen.z;
-  //display(eigvec);
-  //display(eigval);
-  
-  int maxEigIdx = 0;
-  double maxEigvalue = eigval[maxEigIdx];
-  for(int i=1; i < eigval.size(); ++i) {
-    if(eigval[i] > maxEigvalue) {
-      maxEigvalue = eigval[i];
-      maxEigIdx = i;
-    }
-  }
-  
-  // get the max eigenvector into s_out
-  vector_t s_out;
-  for(int i=0; i < eigvec[0].size(); ++i) {
-    s_out.push_back(eigvec[i][maxEigIdx]);
-  }
-  //display(s_out);
+	uword  maxeig_idx;
+	eigval.max(maxeig_idx);
+	colvec s_out = eigvec.col(maxeig_idx);
+  //cout << s_out << endl;
   //exit(1);
-
-  // transform s_out into -1 or 1 values
 	for(unsigned int i=0; i < s_out.size(); ++i) {
-		if(s_out[i] < 0) {
-			s_out[i] = -1;
+		if(s_out(i) < 0) {
+			s_out(i) = -1;
 		}
 		else {
-			s_out[i] = 1;
+			s_out(i) = 1;
 		}
 	}
-  //display(s_out);
-  
-  //                    (n x 1^T) (n x n) (n x 1)
-	//matrix_t Q_matrix_t = s_out.t() * B * s_out;
-  vector_t s_outTB;
-  s_outTB.resize(B.size(), 0);
-  for(int i=0; i < s_out.size(); ++i) {
-    for(int j=0; j < B.size(); ++j) {
-      s_outTB[i] += s_out[j] * B[j][i];
-    }
-  }
-  double Q = 0.0;
-  for(int i=0; i < s_outTB.size(); ++i) {
-    Q += s_outTB[i] * s_out[i];
-  }
+  //cout << s_out << endl;
+	mat Q_mat = s_out.t() * B * s_out;
+	double Q = Q_mat(0, 0);
 	Q *= (1.0 / (m * 4.0));
 
 	return(make_pair(Q, s_out));
 }
 
-intvec_t InteractionNetwork::FlattenModules() {
-	intvec_t flatModules(adjMatrix.size());
-	for(unsigned int i=0; i < modules.size(); ++i) {
-		for(unsigned int j=0; j < modules[i].size(); ++j) {
-			flatModules[modules[i][j]] = i;
+vector<unsigned int> InteractionNetwork::FlattenModules() {
+	vector<unsigned int> flatModules(n);
+	if(modules.size()) {
+		for(unsigned int i=0; i < modules.size(); ++i) {
+			for(unsigned int j=0; j < modules[i].size(); ++j) {
+				flatModules[modules[i][j]] = i;
+			}
 		}
 	}
+	else {
+		cerr << "FalttenModules: WARNING: no modules have been created" << endl;
+	}
+	
 	return flatModules;
 }

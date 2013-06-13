@@ -1407,84 +1407,15 @@ double rnorm() {
 // bcw - 5/10/13
 // ----------------------------------------------------------------------------
 
-bool matrixRead(string mFilename, matrix_t& m, vector<string>& variableNames) {
-    // open the numeric attributes file if possible
-  checkFileExists(mFilename);
-  ifstream matrixFile(mFilename.c_str(), ios::in);
-  if(matrixFile.fail()) {
-    return false;
-  }
-
-  bool readHeader = false;
-  int rows = 0;
-  int cols = 0;
-  while(!matrixFile.eof()) {
-
-    char nline[par::MAX_LINE_LENGTH];
-    matrixFile.getline(nline, par::MAX_LINE_LENGTH, '\n');
-
-    // convert to string
-    string sline = nline;
-    if(sline == "") continue;
-
-    // read line from text file into a vector of tokens
-    string buf;
-    stringstream ss(sline);
-    vector<string> tokens;
-    while(ss >> buf) {
-      tokens.push_back(buf);
-    }
-
-    // parse header if not parsed already
-    if(!readHeader) {
-      // save numeric attribute names = tokens minus FID and IID
-      cols = tokens.size() - 2;
-      variableNames.resize(cols);
-      copy(tokens.begin() + 2, tokens.end(), variableNames.begin());
-      readHeader = true;
-      continue;
-    } else {
-      if(tokens.size() != (cols + 2)) {
-        matrixFile.close();
-        cerr << "Line:\n" + sline + "\n";
-        return false;
-      }
-    }
-    
-    ++rows;
-    
-    // Add numeric attribute values to data matrix
-    vector_t dataValues;
-    bool okay = true;
-    dataValues.clear();
-    for(int c = 2; c < cols + 2; c++) {
-      double t = 0;
-      if(!from_string<double>(t, tokens[c], std::dec))
-        okay = false;
-      dataValues.push_back(t);
-    }
-    if(okay) {
-      m.push_back(dataValues);
-    }
-    else {
-      cerr << "Error reading data values from line " << rows << endl;
-      return false;
-    }
-
-  }
-  matrixFile.close();
-
-  PP->printLOG("Read matrix from [" + mFilename + "]: " + 
-  int2str(rows) + " rows x " + int2str(cols) + " columns\n");
-    
-  return true;
-}
-
 bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix, 
         matrix_t& corMatrix) {
 
-  // compute covariances
   int n = X.size();
+
+	cout << "matrixComputeCovariance, n = " << n << endl;
+	
+  // compute covariances
+	PP->printLOG("Computing covariance\n");
   matrix_t P;
   sizeMatrix(P, n, n);
   matrixFill(P, 1);
@@ -1502,6 +1433,7 @@ bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix,
   matrixDivideScalar(covMatrix, n - 1);
 
   // compute correlations from covariances
+	PP->printLOG("Computing correlation\n");
   vector_t covDiag;
   matrixGetDiag(covMatrix, covDiag);
   // standard deviations from variances
@@ -1618,6 +1550,79 @@ bool matrixSetDiag(matrix_t& m, vector_t d) {
   for(int i=0; i < d.size(); ++i) {
     m[i][i] = d[i];
   }
+  return true;
+}
+
+bool matrixRead(string mFilename, matrix_t& m, vector<string>& variableNames) {
+    // open the numeric attributes file if possible
+  checkFileExists(mFilename);
+  ifstream matrixFile(mFilename.c_str(), ios::in);
+  if(matrixFile.fail()) {
+    return false;
+  }
+
+  bool readHeader = false;
+  int rows = 0;
+  int cols = 0;
+  while(!matrixFile.eof()) {
+
+    char nline[par::MAX_LINE_LENGTH];
+    matrixFile.getline(nline, par::MAX_LINE_LENGTH, '\n');
+
+    // convert to string
+    string sline = nline;
+    if(sline == "") continue;
+
+    // read line from text file into a vector of tokens
+    string buf;
+    stringstream ss(sline);
+    vector<string> tokens;
+    while(ss >> buf) {
+      tokens.push_back(buf);
+    }
+
+    // parse header if not parsed already
+    if(!readHeader) {
+      // save numeric attribute names = tokens minus FID and IID
+      cols = tokens.size() - 2;
+      variableNames.resize(cols);
+      copy(tokens.begin() + 2, tokens.end(), variableNames.begin());
+      readHeader = true;
+      continue;
+    } else {
+      if(tokens.size() != (cols + 2)) {
+        matrixFile.close();
+        cerr << "Line:\n" + sline + "\n";
+        return false;
+      }
+    }
+    
+    ++rows;
+    
+    // Add numeric attribute values to data matrix
+    vector_t dataValues;
+    bool okay = true;
+    dataValues.clear();
+    for(int c = 2; c < cols + 2; c++) {
+      double t = 0;
+      if(!from_string<double>(t, tokens[c], std::dec))
+        okay = false;
+      dataValues.push_back(t);
+    }
+    if(okay) {
+			m.push_back(dataValues);
+    }
+    else {
+      cerr << "Error reading data values from line " << rows << endl;
+      return false;
+    }
+
+  }
+  matrixFile.close();
+
+  PP->printLOG("Read matrix from [" + mFilename + "]: " + 
+  int2str(rows) + " rows x " + int2str(cols) + " columns\n");
+    
   return true;
 }
 

@@ -340,6 +340,8 @@ public:
 	static bool numeric_file;
 	static string numeric_filename;
   static bool do_covariance_matrix;
+	static bool do_coexpression_all;
+	static bool do_coexpression_casecontrol;
   static bool do_numeric_summary;
   static bool do_numeric_extract;
 	static string numeric_extract_file;
@@ -365,13 +367,13 @@ public:
   static string regainMatrixFormat;
   static bool regainMatrixThreshold;
   static double regainMatrixThresholdValue;
+	static bool regainMatrixToSif;
 
 	// added for modularity support - bcw - 5/13/13
 	static bool do_modularity;
   static double modConnectivityThreshold;
   static bool modEnableConnectivityThreshold;
   static bool modUseBinaryThreshold;
-  static string modSaveFile;
   static bool modComputeHomophily;
   static string sifFile;
   static bool sifNetwork;

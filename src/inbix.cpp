@@ -20,6 +20,8 @@
 #include <cmath>
 #include <iterator>
 
+#include <armadillo>
+
 #include "plink.h"
 #include "options.h"
 #include "helper.h"
@@ -39,8 +41,10 @@
 #include "regain.h"
 #include "InteractionNetwork.h"
 #include "CentralityRanker.h"
+#include "ArmadilloFuncs.h"
 
 using namespace std;
+using namespace arma;
 
 ofstream LOG;
 string PVERSION;
@@ -198,64 +202,71 @@ int main(int argc, char* argv[]) {
 
 	////////////////////////////////////////////
 	// A SIF file specified? - bcw - 5/23/13
-  if(par::sifNetwork && par::sifToGain) {
-    P.printLOG("Converting SIF network to reGAIN\n");
-    P.outputSifToGain(par::sifFile);
-    shutdown();
-  }
-  
+	if(par::sifNetwork && par::sifToGain) {
+		P.printLOG("Converting SIF network to reGAIN\n");
+		P.outputSifToGain(par::sifFile);
+		shutdown();
+	}
+
 	////////////////////////////////////////////
 	// A numeric file specified? - bcw - 4/20/13
 	if(par::numeric_file) {
-    // check for SNPs already loaded
+		// check for SNPs already loaded
 		par::have_snps = par::read_bitfile || par::read_ped ||
 						par::tfile_input || par::lfile_input;
 
-    // compute a variance-covariance matrix of the numeric data
-    if(par::do_covariance_matrix) {
-      if(par::have_snps) {
-        error("Covariance matrix is only supported in numeric data");
-      }
-      // read the data matrix
-      matrix_t X;
-      vector<string> variableNames;
-      if(!matrixRead(par::numeric_filename, X, variableNames)) {
-        error("Cannot read matrix file: " + par::numeric_filename);
-      }
-      // compute covariances/correlations
-      matrix_t covMatrix;
-      matrix_t corMatrix;
-      if(matrixComputeCovariance(X, covMatrix, corMatrix)) {
-        // write results
-        string covFilename = par::numeric_filename + ".covariance";
-        string corFilename = par::numeric_filename + ".correlation";
-        matrixWrite(covMatrix, covFilename, variableNames);
-        matrixWrite(corMatrix, corFilename, variableNames);
-      }
-      else {
-        error("Could not compute covariance/correlation matrices");
-      }
-      shutdown();
-    }
+		// compute a variance-covariance matrix of the numeric data
+		if(par::do_covariance_matrix) {
+			if(par::have_snps) {
+				error("Covariance matrix is only supported in numeric data");
+			}
+//			matrix_t testX;
+//			matrix_t testCovMatrix;
+//			matrix_t testCorMatrix;
+//			vector<string> variableNames;
+//			matrixRead(par::numeric_filename, testX, variableNames);
+//			matrixComputeCovariance(testX, testCovMatrix, testCorMatrix);
+//			matrixWrite(testCorMatrix, "foobar.txt", variableNames);
+			
+			// read the data matrix
+			mat X;
+			vector<string> variableNames;
+			if(!armaReadMatrix(par::numeric_filename, X, variableNames)) {
+				error("Cannot read matrix file: " + par::numeric_filename);
+			}
+			// compute covariances/correlations
+			mat covMatrix;
+			mat corMatrix;
+			if(armaComputeCovariance(X, covMatrix, corMatrix)) {
+				// write results
+				string covFilename = par::output_file_name + ".covariance";
+				string corFilename = par::output_file_name + ".correlation";
+				armaWriteMatrix(covMatrix, covFilename, variableNames);
+				armaWriteMatrix(corMatrix, corFilename, variableNames);
+			} else {
+				error("Could not compute covariance/correlation matrices");
+			}
+			shutdown();
+		}
 
-    // prepare numeric attributes for further processing
+		// prepare numeric attributes for further processing
 		if(!P.readNumericFile()) {
 			error("Problem reading the numeric file: [" + par::numeric_filename + "]");
 		}
 		par::have_numerics = true;
-    
-    if(par::do_numeric_summary) {
-      P.printLOG("Reporting numeric file summary statistics.\n");
-      reportNumericSummaryStats();
-      shutdown();
-    }
 
-    // extract attributes listed in user file to new file
-    if(par::do_numeric_extract) {
-      P.printLOG("Extracting numeric attributes to a new numeric file.\n");
-      P.outputNumericExtract(par::numeric_extract_file);
-      shutdown();
-    }
+		if(par::do_numeric_summary) {
+			P.printLOG("Reporting numeric file summary statistics.\n");
+			reportNumericSummaryStats();
+			shutdown();
+		}
+
+		// extract attributes listed in user file to new file
+		if(par::do_numeric_extract) {
+			P.printLOG("Extracting numeric attributes to a new numeric file.\n");
+			P.outputNumericExtract(par::numeric_extract_file);
+			shutdown();
+		}
 	}
 
 	// Set number of individuals
@@ -441,7 +452,7 @@ int main(int argc, char* argv[]) {
 				error("Problem reading the specified covariate from the covariate file");
 		}
 	}
-  
+
 	//////////////////////////////////////
 	// Assign cluster solution from file 
 	if(par::include_cluster_from_file) {
@@ -590,18 +601,20 @@ int main(int argc, char* argv[]) {
 	P.printLOG("After frequency and genotyping pruning, there are "
 					+ int2str(P.nl_all) + " SNPs\n");
 
-  // NOTE:: some methods do not require SNP and/or numeric data to be loaded,
-  // so do not exit with an error when these conditions are detected.
-	if((P.nl_all == 0) && (P.nlistname.size() == 0) && 
-          (!par::do_modularity) && (!par::do_ranking)) {
+	// NOTE:: some methods do not require SNP and/or numeric data to be loaded,
+	// so do not exit with an error when these conditions are detected.
+	if((P.nl_all == 0) && (P.nlistname.size() == 0) &&
+					(!par::do_modularity) && (!par::do_ranking) &&
+					(!par::do_regain_post)) {
 		error("Stopping as there are no SNPs or numeric attributes "
-            "left for analysis\n");
-  }
+						"left for analysis\n");
+	}
 
-	if((P.n == 0) && (!par::do_modularity) && (!par::do_ranking)) {
+	if((P.n == 0) && (!par::do_modularity) && (!par::do_ranking)
+					&& (!par::do_regain_post)) {
 		error("Stopping as there are no individuals left for analysis\n");
-  }
-  
+	}
+
 	//////////////////////////////////////////////////
 	// Re-report basic case/control counts, etc
 	summaryBasics(P);
@@ -613,176 +626,232 @@ int main(int argc, char* argv[]) {
 			P.locus[l]->allele1 = "0";
 	}
 
- 	////////////////////////////////////////////////
+	// compute a co-expression matrix of the numeric data
+	if(par::do_coexpression_all || par::do_coexpression_casecontrol) {
+		if(!par::numeric_file) {
+			error("Co-expression matrix requires numeric data");
+		}
+		if(par::have_snps) {
+			error("Co-expression matrix is only supported in numeric data");
+		}
+		if(!par::bt) {
+			error("Co-expression matrix is only supported in case-control data");
+		}
+		if(par::do_coexpression_all) {
+			P.printLOG("Computing co-expression for ALL variables.\n");
+			mat X;
+			if(!armaGetPlinkNumericToMatrixAll(X)) {
+				error("Cannot read numeric data into matrix");
+			}
+			// compute covariances/correlations
+			mat covMatrix;
+			mat corMatrix;
+			if(armaComputeCovariance(X, covMatrix, corMatrix)) {
+				// write results
+				string coexpFilename = par::output_file_name + ".coexpression";
+				armaWriteMatrix(corMatrix, coexpFilename, P.nlistname);
+			} else {
+				error("Could not compute co-expression matrix");
+			}
+		} else {
+			P.printLOG("Computing co-expression for CASES and CONTROLS.\n");
+			mat X;
+			mat Y;
+			if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
+				error("Cannot read numeric data into case-control matrices");
+			}
+			// compute covariances/correlations
+			mat covMatrixX;
+			mat corMatrixX;
+			if(armaComputeCovariance(X, covMatrixX, corMatrixX)) {
+				// write results
+				string coexpFilename = par::output_file_name + ".coexpression.cases";
+				armaWriteMatrix(corMatrixX, coexpFilename, P.nlistname);
+			} else {
+				error("Could not compute co-expression matrix for cases");
+			}
+			mat covMatrixY;
+			mat corMatrixY;
+			if(armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
+				// write results
+				string coexpFilename = par::output_file_name + ".coexpression.controls";
+				armaWriteMatrix(corMatrixY, coexpFilename, P.nlistname);
+			} else {
+				error("Could not compute co-expression matrix for controls");
+			}
+		}
+		shutdown();
+	}
+
+	////////////////////////////////////////////////
 	// data set export requested - bcw - 5/21/13
 	if(par::exportArff) {
-    P.printLOG("Performing data set export to Weka ARFF format\n");
-    // switch from SNP-major to individual-major data orientation!
-    P.SNP2Ind();
-    string arffFilename = par::output_file_name + ".arff";
-    P.outputArffFile(arffFilename);
-    shutdown();
-  }
-  // delimited format for Excel, R, etc - bcw - 5/22/13
+		P.printLOG("Performing data set export to Weka ARFF format\n");
+		// switch from SNP-major to individual-major data orientation!
+		P.SNP2Ind();
+		string arffFilename = par::output_file_name + ".arff";
+		P.outputArffFile(arffFilename);
+		shutdown();
+	}
+	// delimited format for Excel, R, etc - bcw - 5/22/13
 	if(par::exportDelimited) {
-    P.printLOG("Performing data set export to delimited format\n");
-    // switch from SNP-major to individual-major data orientation!
-    P.SNP2Ind();
-    string fileExtension = ".delim";
-    if(par::exportDelimiter == "\t") {
-      fileExtension = ".tab";
-    }
-    if(par::exportDelimiter == ",") {
-      fileExtension = ".csv";
-    }
-    string delimitedFilename = par::output_file_name + fileExtension;
-    P.outputDelimitedFile(delimitedFilename, par::exportDelimiter);
-    shutdown();
-  }
+		P.printLOG("Performing data set export to delimited format\n");
+		// switch from SNP-major to individual-major data orientation!
+		P.SNP2Ind();
+		string fileExtension = ".delim";
+		if(par::exportDelimiter == "\t") {
+			fileExtension = ".tab";
+		}
+		if(par::exportDelimiter == ",") {
+			fileExtension = ".csv";
+		}
+		string delimitedFilename = par::output_file_name + fileExtension;
+		P.outputDelimitedFile(delimitedFilename, par::exportDelimiter);
+		shutdown();
+	}
 
 	////////////////////////////////////////////////
 	// variable ranking requested - bcw - 5/16/13
 	if(par::do_ranking) {
-    P.printLOG("Performing variable ranking\n");
-    P.SNP2Ind();
-    if(par::ranker_method == "centrality" || 
-            par::ranker_method == "centrality_power" ||
-            par::ranker_method == "centrality_gauss") {
-      if(!par::do_regain_post) {
-        error("Centrality ranking requires a reGAIN file");
-      }
-      P.printLOG("Ranking by network centrality: " + par::ranker_method + "\n");
-      CentralityRanker cr(par::regainFile);
-      if(par::ranker_centrality_gamma > 0) {
-        P.printLOG("Network centrality gamma set to: " + 
-          dbl2str(par::ranker_centrality_gamma) + "\n");
-        cr.SetGlobalGamma(par::ranker_centrality_gamma);
-      }
-      if(par::ranker_method == "centrality_power") {
-        P.printLOG("Centrality using the power method, fixed gamma\n");
-        cr.SetGlobalGamma(0.85);
-        if(!cr.CalculateCentrality(POWER_METHOD)) {
-          error("Centrality ranking failed");
-        }
-      }
-      if(par::ranker_method == "centrality" || 
-              par::ranker_method == "centrality_gauss") {
-        P.printLOG("Centrality using the gauss method, variable-gamma\n");
-        if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
-          error("Centrality ranking failed");
-        }
-      }
-      if(par::verbose) {
-        cr.WriteToConsole(par::ranker_top_n);
-      }
-      string saveFilename = par::output_file_name + ".ranks";
-      cr.WriteToFile(saveFilename, par::ranker_top_n);
-    }
-    if(par::ranker_method == "regressions" ||
-            par::ranker_method == "regressionb" ||
-            par::ranker_method == "regressionp") {
-      if(par::bt) {
-        P.printLOG("Ranking by logistic regression\n");
-      } else {
-        P.printLOG("Ranking by linear regression\n");
-      }
-      rankedlist_t ranks;
-      if(par::ranker_method == "regressions") {
-        P.printLOG("Using regression statistic values\n");
-        rankByRegression(REGRESSION_RANK_STAT, ranks);
-      }
-      if(par::ranker_method == "regressionb") {
-        P.printLOG("Using regression beta coefficient values\n");
-        rankByRegression(REGRESSION_RANK_BETA, ranks);
-      }
-      if(par::ranker_method == "regressionp") {
-        P.printLOG("Using regression -log10(p-values)\n");
-        rankByRegression(REGRESSION_RANK_PVAL, ranks);
-      }
-      string outFile = par::output_file_name + ".ranks";
-      P.printLOG("Writing scores to [" + outFile + "]\n");
-    	ofstream outputFileHandle(outFile.c_str());
-      int numToWrite = ranks.size();
-      int topN = par::ranker_top_n;
-      if((topN > 0) && (topN <= ranks.size())) {
-        numToWrite = topN;
-      }
-      else {
-        if(topN != -1) {
-          cout << "WARNING: Attempting to use top N outside valid range: " 
-                  << topN << ". Using all ranks." << endl;
-        }
-      }
-      for(int i = 0; i < numToWrite; i++) {
-        double score = ranks[i].first;
-        string name = ranks[i].second;
-        outputFileHandle << name << "\t" << score << endl;
-      }
-      outputFileHandle.close();
-    }
-    if(par::ranker_method == "relieff") {
-      P.printLOG("Ranking Relief-F\n");
-      P.printLOG("***** Relief-F not implemented *****\n");
-    }
-    if(par::ranker_method == "random") {
-      P.printLOG("Ranking Random\n");
-      P.printLOG("***** Random ranking not implemented *****\n");
-    }
-    shutdown();
-  }
-  
+		P.printLOG("Performing variable ranking\n");
+		P.SNP2Ind();
+		if(par::ranker_method == "centrality" ||
+						par::ranker_method == "centrality_power" ||
+						par::ranker_method == "centrality_gauss") {
+			if(!par::do_regain_post) {
+				error("Centrality ranking requires a reGAIN file");
+			}
+			P.printLOG("Ranking by network centrality: " + par::ranker_method + "\n");
+			CentralityRanker cr(par::regainFile);
+			if(par::ranker_centrality_gamma > 0) {
+				P.printLOG("Network centrality gamma set to: " +
+								dbl2str(par::ranker_centrality_gamma) + "\n");
+				cr.SetGlobalGamma(par::ranker_centrality_gamma);
+			}
+			if(par::ranker_method == "centrality_power") {
+				P.printLOG("Centrality using the power method, fixed gamma\n");
+				cr.SetGlobalGamma(0.85);
+				if(!cr.CalculateCentrality(POWER_METHOD)) {
+					error("Centrality ranking failed");
+				}
+			}
+			if(par::ranker_method == "centrality" ||
+							par::ranker_method == "centrality_gauss") {
+				P.printLOG("Centrality using the gauss method, variable-gamma\n");
+				if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
+					error("Centrality ranking failed");
+				}
+			}
+			if(par::verbose) {
+				cr.WriteToConsole(par::ranker_top_n);
+			}
+			string saveFilename = par::output_file_name + ".ranks";
+			cr.WriteToFile(saveFilename, par::ranker_top_n);
+		}
+		if(par::ranker_method == "regressions" ||
+						par::ranker_method == "regressionb" ||
+						par::ranker_method == "regressionp") {
+			if(par::bt) {
+				P.printLOG("Ranking by logistic regression\n");
+			} else {
+				P.printLOG("Ranking by linear regression\n");
+			}
+			rankedlist_t ranks;
+			if(par::ranker_method == "regressions") {
+				P.printLOG("Using regression statistic values\n");
+				rankByRegression(REGRESSION_RANK_STAT, ranks);
+			}
+			if(par::ranker_method == "regressionb") {
+				P.printLOG("Using regression beta coefficient values\n");
+				rankByRegression(REGRESSION_RANK_BETA, ranks);
+			}
+			if(par::ranker_method == "regressionp") {
+				P.printLOG("Using regression -log10(p-values)\n");
+				rankByRegression(REGRESSION_RANK_PVAL, ranks);
+			}
+			string outFile = par::output_file_name + ".ranks";
+			P.printLOG("Writing scores to [" + outFile + "]\n");
+			ofstream outputFileHandle(outFile.c_str());
+			int numToWrite = ranks.size();
+			int topN = par::ranker_top_n;
+			if((topN > 0) && (topN <= ranks.size())) {
+				numToWrite = topN;
+			} else {
+				if(topN != -1) {
+					cout << "WARNING: Attempting to use top N outside valid range: "
+									<< topN << ". Using all ranks." << endl;
+				}
+			}
+			for(int i = 0; i < numToWrite; i++) {
+				double score = ranks[i].first;
+				string name = ranks[i].second;
+				outputFileHandle << name << "\t" << score << endl;
+			}
+			outputFileHandle.close();
+		}
+		if(par::ranker_method == "relieff") {
+			P.printLOG("Ranking Relief-F\n");
+			P.printLOG("***** Relief-F not implemented *****\n");
+		}
+		if(par::ranker_method == "random") {
+			P.printLOG("Ranking Random\n");
+			P.printLOG("***** Random ranking not implemented *****\n");
+		}
+		shutdown();
+	}
+
 	////////////////////////////////////////////////
 	// modularity analysis requested - bcw - 5/13/13
-  // NOTE: if regain file specified AND modularity assume 
-  // no transform option.
+	// NOTE: if regain file specified AND modularity assume 
+	// no transform option.
 	if(par::do_modularity) {
 		P.printLOG("Performing network modularity analysis\n");
-    InteractionNetwork* network = 0;
-    // check for input file type, and construct a new network
-    if(par::sifNetwork) {
-      P.printLOG("Reading network from SIF file [" + par::sifFile + "]\n");
-	    network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
-    }
-    if(par::afniNetwork) {
-      P.printLOG("Reading network from corr.1D file [" + par::afni1dFile + "]\n");
-	    network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
-    }
-    if(par::do_regain_post) {
-      P.printLOG("Reading network from reGAIN file [" + par::regainFile + "]\n");
-      network = new InteractionNetwork(par::regainFile, REGAIN_FILE, false, &P);
-    }
-    if(!network) {
-      error("Network construction for modularity analysis failed for the "
-              "given inbix options");
-    }
-    if(par::modEnableConnectivityThreshold) {
-      P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " + 
-        dbl2str(par::modConnectivityThreshold) + "\n");
-      network->SetConnectivityThreshold(par::modConnectivityThreshold);
-      if(par::modUseBinaryThreshold) {
-        P.printLOG("Using binary thresholding to 1 if > threshold\n");
-        network->SetBinaryThresholding(par::modUseBinaryThreshold);
-      }
-    }
-    network->PrintSummary();
-    // perform network operations
-    pair<double, vector<vector<unsigned int> > > modules = 
-      network->ModularityLeadingEigenvector();
-    P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
-    P.printLOG("There are " + int2str(modules.second.size()) +
-             " modules" + "\n");
-    network->ShowModules();
-    if(par::modComputeHomophily) {
-      network->ShowHomophily();
-    }
-    // save modules
-    network->SaveModules(par::modSaveFile);
+		InteractionNetwork* network = 0;
+		// check for input file type, and construct a new network
+		if(par::sifNetwork) {
+			P.printLOG("Reading network from SIF file [" + par::sifFile + "]\n");
+			network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
+		}
+		if(par::afniNetwork) {
+			P.printLOG("Reading network from corr.1D file [" + par::afni1dFile + "]\n");
+			network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
+		}
+		if(par::do_regain_post) {
+			P.printLOG("Reading network from reGAIN file [" + par::regainFile + "]\n");
+			network = new InteractionNetwork(par::regainFile, REGAIN_FILE, false, &P);
+		}
+		if(!network) {
+			error("Network construction for modularity analysis failed for the "
+							"given inbix options");
+		}
+		if(par::modEnableConnectivityThreshold) {
+			P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " +
+							dbl2str(par::modConnectivityThreshold) + "\n");
+			network->SetConnectivityThreshold(par::modConnectivityThreshold);
+			if(par::modUseBinaryThreshold) {
+				P.printLOG("Using binary thresholding to 1 if > threshold\n");
+				network->SetBinaryThresholding(par::modUseBinaryThreshold);
+			}
+		}
+		network->PrintSummary();
+		// perform network operations
+		pair<double, vector<vector<unsigned int> > > modules =
+						network->ModularityLeadingEigenvector();
+		P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
+		P.printLOG("There are " + int2str(modules.second.size()) +
+						" modules" + "\n");
+		network->ShowModules();
+		if(par::modComputeHomophily) {
+			network->ShowHomophily();
+		}
+		// save modules
+		network->SaveModules(par::output_file_name + ".modules");
 
-    // clean up and shut down
-    delete network;
-    shutdown();
-  }
-  
+		// clean up and shut down
+		delete network;
+		shutdown();
+	}
+
 	////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {
@@ -793,55 +862,49 @@ int main(int argc, char* argv[]) {
 						par::regainSifThreshold,
 						par::have_numerics,
 						par::regainComponents,
-						par::regainFdrPrune, 
-            true);
-    // reGAIN output options - bcw - 4/30/13
-    if(par::regainMatrixThreshold) {
-      regain->setOutputThreshold(par::regainMatrixThresholdValue);
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-    }
-    if(par::regainMatrixFormat == "upper") {
-      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
-    }
-    else {
-      if(par::regainMatrixFormat == "full") {
-        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
-      }
-      else {
-        error("reGAIN output format allowed options: {upper, full}");
-      }
-    }
-    if(par::regainMatrixTransform == "none") {
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-    }
-    else {
-      if(par::regainMatrixTransform == "threshold") {
-        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-      }
-      else {
-        if(par::regainMatrixTransform == "abs") {
-          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
-        }
-        else {
-          error("reGAIN output transform allowed options: {none, threshold, abs}");
-        }
-      }
-    }
-    if(par::regainPureInteractions) {
-      regain->performPureInteraction(true);
-    }
-    else {
-      regain->performPureInteraction(false);
-    }
+						par::regainFdrPrune,
+						true);
+		// reGAIN output options - bcw - 4/30/13
+		if(par::regainMatrixThreshold) {
+			regain->setOutputThreshold(par::regainMatrixThresholdValue);
+			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+		}
+		if(par::regainMatrixFormat == "upper") {
+			regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+		} else {
+			if(par::regainMatrixFormat == "full") {
+				regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+			} else {
+				error("reGAIN output format allowed options: {upper, full}");
+			}
+		}
+		if(par::regainMatrixTransform == "none") {
+			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+		} else {
+			if(par::regainMatrixTransform == "threshold") {
+				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+			} else {
+				if(par::regainMatrixTransform == "abs") {
+					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+				} else {
+					error("reGAIN output transform allowed options: {none, threshold, abs}");
+				}
+			}
+		}
+		if(par::regainPureInteractions) {
+			regain->performPureInteraction(true);
+		} else {
+			regain->performPureInteraction(false);
+		}
 		regain->run();
 		if(par::regainFdrPrune) {
 			regain->writeRegain(false);
 			regain->fdrPrune(par::regainFdr);
 		}
-    // write output options to stdout and log file - bcw - 5/1/13
-    regain->logOutputOptions();
-    regain->logMatrixStats();
-  	regain->writeRegain(false, par::regainFdrPrune);
+		// write output options to stdout and log file - bcw - 5/1/13
+		regain->logOutputOptions();
+		regain->logMatrixStats();
+		regain->writeRegain(false, par::regainFdrPrune);
 		regain->writeRegain(true);
 		delete regain;
 		// stop inbix processing
@@ -857,49 +920,48 @@ int main(int argc, char* argv[]) {
 						par::regainCompress,
 						par::regainSifThreshold,
 						par::regainComponents
-    );
-    // reGAIN output options - bcw - 4/30/13
-    if(par::regainMatrixThreshold) {
-      regain->setOutputThreshold(par::regainMatrixThresholdValue);
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-    }
-    if(par::regainMatrixFormat == "upper") {
-  		P.printLOG("Reformatting reGAIN matrix to upper triangular\n");
-      regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
-    }
-    else {
-      if(par::regainMatrixFormat == "full") {
-    		P.printLOG("Reformatting reGAIN matrix to full matrix\n");
-        regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
-      }
-      else {
-        error("reGAIN output format allowed options: {upper, full}");
-      }
-    }
-    if(par::regainMatrixTransform == "none") {
-      regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-    }
-    else {
-      if(par::regainMatrixTransform == "threshold") {
-    		P.printLOG("Thresholding reGAIN matrix\n");
-        regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-      }
-      else {
-        if(par::regainMatrixTransform == "abs") {
-      		P.printLOG("Absolute value reGAIN matrix\n");
-          regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
-        }
-        else {
-          error("reGAIN output transform allowed options: {none, threshold, abs}");
-        }
-      }
-    }
+						);
 		regain->readRegainFromFile(par::regainFile);
-		regain->writeRegainToFile(par::regainFile + ".postproc");
+		// reGAIN output options - bcw - 4/30/13
+		if(par::regainMatrixThreshold) {
+			regain->setOutputThreshold(par::regainMatrixThresholdValue);
+			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+		}
+		if(par::regainMatrixFormat == "upper") {
+			P.printLOG("Reformatting reGAIN matrix to upper triangular\n");
+			regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+		} else {
+			if(par::regainMatrixFormat == "full") {
+				P.printLOG("Reformatting reGAIN matrix to full matrix\n");
+				regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+			} else {
+				error("reGAIN output format allowed options: {upper, full}");
+			}
+		}
+		if(par::regainMatrixTransform == "none") {
+			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+		} else {
+			if(par::regainMatrixTransform == "threshold") {
+				P.printLOG("Thresholding reGAIN matrix\n");
+				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+			} else {
+				if(par::regainMatrixTransform == "abs") {
+					P.printLOG("Absolute value reGAIN matrix\n");
+					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+				} else {
+					error("reGAIN output transform allowed options: {none, threshold, abs}");
+				}
+			}
+		}
+		if(par::regainMatrixToSif) {
+			regain->writeRegainToSifFile(par::output_file_name + ".sif");
+		} else {
+			regain->writeRegainToFile(par::regainFile + ".postproc");
+		}
 		delete regain;
-    shutdown();
-  }
-  
+		shutdown();
+	}
+
 	/////////////////////////////////////////
 	// SET statistics?
 	if(par::read_set)

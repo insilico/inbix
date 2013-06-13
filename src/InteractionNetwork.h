@@ -11,6 +11,8 @@
 #include <vector>
 #include <cstring>
 
+#include <armadillo>
+
 #include "plink.h"
 
 const double DEFAULT_CONNECTIVITY_THRESHOLD = 0;
@@ -39,7 +41,7 @@ public:
   
 	// write adjacency matrix to file
 	unsigned int NumNodes();
-	matrix_t GetAdjacencyMatrix();
+	arma::mat GetAdjacencyMatrix();
 	std::vector<std::string> GetNodeNames();
 	void PrintAdjacencyMatrix();
 	void PrintSummary();
@@ -75,8 +77,8 @@ private:
 	bool WriteSifFile(std::string outFilename);
 
 	// modularity support functions
-	std::pair<double, vector_t> ModularityBestSplit(matrix_t& B, double m);
-	intvec_t FlattenModules();
+	std::pair<double, arma::vec> ModularityBestSplit(arma::mat& B, double m);
+	vector<unsigned int> FlattenModules();
 
 	// graph/network filename
 	std::string networkFile;
@@ -85,18 +87,18 @@ private:
 	std::map<std::string, unsigned int> nodeNameIndex;
 
 	// adjacency matrix
-	matrix_t adjMatrix;
+	arma::mat adjMatrix;
 	// connectivity matrix
-	matrix_t A;
+	arma::mat A;
 	// node degrees - not necessarily discrete
-	vector_t k;
+	arma::rowvec k;
 	// number of edges/links
 	double m;
 	// number of nodes/vertices
 	double n;
 	
 	// modularity matrix
-	matrix_t B;
+	arma::mat B;
 	
   // edge threshold
   double connectivityThreshold;

@@ -302,74 +302,97 @@ bool Regain::readRegainFromFile(string regainFilename) {
   
   return true;
 }
-  bool Regain::writeRegainToFile(string newRegainFilename) {
-    
-    PP->printLOG("Writing REGAIN matrix [ " + newRegainFilename + " ]\n");
-    ofstream outFile(newRegainFilename.c_str());
-    if(outFile.fail()) {
-      return false;
-    }
-    outFile.precision(6);
-    outFile.fixed;
-    
-    // write header
-    int hIdx = 0;
-    for(vector<string>::const_iterator hIt = attributeNames.begin();
-            hIt != attributeNames.end(); ++hIt, ++hIdx) {
-      if(hIdx) {
-        outFile << "\t" << *hIt;
-      }
-      else {
-        outFile << *hIt;
-      }
-    }
-    outFile << endl;
-    
-    // write matrix entries, possibly transformed
-    double valueToWrite = 0;
-    for(int i=0; i < numAttributes; ++i) {
-      for(int j=0; j < numAttributes; ++j) {
-        double rawValue = valueToWrite = regainMatrix[i][j];
-        switch(outputTransform) {
-          case REGAIN_OUTPUT_TRANSFORM_ABS:
-            valueToWrite = abs(rawValue);
-            break;
-          case REGAIN_OUTPUT_TRANSFORM_THRESH:
-            valueToWrite = rawValue < outputThreshold? 0: rawValue;
-            break;
-        }
-        switch(outputFormat) {
-          case REGAIN_OUTPUT_FORMAT_FULL:
-            if(j) {
-              outFile << "\t" << valueToWrite;
-            }
-            else {
-              outFile << valueToWrite;
-            }
-            break;
-          case REGAIN_OUTPUT_FORMAT_UPPER:
-            if(j < i) {
-              // write tabs
-              outFile << "\t";
-            }
-            else {
-              if(j < (numAttributes -1)) {
-                outFile << valueToWrite << "\t";
-              }
-              else {
-                outFile << valueToWrite;
-              }
-            }
-            break;
-        }
-      }
-      outFile << endl;
-    }
-    outFile.close();
-    
-    return true;
-  }
-  
+
+bool Regain::writeRegainToFile(string newRegainFilename) {
+
+	PP->printLOG("Writing REGAIN matrix [ " + newRegainFilename + " ]\n");
+	ofstream outFile(newRegainFilename.c_str());
+	if(outFile.fail()) {
+		return false;
+	}
+
+	// write header
+	int hIdx = 0;
+	for(vector<string>::const_iterator hIt = attributeNames.begin();
+					hIt != attributeNames.end(); ++hIt, ++hIdx) {
+		if(hIdx) {
+			outFile << "\t" << *hIt;
+		}
+		else {
+			outFile << *hIt;
+		}
+	}
+	outFile << endl;
+
+	// write matrix entries, possibly transformed
+	double valueToWrite = 0;
+	for(int i=0; i < numAttributes; ++i) {
+		for(int j=0; j < numAttributes; ++j) {
+			double rawValue = valueToWrite = regainMatrix[i][j];
+			switch(outputTransform) {
+				case REGAIN_OUTPUT_TRANSFORM_ABS:
+					valueToWrite = abs(rawValue);
+					break;
+				case REGAIN_OUTPUT_TRANSFORM_THRESH:
+					valueToWrite = rawValue < outputThreshold? 0: rawValue;
+					break;
+			}
+			switch(outputFormat) {
+				case REGAIN_OUTPUT_FORMAT_FULL:
+					if(j) {
+						outFile << "\t" << valueToWrite;
+					}
+					else {
+						outFile << valueToWrite;
+					}
+					break;
+				case REGAIN_OUTPUT_FORMAT_UPPER:
+					if(j < i) {
+						// write tabs
+						outFile << "\t";
+					}
+					else {
+						if(j < (numAttributes -1)) {
+							outFile << valueToWrite << "\t";
+						}
+						else {
+							outFile << valueToWrite;
+						}
+					}
+					break;
+			}
+		}
+		outFile << endl;
+	}
+	outFile.close();
+
+	return true;
+}
+
+bool Regain::writeRegainToSifFile(string newSifFilename) {
+
+	PP->printLOG("Writing REGAIN matrix to SIF [ " + newSifFilename + " ]\n");
+	ofstream outFile(newSifFilename.c_str());
+	if(outFile.fail()) {
+		return false;
+	}
+
+	for(int i=0; i < numAttributes; ++i) {
+		for(int j=i+1; j < numAttributes; ++j) {
+			string attr1 = attributeNames[i];
+			string attr2 = attributeNames[j];
+			double valueToWrite = regainMatrix[i][j];
+			if(valueToWrite > outputThreshold) {
+				outFile << attr1 << "\t" << valueToWrite << "\t" << attr2 << endl;
+			}
+		}
+	}
+	
+	outFile.close();
+	
+	return true;
+}
+
 void Regain::run() {
 	int varIndex1, varIndex2;
   // reset the warnings list

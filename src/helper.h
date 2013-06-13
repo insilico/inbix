@@ -214,4 +214,7 @@ void mapRangesToSNPs(string,
 map<string, set<Range> > filterRanges(map<string, set<Range> > & ranges, 
 				string filename);
 
+bool matrixGetNumericAll(matrix_t& X);
+bool matrixGetNumericCaseControl(matrix_t& X, matrix_t& Y);
+
 #endif

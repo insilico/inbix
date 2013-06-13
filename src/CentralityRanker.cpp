@@ -8,6 +8,11 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <limits>
+#include <ios>
+#include <float.h>
+
+#include <armadillo>
 
 #include "plink.h"
 #include "stats.h"
@@ -18,6 +23,7 @@
 
 using namespace std;
 using namespace Insilico;
+using namespace arma;
 
 // Plink object
 extern Plink* PP;
@@ -36,19 +42,19 @@ CentralityRanker::CentralityRanker(string gainFileParam, bool isUpperTriangular)
 	}
 	gainFile = gainFileParam;
 	gamma = 0.0;
-	n = G[0].size();
-  sizeMatrix(Gdiag, n, n);
+	n = G.n_cols;
+  Gdiag.resize(n, n);
 }
 
 CentralityRanker::CentralityRanker(double** variablesMatrix, unsigned int dim,
 		vector<string>& variableNames)
 {
 	// setup G matrix for  algorithm
-	sizeMatrix(G, dim, dim);
+	G.resize(dim, dim);
 	// copy variable matrix values into G
 	for(unsigned int i=0; i < dim; ++i) {
 		for(unsigned int j=0; j < dim; ++j) {
-			G[i][j] = G[j][i] = variablesMatrix[i][j];
+			G(i, j) = G(j, i) = variablesMatrix[i][j];
 		}
 	}
 	for(unsigned int i=0; i < dim; ++i) {
@@ -58,18 +64,18 @@ CentralityRanker::CentralityRanker(double** variablesMatrix, unsigned int dim,
 	gainFile = "";
 	gamma = 0.0;
 	n = dim;
-  sizeMatrix(Gdiag, n, n);
+  Gdiag.resize(n, n);
 }
 
-CentralityRanker::CentralityRanker(matrix_t& A, vector<string>& variableNames)
+CentralityRanker::CentralityRanker(mat& A, vector<string>& variableNames)
 {
-	unsigned int dim = A[0].size();
-	// setup G matrix for  algorithm
-	sizeMatrix(G, dim, dim);
+	unsigned int dim = A.n_cols;
+	// setup G matrix for SNPrank algorithm
+	G.resize(dim, dim);
 	// copy variable matrix values into G
 	for(unsigned int i=0; i < dim; ++i) {
 		for(unsigned int j=0; j < dim; ++j) {
-			G[i][j] = G[j][i] = A[i][j];
+			G(i, j) = G(j, i) = A(i, j);
 		}
 	}
 	for(unsigned int i=0; i < dim; ++i) {
@@ -78,8 +84,8 @@ CentralityRanker::CentralityRanker(matrix_t& A, vector<string>& variableNames)
 	// set default values
 	gainFile = "";
 	gamma = 0.0;
-	n = G[0].size();
-  sizeMatrix(Gdiag, n, n);
+	n = G.n_cols;
+  Gdiag.resize(n, n);
 }
 
 CentralityRanker::~CentralityRanker()
@@ -87,32 +93,31 @@ CentralityRanker::~CentralityRanker()
 
 bool CentralityRanker::CalculateCentrality(SolverMethod method)
 {
-	// NOTE: This code attempts to match the SnpRankNextGen code, which is
-	// based on the original Matlab .m code.
+	// NOTE: This code attempts to match the original Matlab .m code.
 
 	// G diagonal is main effects
-  vector_t diag;
-  matrixGetDiag(G, diag);
-  matrixSetDiag(Gdiag, diag);
+	Gdiag = G.diag();
 #ifdef DEBUG_CENTRALITY
-	display(diag);
+	cout << "DEBUG: Gdiag: " << endl << Gdiag << endl;
 #endif
 
-	// sum of diagonal elements is Gtrace
-	matrixGetTrace(G, Gtrace);
+	//sum of diagonal elements is Gtrace
+	Gtrace = trace(G);
 #ifdef DEBUG_CENTRALITY
-	cout << "Gtrace: " << Gtrace << endl;;
+	cout << "DEBUG: Gtrace: "	<< Gtrace << endl;
 #endif
 
+	//dimension of data matrix
+	n = G.n_rows;
 #ifdef DEBUG_CENTRALITY
-	cout << "n: " << n << endl;
+	cout << "DEBUG: n: " << n << endl;
 #endif
 
-	// colsum = degree of each variable(in undirected graphs, out-degree = in-degree)
+	// colsum = degree of each SNP(in undirected graphs, out-degree = in-degree)
 	// 1 x n (row) vector of column sums (d_j in Eqs. 4, 5 from SNPRank paper)
-	matrixSums(G, colsum, 0);
+	colsum = sum(G);
 #ifdef DEBUG_CENTRALITY
-	display(colsum);
+	cout << "DEBUG: colsum: " << endl << colsum << endl;
 #endif
 
 	if(method == POWER_METHOD) {
@@ -149,55 +154,44 @@ void CentralityRanker::WriteToFile(string outFile, int topN)
 {
   PP->printLOG("Writing centrality scores to [" + outFile + "]\n");
 	// r indices sorted in descending order
-	sort(ranks.begin(), ranks.end());
-  reverse(ranks.begin(), ranks.end());
-	// output r (centrality rankings) to file, truncating to 6 decimal places
+	uvec r_indices = sort_index(r, 1);
+	int index = 0;
+
+	// output r (SNPrank rankings) to file, truncating to 6 decimal places
 	ofstream outputFileHandle(outFile.c_str());
-	outputFileHandle << "SNP\tCentrality\tdiag\tdegree" << endl;
-  int numToWrite = ranks.size();
-  if((topN > 0) && (topN <= ranks.size())) {
-    numToWrite = topN;
-  }
-  else {
-    cout << "WARNING: Attempting to use top N outside valid range: " 
-            << topN << ". Using all ranks." << endl;
-  }
-	for(int i = 0; i < numToWrite; i++) {
-    double score = ranks[i].first;
-    int index = ranks[i].second;
-    outputFileHandle << variableNames[index] << "\t"
-         << score << "\t"
-         << Gdiag[index][index] << "\t"
-         << colsum[index];
-    outputFileHandle << endl;
+	streamsize savedPrecision = cout.precision();
+	cout.precision(numeric_limits<double>::digits10);
+	outputFileHandle << "SNP\tSNPrank\tdiag\tdegree" << endl;
+	for(int i = 0; i < (int)r.n_elem; i++) {
+			index = r_indices[i];
+			outputFileHandle << variableNames[index] << "\t"
+					 << r[index] << "\t"
+					 << Gdiag(index) << "\t"
+					 << colsum(index);
+			outputFileHandle << endl;
 	}
 	outputFileHandle.close();
+	cout.precision(savedPrecision);
 }
 
 void CentralityRanker::WriteToConsole(int topN)
 {
 	// r indices sorted in descending order
-	sort(ranks.begin(), ranks.end());
-  reverse(ranks.begin(), ranks.end());
-	// output r (centrality rankings) to file, truncating to 6 decimal places
-	cout << "SNP\tCentrality\tdiag\tdegree" << endl;
-  int numToWrite = ranks.size();
-  if((topN > 0) && (topN <= ranks.size())) {
-    numToWrite = topN;
-  }
-  else {
-    cout << "WARNING: Attempting to use top N outside valid range: " 
-            << topN << ". Using all ranks." << endl;
-  }
-	for(int i = 0; i < numToWrite; i++) {
-    double score = ranks[i].first;
-    int index = ranks[i].second;
-    cout << variableNames[index] << "\t"
-         << score << "\t"
-         << Gdiag[index][index] << "\t"
-         << colsum[index];
-    cout << endl;
+	uvec r_indices = sort_index(r, 1);
+	int index = 0;
+	// output r (SNPrank rankings) to file with full precision
+	streamsize savedPrecision = cout.precision();
+	cout.precision(numeric_limits<double>::digits10);
+	cout << "SNP\tSNPrank\tdiag\tdegree" << endl;
+	for(int i = 0; i < (int) r.n_elem; i++) {
+			index = r_indices[i];
+			cout << variableNames[index] << "\t"
+					 << r[index] << "\t"
+					 << Gdiag(index) << "\t"
+					 << colsum(index);
+			cout << endl;
 	}
+	cout.precision(savedPrecision);
 }
 
 // ------------------ P R I V A T E   M E T H O D S --------------------------
@@ -225,7 +219,7 @@ bool CentralityRanker::ReadGainFile(string gainFilename, bool isUpperTriangular)
 		cerr << "ERROR: Could not parse SNP names from (re)GAIN file header" << endl;
 		return false;
 	}
-	sizeMatrix(G, numVariables, numVariables);
+	G.set_size(numVariables, numVariables);
 
 	// read numeric data into G
 	size_t row = 0;
@@ -257,12 +251,12 @@ bool CentralityRanker::ReadGainFile(string gainFilename, bool isUpperTriangular)
 			if(!from_string<double>(t, token, std::dec)) {
 				error("Parsing REGAIN line " + line);
 			}
-			G[row][col] = t;
+			G(row, col) = t;
 			if((row != col) && isUpperTriangular) {
 				if(!from_string<double>(t, token, std::dec)) {
 					error("Parsing REGAIN line " + line);
 				}
-				G[col][row] = t;
+				G(col, row) = t;
 			}
 		}
 		row++;
@@ -283,187 +277,115 @@ bool CentralityRanker::GaussEliminationSolver()
 #endif
 
 	// zero the G diagonal
-  vector_t diagZ(n, 0);
-	matrixSetDiag(G, diagZ);
-
+	G.diag() = zeros<vec>(n);
 #ifdef DEBUG_CENTRALITY
-	display(G);
+	cout << "DEBUG: new G = G - Gdiag: " << endl << G << endl;
 #endif
 
 	// by bam in Matlba/Octave - added here by bcw - 10/26/12
 	// including the factor of n (below) reduces the effect of main effects.
-	// if you remove the n, the centrality is highly correlated with main effect
+	// if you remove the n, the snprank is highly correlated with main effect
 	// too correlated I think. I think the n creates a good balance between
-	// correlation of centrality with main effect and degree.
+	// correlation of snprank with main effect and degree.
 	Gtrace *= n;
 
 	// create gamma vector/matrix
-	vector_t colsum_G;
-  matrixSums(G, colsum_G, 0);
+	rowvec colsum_G = sum(G);
 #ifdef DEBUG_CENTRALITY
-	display(colsum_G);
+	cout << "DEBUG: colsum: " << endl << colsum_G << endl;
 #endif
-	vector_t rowsum_G;
-  matrixSums(G, rowsum_G, 1);
+	rowvec rowsum_G = sum(trans(G));
 #ifdef DEBUG_CENTRALITY
-	display(rowsum_G);
+	cout << "DEBUG: rowsum: " << endl << rowsum_G << endl;
 #endif
 
-	vector_t rowsum_denom(n);
+	colvec rowsum_denom(n);
 	for(unsigned int i=0; i < n; ++i) {
 		double localSum = 0;
 		for(unsigned int j=0; j < n; ++j) {
 			// added this check per snprank_nextgen_octave_3b.m
 			// from bam 12/13/12
-			double factor = G[i][j]? 1: 0;
-			 localSum += (factor * colsum_G[j]);
+			double factor = G(i, j)? 1: 0;
+			 localSum += (factor * colsum_G(j));
 		}
-		rowsum_denom[i] = localSum;
+		rowsum_denom(i) = localSum;
 	}
 #ifdef DEBUG_CENTRALITY
-	display(rowsum_denom);
+	cout << "DEBUG: rowsum_denom: " << endl << rowsum_denom << endl;
 #endif
 
-	vector_t gamma_vec(n);
+	rowvec gamma_vec(n);
 	if(gammaVector.size()) {
 		for(unsigned int i=0; i < n; ++i) {
-			gamma_vec[i] = gammaVector[i];
+			gamma_vec(i) = gammaVector[i];
 		}
 	}
 	else {
 		for(unsigned int i=0; i < n; ++i) {
 			if(gamma != 0) {
-				gamma_vec[i] = gamma;
+				gamma_vec(i) = gamma;
 			}
 			else {
-				if(rowsum_denom[i] != 0) {
-					gamma_vec[i] = rowsum_G[i] / rowsum_denom[i];
+				if(rowsum_denom(i) != 0) {
+					gamma_vec(i) = rowsum_G(i) / rowsum_denom(i);
 				}
 				else {
-					gamma_vec[i] = 0;
+					gamma_vec(i) = 0;
 				}
 			}
 		}
 	}
 	if(gamma == 0) {
-		double averageGamma = 0;
-    for(int i=0; i < gamma_vec.size(); ++i) {
-      averageGamma += gamma_vec[i];
-    }
-    averageGamma /= (double) n;
+		double averageGamma = sum(gamma_vec) / (double) n;
 		cout << "Average gamma = " << averageGamma << endl;
 	}
-  
-  // repmat(gamma_vec, n, 1);
-	matrix_t gamma_matrix;
-  sizeMatrix(gamma_matrix, n, n);
-  for(int i=0; i < n; ++i) {
-    for(int j=0; j < n; ++j) {
-      gamma_matrix[i][j] = gamma_vec[j];
-    }
-  }
-  
+	mat gamma_matrix = repmat(gamma_vec, n, 1);
 #ifdef DEBUG_CENTRALITY
-	display(gamma_vec);
-	display(gamma_matrix);
+	cout << "DEBUG: gamma_vec: " << endl << gamma_vec << endl;
+	cout << "DEBUG: gamma_matrix: " << endl << gamma_matrix << endl;
 #endif
 
 	// b is the "charity vector"
-	vector_t b(n);
+	colvec b(n);
 	for(unsigned int i=0; i < n; ++i) {
 		if(Gtrace != 0) {
-			b[i] = ((1.0 - gamma_vec[i]) / n) + (Gdiag[i][i] / Gtrace);
+			b(i) = ((1.0 - gamma_vec(i)) / n) + (Gdiag(i) / Gtrace);
 		}
 		else {
-			b[i] = (1.0 - gamma_vec[i]) / n;
+			b(i) = (1.0 - gamma_vec(i)) / n;
 		}
 	}
 #ifdef DEBUG_CENTRALITY
-	display(b);
+	cout << "DEBUG: b: " << endl << b << endl;
 #endif
 
 	// D = n x n sparse matrix with 1/colsum for nonzero elements of colsum
-  matrix_t D;
-  sizeMatrix(D, n, n);
+	D = zeros<mat>(n, n);
 	for (size_t i = 0; i < n; i++){
-		if(colsum_G[i] != 0) {
-			D[i][i] = 1 / colsum_G[i];
+		if(colsum_G(i) != 0) {
+			D(i, i) = 1 / colsum_G(i);
 		}
 		else {
-			D[i][i] = 0;
+			D(i, i) = 0;
 		}
 	}
 #ifdef DEBUG_CENTRALITY
-	display(D);
+	cout << "DEBUG: D: " << endl << D << endl;
 #endif
 
 	// SOLVE: Ax = b system of equations using gaussian elimination
 	// A = (I - gamma_matrix % G * D)
-	// b = b, x = r = centrality scores
-	// r = solve((I - gamma_matrix % G * D), b);
-
-  // -------------- replaces Armadillo one-liner above ! ----------------------
-	matrix_t I;
-  sizeMatrix(I, n, n); 
-  vector_t eye(n, 1);
-  matrixSetDiag(I, eye);
-  matrix_t tmpMatrix;
-  matrixElementWiseMultiply(gamma_matrix, G, tmpMatrix);
-  matrix_t tmpMatrix2;
-  multMatrix(tmpMatrix, D, tmpMatrix2);
-  matrix_t u;
-  sizeMatrix(u, n, n);
-  matrixSubtract(I, tmpMatrix2, u);
-  // solve Ar=b
-  vector_t w(n);
-  matrix_t v;
-	sizeMatrix(v, n, n);
-	const double TOL = 1.0e-13;
-#ifdef DEBUG_CENTRALITY_SOLVER
-  display(u);
-  display(v);
-  display(w);
+	// b = b, x = r = snprank scores
+	mat I(n, n); I.eye();
+  mat temp = I - gamma_matrix % G * D;
+  // cout << temp << endl;
+	r = solve(temp, b);
+#ifdef DEBUG_CENTRALITY
+	cout << "DEBUG: r: " << endl << r << endl;
 #endif
-	if(!svdcmp(u, w, v)) {
-    error("SVD solver failed: svdcmp");
-	}
-#ifdef DEBUG_CENTRALITY_SOLVER
-  display(u);
-  display(v);
-  display(w);
-  cout << "Performing back substitution" << endl;
-#endif
-
-	double wmax = 0.0;
-	for(int j = 0; j < n; j++) {
-		if(w[j] > wmax) {
-			wmax = w[j];
-		}
-	}
-	double thresh = TOL * wmax;
-	for(int j = 0; j < n; j++) {
-		if(w[j] < thresh) {
-			w[j] = 0.0;
-		}
-	}
-  r.resize(n);
-	svbksb(u, w, v, b, r);
-#ifdef DEBUG_CENTRALITY_SOLVER
-	display(r);
-#endif
-  // --------------------------------------------------------------------------
-
-  //	r = r / sum(r);
-  double rSum = 0;
-  for(int i=0; i < r.size(); ++i) {
-    rSum += r[i];
-  }
-  for(int i=0; i < r.size(); ++i) {
-    r[i] /= rSum;
-    ranks.push_back(make_pair(r[i], i));
-  }
-#ifdef DEBUG_CENTRALITY_SOLVER
-	display(r);
+	r = r / sum(r);
+#ifdef DEBUG_CENTRALITY
+	cout << "DEBUG: r (normalized): " << endl << r << endl;
 #endif
 
 	return true;
@@ -471,134 +393,83 @@ bool CentralityRanker::GaussEliminationSolver()
 
 bool CentralityRanker::PowerMethodSolver()
 {
-#ifdef DEBUG_CENTRALITY
-  cout << "In PowerMethodSolver" << endl;
 	// compute initial T, Markov chain transition matrix
 	// first term (gamma * G * D) is zero when d_j = 0
 	// for right hand term of T, Gdiag is nx1 and T_nz is 1xn
 	// initialize second term multiplier as a row vector of 1s
-  cout << "Column sums" << endl;
-#endif
-	vector_t diag_T_nz(n, 1);
-  for(int i=0; i < n; ++i) {
-    diag_T_nz[i] /= n;
-  }
 
+	rowvec diag_T_nz;
+	diag_T_nz = ones(1, n) / n;
 	// (A) if row degree is 0, this will give 1/n gives more charity
   // if no incoming connections
+
 	// (B) if row degree is non-0, gives (1-gamma)/n
 	// indices of colsum vector that are non-zero
-	intvec_t colsum_nzidx;
-  for(int i=0; i < colsum.size(); ++i) {
-    double thisSum = colsum[i];
-    if(thisSum) {
-      colsum_nzidx.push_back(i);
-    }
-  }
+	uvec colsum_nzidx = find(colsum);
 #ifdef DEBUG_CENTRALITY
-  cout << "colsum_nzidx:" << endl;
-	display(colsum_nzidx);
+	cout << "DEBUG: colsum_nzidx: " << endl << colsum_nzidx << endl;
 #endif
 
 	// D is an n x n sparse matrix with values 1/colsum for nonzero elements
 	// of colsum indices given by colsum_nzidx.  Other elements are zero.
+	D = zeros<mat>(n, n);
+	mat fillD = ones(colsum_nzidx.n_elem, 1) / colsum.elem(colsum_nzidx);
+	for (int i = 0; i < (int) fillD.size(); i++){
+		D(colsum_nzidx[i], colsum_nzidx[i]) = fillD[i];
+	}
 #ifdef DEBUG_CENTRALITY
-  cout << "Creating D" << endl;
+	cout << "DEBUG: D: " << endl << D << endl;
+  cout << "DEBUG: Gdiag: " << endl << Gdiag << endl;
+	cout << "DEBUG: G: " << endl << G << endl;
 #endif
-  sizeMatrix(D, n, n);
-  matrixFill(D, 0);
-	// D = zeros<matrix_t>(n, n);
-	// matrix_t fillD = ones(colsum_nzidx.n_elem, 1) / colsum.elem(colsum_nzidx);
-  //	for (int i = 0; i < (int) fillD.size(); i++){
-  //		D(colsum_nzidx[i], colsum_nzidx[i]) = fillD[i];
-  //	}
-  for(int i=0; i < colsum_nzidx.size(); ++i) {
-    int colIndex = colsum_nzidx[i];
-    D[i][i] = 1 / colsum[i];
-  }
-#ifdef DEBUG_CENTRALITY
-	display(D);
-	display(Gdiag);
-  cout << "Finding nonzero indexes" << endl;
-#endif
-  cout << "gamma = " << gamma << endl;
-	for (int i = 0; i < colsum_nzidx.size(); i++){
-		diag_T_nz[colsum_nzidx[i]] = (1 - gamma) / n;
+
+	for (int i = 0; i < (int) colsum_nzidx.n_elem; i++){
+		diag_T_nz(colsum_nzidx[i]) = (1 - gamma) / n;
 	}
 
-	// find the diagonal elements that are non-zero
-	intvec_t diag_nzidx;
-  for(int i=0; i < n; ++i) {
-    if(Gdiag[i][i]) {
-      diag_nzidx.push_back(i);
-    }
-  }
-  
-	for(int i = 0; i < diag_nzidx.size(); i++){
-    int nzidx = diag_nzidx[i];
-		diag_T_nz[nzidx] = (1 - gamma) * Gdiag[nzidx][nzidx] / n;
-	}
-
-#ifdef DEBUG_CENTRALITY
-  cout << "diag_T_nz:" << endl;
-	display(diag_T_nz);
-  cout << "diag_nzidx:" << endl;
-  display(diag_nzidx);
-#endif
+	// find the diagonal elements that are zero
+	uvec diag_nzidx = find(Gdiag);
 	// (C) for non-zero diag elements, gives (1-gamma)gii/n,
 	// which supercedes (A) and (B)
 
 	// this !replaces! the constant charity term if there are non-zero main effects
-  //	for (int i = 0; i < (int) diag_nzidx.n_elem; i++){
-  //		diag_T_nz(diag_nzidx[i]) = (1 - gamma) * Gdiag(diag_nzidx[i]) / n;
-  //	}
+	for (int i = 0; i < (int) diag_nzidx.n_elem; i++){
+		diag_T_nz(diag_nzidx[i]) = (1 - gamma) * Gdiag(diag_nzidx[i]) / n;
+	}
+#ifdef DEBUG_CENTRALITY
+	cout << "DEBUG: diag_T_nz: " << endl << diag_T_nz << endl;
+	cout << "DEBUG: diag_nzidx: " << endl << diag_nzidx << endl;
+#endif
 
-  matrix_t GD;
-  //multMatrix(G, D, GD);
-  matrixMultiply(G, D, GD);
+	arma::colvec e = ones(n, 1);
+	mat T = zeros<mat>(n, n);
+  mat GD = G * D;
+  mat ed = (e * diag_T_nz);
+  mat gammaGD = gamma * GD;
 #ifdef DEBUG_CENTRALITY
-  cout << "Creating GD" << endl;
-	display(GD);
+	cout << "DEBUG: GD: " << endl << GD << endl;
+	cout << "DEBUG: gammaGD: " << endl << gammaGD << endl;
+	cout << "DEBUG: ed: " << endl << ed << endl;
 #endif
-  matrixMultiplyScalar(GD, gamma);
-#ifdef DEBUG_CENTRALITY
-	display(GD);
-  cout << "Creating ed" << endl;
-#endif
-	vector_t e(n, 1);
-  matrix_t ed;
-  sizeMatrix(ed, n, n);
-  int i, j;
-  for(i=0; i < n; ++i) {
-    for(j=0; j < n; ++j) {
-      ed[i][j] = e[i] * diag_T_nz[j];
-    }
-  }
-#ifdef DEBUG_CENTRALITY
-	display(ed);
-  cout << "Creating T" << endl;
-#endif
-	matrix_t T;
-  sizeMatrix(T, n, n);
+  
 	if(Gtrace == 0.0) {
-    matrixAdd(GD, ed, T);
+		T = (gamma * G * D) + (e * diag_T_nz);
 	}
 	else {
-    matrixDivideScalar(ed, Gtrace);
-    matrixAdd(GD, ed, T);
+		T = (gamma * G * D) + (e * diag_T_nz) / Gtrace;
 	}
 #ifdef DEBUG_CENTRALITY
-	display(T);
+	cout << "DEBUG: T: " << endl << T << endl;
 #endif
 
-	// initialize size of vector r to store centrality scores
-  //	r.set_size(G.size());
-  //	r.fill(1.0 / G.size());
-  r.resize(n, 1.0 / n);
+	// initialize size of vector r to store snprank scores
+	r.set_size(n);
+	r.fill(1.0 / n);
+
 	double threshold = 1.0E-4;
 	double lambda = 0.0;
 	bool converged = false;
-	vector_t r_old = r;
+	vec r_old = r;
 
 	// if the absolute value of the difference between old and current r
 	// vector is < threshold, we have converged
@@ -608,57 +479,22 @@ bool CentralityRanker::PowerMethodSolver()
     ++iterations;
     
 		r_old = r;
-		// r = T * r;
-#ifdef DEBUG_CENTRALITY
-	display(r);
-#endif
-    vector_t r_new(n);
-    for(int i=0; i < n; ++i) {
-      double tempSum = 0;
-      for(int j=0; j < n; ++j) {
-        tempSum += T[i][j] * r[j];
-      }
-      r_new[i] = tempSum;
-    }
-    r = r_new;
-#ifdef DEBUG_CENTRALITY
-	display(r);
-#endif
-
+		r = T * r;
+    
 		// sum of r elements
-		lambda = 0;
-    for(int i=0; i < r.size(); ++i) {
-      lambda += r[i];
-    }
+		lambda = sum(r);
 
 		// normalize eigenvector r so sum(r) == 1
-		// r = r / lambda;
-    for(int i=0; i < r.size(); ++i) {
-      r[i] /= lambda;;
-    }
+		r = r / lambda;
 
 		// check convergence, ensure all elements of r - r_old < threshold
-    //		if(min((intvec_t) (abs(r - r_old) < threshold)) == 1) {
-    //			converged = true;
-    //		}
-    //		else {
-    //			converged = false;
-    //		}
-    int numConverged = 0;
-    for(int i=0; i < r.size(); ++i) {
-      if(fabs(r[i] - r_old[i]) < threshold) {
-        ++numConverged;
-      }
-    }
-    if(numConverged == r.size()) {
-      converged = true;
-      cout << "Converged in " << iterations << " iterations" << endl;
-    }
+		if(min((uvec) (abs(r - r_old) < threshold)) == 1) {
+			converged = true;
+		}
+		else {
+			converged = false;
+		}
 	}
-
-  for(int i=0; i < r.size(); ++i) {
-    ranks.push_back(make_pair(r[i], i));
-  }
 
 	return converged;
 }

@@ -45,9 +45,8 @@ bool matrixSetDiag(matrix_t& m, vector_t d);
 // compute a covariance and correlation matrices from a file of numeric data
 bool matrixComputeCovariance(matrix_t X, matrix_t& covMatrix, 
         matrix_t& corMatrix);
-// read a matrix from a file
+// read/write a matrix from/to a file with variable names header
 bool matrixRead(string mFilename, matrix_t& m, vector<string>& variableNames);
-// write a matrix to a file with variable names header
 bool matrixWrite(matrix_t m, string mFilename, vector<string> variableNames);
 
 // added for modularity - bcw - 5/13/13

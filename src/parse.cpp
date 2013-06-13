@@ -2773,6 +2773,14 @@ void setOptions(CArgs & a) {
     par::do_covariance_matrix = true;
   }
 
+  // gene coexpression support - bcw - 5/10/13
+  if(a.find("--coexpression-all")) {
+    par::do_coexpression_all = true;
+  }
+  if(a.find("--coexpression-casecontrol")) {
+    par::do_coexpression_casecontrol = true;
+  }
+
   // numeric attribute file summary - bcw - 5/23/13
   if(a.find("--numeric-summary")) {
     par::do_numeric_summary = true;
@@ -2849,6 +2857,11 @@ void setOptions(CArgs & a) {
     par::sifToGain = true;
   }
 
+  if(a.find("--regain-to-sif")) {
+		par::do_regain_post = true;
+    par::regainMatrixToSif = true;
+  }
+
   // added for modularity support - bcw - 5/13/13
   if(a.find("--sif-file")) {
     par::sifFile = a.value("--sif-file");
@@ -2872,10 +2885,6 @@ void setOptions(CArgs & a) {
   if(a.find("--modularity-binary-threshold")) {
     par::modEnableConnectivityThreshold= true;
     par::modUseBinaryThreshold= true;
-  }
-
-  if(a.find("--modularity-save-file")) {
-    par::modSaveFile = a.value("--modularity-save-file");
   }
 
   if(a.find("--afni-1d-file")) {
@@ -4083,6 +4092,8 @@ void setOptions(CArgs & a) {
             << "      --logistic                Logistic regression model   \n"
             << "\n"
             << "      --covariance-matrix       Compute covariance and correlation matrices\n"
+            << "      --coexpresson-all         Compute coexpresson - all\n"
+            << "      --coexpresson-casecontrol Compute coexpresson - case-control\n"
             << "      --numeric-summary         Report numeric file statistics\n"
             << "      --numeric-extract {file}  Extract numeric attributes\n"
             << "\n"
@@ -4099,11 +4110,11 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-threshold-value {threshold}  Filter reGAIN output\n"
             << "      --regain-matrix-format {format}  reGAIN output format \n"
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
+            << "      --regain-to-sif {regain}  Convert reGAIN matrix to SIF file\n"
             << "\n"
             << "      --modularity              Perform a network modularity analysis\n"
             << "      --modularity-connectivity-threshold Edge threshold for connectivity\n"
             << "      --modularity-binary-threshold Threshold to binary connectivity?\n"
-            << "      --modularity-save-file {file name} Save network modules to file\n"
             << "      --modularity-homophily    Compute module homophilies\n"
             << "      --sif-file {SIF file}     Read network from a SIF file\n"
             << "      --sif-to-regain           Convert SIF network to reGAIN\n"

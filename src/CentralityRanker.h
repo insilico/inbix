@@ -9,6 +9,8 @@
 #include <vector>
 #include <cstring>
 
+#include <armadillo>
+
 #include "plink.h"
 
 enum SolverMethod { POWER_METHOD, GAUSS_ELIMINATION };
@@ -20,7 +22,7 @@ public:
 	// matrix constructor for calling as a library method
 	CentralityRanker(double** variablesMatrix, unsigned int dim,
 			std::vector<std::string>& variableNames);
-	CentralityRanker(matrix_t& A, std::vector<std::string>& variableNames);
+	CentralityRanker(arma::mat& A, std::vector<std::string>& variableNames);
 	virtual ~CentralityRanker();
 
 	bool CalculateCentrality(SolverMethod method);
@@ -43,21 +45,21 @@ private:
 
 	// gamma parameter
 	double gamma;
-	vector_t gammaVector;
+	std::vector<double> gammaVector;
 
 	// vector that stores variable names
 	std::vector<std::string> variableNames;
 	// GAIN matrix
-	matrix_t G;
+	arma::mat G;
 	// intermediate results of centrality calculations
-	vector_t colsum;
+	arma::rowvec colsum;
 	size_t n;
-	matrix_t Gdiag;
+	arma::mat Gdiag;
 	double Gtrace;
-	matrix_t D;
+	arma::mat D;
 
 	// centrality rank scores
-	vector_t r;
+	arma::vec r;
   vector<pair<double, int> > ranks;
   
   int topN;

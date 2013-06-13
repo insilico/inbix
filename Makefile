@@ -20,7 +20,7 @@ WITH_WEBCHECK = 1
 FORCE_32BIT = 
 WITH_ZLIB = 1
 WITH_LAPACK = 
-FORCE_DYNAMIC = 
+FORCE_DYNAMIC = 1
 
 # Put C++ compiler here; Windows has it's own specific version
 CXX_UNIX = g++
@@ -38,7 +38,8 @@ LIB_IGRAPH = /usr/lib/libigraph.so
 # --------------------------------------------------------------------
 
 # optimized mode
-CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings
+CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
+  -L/usr/local/lib 
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY
 
@@ -49,7 +50,7 @@ ifeq ($(SYS),WIN)
  CXXFLAGS += -DWIN
  CXX = $(CXX_WIN)
  ifndef FORCE_DYNAMIC
-  CXXFLAGS += -static -fopenmp
+  CXXFLAGS += -static
  endif
 endif
 
@@ -57,12 +58,12 @@ ifeq ($(SYS),UNIX)
  CXXFLAGS += -DUNIX
  CXX = $(CXX_UNIX)
  ifndef FORCE_DYNAMIC
-  CXXFLAGS += -static -fopenmp
+  CXXFLAGS += -static
  endif
 endif
 
 ifeq ($(SYS),MAC)
- CXXFLAGS += -DUNIX -fopenmp
+ CXXFLAGS += -DUNIX
  CXX = $(CXX_UNIX)
 endif
 
@@ -90,6 +91,8 @@ else
  CXXFLAGS += -DSKIP
 endif
 
+CXXFLAGS += -fopenmp
+
 SRC = inbix.cpp plink.cpp options.cpp input.cpp binput.cpp tinput.cpp \
 genome.cpp \
 helper.cpp stats.cpp filters.cpp locus.cpp multi.cpp crandom.cpp	\
@@ -105,13 +108,14 @@ clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp	\
 nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
 flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
 tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
-metaanal.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp
+metaanal.cpp \
+ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
 fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
-gvar.h cnv.h cfamily.h idhelp.h zed.h regain.h InteractionNetwork.h     \
-StringUtils.h CentralityRanker.h
+gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h                     \
+ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS
@@ -139,7 +143,7 @@ SRC += lapackf.cpp
 LIB += $(LIB_LAPACK) 
 endif
 
-LIB += -lm -lgsl -lgslcblas
+LIB += -larmadillo -lblas -llapack -lm -lgsl -lgslcblas
 
 OBJ = $(SRC:.cpp=.o)
 
