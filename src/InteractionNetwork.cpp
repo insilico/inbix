@@ -120,6 +120,10 @@ bool InteractionNetwork::PrepareConnectivytMatrix() {
 		}
 	}
 
+	inbixEnv->printLOG("--- Matrix prepared for modularity\n"); 
+  inbixEnv->printLOG("Minimum: " + dbl2str(A.min()) + "\n");
+  inbixEnv->printLOG("Maximum: " + dbl2str(A.max()) + "\n");
+	
 	k = sum(A, 0);
 	m = 0.5 * sum(k);
 
@@ -170,21 +174,12 @@ void InteractionNetwork::PrintSummary()
 	unsigned int n = adjMatrix.n_cols;
 	inbixEnv->printLOG("Adjacency Matrix: "	+ int2str(n) + " x " + 
     int2str(n) + "\n");
-	double minElement = adjMatrix(0 , 0);
-	double maxElement = adjMatrix(0 , 0);
-  for(int i=0; i < adjMatrix.n_cols; ++i) {
-    for(int j=0; j < adjMatrix.n_cols; ++j) {
-      if(adjMatrix(i , j) < minElement) {
-        minElement = adjMatrix(i , j);
-      }
-      if(adjMatrix(i , j) > maxElement) {
-        maxElement = adjMatrix(i , j);
-      }
-    }
-  }
-  inbixEnv->printLOG("Minimum: " + dbl2str(minElement) + "\n");
-  inbixEnv->printLOG("Maximum: " + dbl2str(maxElement) + "\n");
-  inbixEnv->printLOG("Edge Threshold: " + dbl2str(connectivityThreshold) + "\n");
+  inbixEnv->printLOG("Minimum: " + dbl2str(adjMatrix.min()) + "\n");
+  inbixEnv->printLOG("Maximum: " + dbl2str(adjMatrix.max()) + "\n");
+	if(par::modEnableConnectivityThreshold) {
+		inbixEnv->printLOG("Edge Threshold: " + 
+			dbl2str(connectivityThreshold) + "\n");
+	}
 }
 
 bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
@@ -299,6 +294,19 @@ bool InteractionNetwork::Merge(
 
 	return true;
 }
+
+// apply a power transform with exponent
+bool InteractionNetwork::ApplyPowerTransform(double transformExponent) {
+	
+	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
+			adjMatrix(i, j) = pow(adjMatrix(i, j), transformExponent);
+		}
+	}
+	
+	return true;
+}
+
 // ------------------ P R I V A T E   M E T H O D S --------------------------
 
 bool InteractionNetwork::ReadCsvFile(string matrixFilename)
@@ -570,6 +578,8 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 pair<double, vector<vector<unsigned int> > >
 	InteractionNetwork::ModularityLeadingEigenvector() {
 
+	PrepareConnectivytMatrix();
+
 	// real symmetric modularity matrix B
 	B.resize(n, n);
 	colvec k_vec = k.t();
@@ -753,8 +763,8 @@ double InteractionNetwork::ComputeQ() {
 	// m = number of edges
   double m = sum(sum(A)) / 2.0;
   // rowvec k = sum(B);
-  cout << m << endl;
-  cout << k << endl;
+  //cout << m << endl;
+  //cout << k << endl;
   
   double q = 0.0;
   for(unsigned int i=0; i < A.n_cols; ++i) {

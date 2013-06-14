@@ -375,6 +375,8 @@ public:
   static bool modEnableConnectivityThreshold;
   static bool modUseBinaryThreshold;
   static bool modComputeHomophily;
+	static bool modPowerTransform;
+	static double modPowerTransformExponent;
   static string sifFile;
   static bool sifNetwork;
   static bool sifToGain;

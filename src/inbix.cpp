@@ -824,6 +824,13 @@ int main(int argc, char* argv[]) {
 			error("Network construction for modularity analysis failed for the "
 							"given inbix options");
 		}
+		network->PrintSummary();
+
+		if(par::modPowerTransform) {
+			P.printLOG("Transforming adjacency matrix connectivity using "
+				"power with exponent " + dbl2str(par::modPowerTransformExponent) + "\n");
+			network->ApplyPowerTransform(par::modPowerTransformExponent);
+		}
 		if(par::modEnableConnectivityThreshold) {
 			P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " +
 							dbl2str(par::modConnectivityThreshold) + "\n");
@@ -834,7 +841,8 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		network->PrintSummary();
-		// perform network operations
+
+		// compute modularity
 		pair<double, vector<vector<unsigned int> > > modules =
 						network->ModularityLeadingEigenvector();
 		P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");

@@ -63,6 +63,9 @@ public:
 					double alpha,
 					double omega,
 					double threshold);
+	
+	// apply a power transform with exponent
+	bool ApplyPowerTransform(double transformExponent = 1.0);
 private:
 	// data readers
 	bool ReadCsvFile(std::string matrixFilename);

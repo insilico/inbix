@@ -2887,6 +2887,12 @@ void setOptions(CArgs & a) {
     par::modUseBinaryThreshold= true;
   }
 
+  if(a.find("--modularity-power-transform")) {
+    par::modPowerTransform= true;
+    par::modPowerTransformExponent = 
+						a.value_double("--modularity-power-transform");
+  }
+
   if(a.find("--afni-1d-file")) {
     par::afniNetwork = true;
     par::afni1dFile = a.value("--afni-1d-file");
@@ -4115,6 +4121,7 @@ void setOptions(CArgs & a) {
             << "      --modularity              Perform a network modularity analysis\n"
             << "      --modularity-connectivity-threshold Edge threshold for connectivity\n"
             << "      --modularity-binary-threshold Threshold to binary connectivity?\n"
+						<< "      --modularity-power-transform {exponent}\n"
             << "      --modularity-homophily    Compute module homophilies\n"
             << "      --sif-file {SIF file}     Read network from a SIF file\n"
             << "      --sif-to-regain           Convert SIF network to reGAIN\n"
