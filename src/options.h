@@ -377,6 +377,7 @@ public:
   static bool modComputeHomophily;
 	static bool modPowerTransform;
 	static double modPowerTransformExponent;
+	static bool modFisherTransform;
   static string sifFile;
   static bool sifNetwork;
   static bool sifToGain;

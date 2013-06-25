@@ -66,6 +66,8 @@ public:
 	
 	// apply a power transform with exponent
 	bool ApplyPowerTransform(double transformExponent = 1.0);
+	// apply a power transform with exponent
+	bool ApplyFisherTransform();
 private:
 	// data readers
 	bool ReadCsvFile(std::string matrixFilename);

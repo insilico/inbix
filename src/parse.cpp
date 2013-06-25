@@ -2893,6 +2893,10 @@ void setOptions(CArgs & a) {
 						a.value_double("--modularity-power-transform");
   }
 
+  if(a.find("--modularity-fisher-transform")) {
+    par::modFisherTransform= true;
+  }
+
   if(a.find("--afni-1d-file")) {
     par::afniNetwork = true;
     par::afni1dFile = a.value("--afni-1d-file");

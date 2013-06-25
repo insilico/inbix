@@ -307,6 +307,19 @@ bool InteractionNetwork::ApplyPowerTransform(double transformExponent) {
 	return true;
 }
 
+// apply a Fisher transformation for correlation values
+bool InteractionNetwork::ApplyFisherTransform() {
+	
+	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
+			double r = adjMatrix(i, j);
+			adjMatrix(i, j) = log((1 + r) / (1 - r));
+		}
+	}
+	
+	return true;
+}
+
 // ------------------ P R I V A T E   M E T H O D S --------------------------
 
 bool InteractionNetwork::ReadCsvFile(string matrixFilename)

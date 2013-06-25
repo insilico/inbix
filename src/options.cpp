@@ -1,5 +1,3 @@
-
-
 //////////////////////////////////////////////////////////////////
 //                                                              //
 //           PLINK (c) 2005-2009 Shaun Purcell                  //
@@ -281,6 +279,7 @@ bool par::modUseBinaryThreshold = false;
 bool par::modComputeHomophily = false;
 bool par::modPowerTransform = false;
 double par::modPowerTransformExponent = 1;
+bool par::modFisherTransform = false;
 string par::sifFile = "";
 bool par::sifNetwork = false;
 bool par::sifToGain = false;
