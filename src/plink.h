@@ -74,6 +74,18 @@ enum RegressionRankType {
   REGRESSION_RANK_STAT, REGRESSION_RANK_BETA, REGRESSION_RANK_PVAL
 };
 
+// regression ranking results
+class RegressionRankResults {
+public:
+	vector<string> vars;
+	vector_t coefs;
+	vector_t pvals;
+	vector_t stats;
+	
+	RegressionRankResults() {
+	}
+};
+
 typedef pair<int, ModelTermType> interactionVar_t;
 typedef pair<interactionVar_t, interactionVar_t> interaction_t;
 

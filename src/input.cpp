@@ -19,6 +19,7 @@
 #include <bitset>
 #include <limits>
 #include <cerrno>
+#include <iterator>
 
 #include "plink.h"
 #include "options.h"
@@ -1079,6 +1080,7 @@ bool Plink::readNumericFile() {
       // save numeric attribute names = tokens minus FID and IID
       nlistname.resize(tokens.size() - 2);
       copy(tokens.begin() + 2, tokens.end(), nlistname.begin());
+      //copy(tokens.begin() + 2, tokens.end(), ostream_iterator<string>(cout, "\n"));
       readHeader = true;
       numNumerics = tokens.size() - 2;
       continue;

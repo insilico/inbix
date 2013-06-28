@@ -757,17 +757,18 @@ int main(int argc, char* argv[]) {
 				P.printLOG("Ranking by linear regression\n");
 			}
 			rankedlist_t ranks;
+			RegressionRankResults results;
 			if(par::ranker_method == "regressions") {
 				P.printLOG("Using regression statistic values\n");
-				rankByRegression(REGRESSION_RANK_STAT, ranks);
+				rankByRegression(REGRESSION_RANK_STAT, ranks, results);
 			}
 			if(par::ranker_method == "regressionb") {
 				P.printLOG("Using regression beta coefficient values\n");
-				rankByRegression(REGRESSION_RANK_BETA, ranks);
+				rankByRegression(REGRESSION_RANK_BETA, ranks, results);
 			}
 			if(par::ranker_method == "regressionp") {
 				P.printLOG("Using regression -log10(p-values)\n");
-				rankByRegression(REGRESSION_RANK_PVAL, ranks);
+				rankByRegression(REGRESSION_RANK_PVAL, ranks, results);
 			}
 			string outFile = par::output_file_name + ".ranks";
 			P.printLOG("Writing scores to [" + outFile + "]\n");
@@ -788,6 +789,20 @@ int main(int argc, char* argv[]) {
 				outputFileHandle << name << "\t" << score << endl;
 			}
 			outputFileHandle.close();
+
+			string outFileDetail = par::output_file_name + ".ranks.detail";
+			P.printLOG("Writing detailed results to [" + outFileDetail + "]\n");
+			ofstream outputFileDetailHandle(outFileDetail.c_str());
+			outputFileDetailHandle << "var\tcoef\tpval\tstat"	<< endl;
+			for(int i = 0; i < results.vars.size(); i++) {
+				outputFileDetailHandle 
+								<< results.vars[i] << "\t"
+								<< results.coefs[i] << "\t"
+								<< results.pvals[i] << "\t"
+								<< results.stats[i]
+								<< endl;								
+			}
+			outputFileDetailHandle.close();
 		}
 		if(par::ranker_method == "relieff") {
 			P.printLOG("Ranking Relief-F\n");

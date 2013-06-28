@@ -77,7 +77,8 @@ bool reportNumericSummaryStats();
 bool vectorSummary(vector_t values, vector_t& summary);
 
 // added for regression ranker - bcw - 5/27/13
-bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks);
+bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
+				RegressionRankResults& results);
 pair<double, double> fitModel(Model* m);
 
 // my own matrix multiply using openmp

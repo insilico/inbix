@@ -1847,7 +1847,8 @@ bool vectorSummary(vector_t values, vector_t& summary) {
   summary[2] = sd;
 }
 
-bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks) {
+bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
+				RegressionRankResults& results) {
  	Model *mainEffectModel;
 
   // model SNPs
@@ -1895,8 +1896,10 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks) {
 
     // always use first coefficient after intercept as main effect term
     double mainEffectValueB = betaMainEffectCoefs[tp];
-    double mainEffectValueS = betaMainEffectCoefs[tp] /
-              mainEffectModelSE[tp];
+		// t- or z-statistic
+    double mainEffectValueS = 
+			betaMainEffectCoefs[tp] /
+      mainEffectModelSE[tp];
 
     double rankValue = 0;
     switch(rankType) {
@@ -1910,8 +1913,14 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks) {
         rankValue = -log10(mainEffectValueP);
         break;
     }
+
     ranks.push_back(make_pair(rankValue, PP->nlistname[i]));
 
+		results.vars.push_back(PP->nlistname[i]);
+		results.coefs.push_back(mainEffectValueB);
+		results.pvals.push_back(mainEffectValueP);
+		results.stats.push_back(mainEffectValueS);
+		
     delete mainEffectModel;
   }
 
