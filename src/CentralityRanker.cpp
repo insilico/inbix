@@ -162,7 +162,12 @@ void CentralityRanker::WriteToFile(string outFile, int topN)
 	streamsize savedPrecision = cout.precision();
 	cout.precision(numeric_limits<double>::digits10);
 	outputFileHandle << "SNP\tSNPrank\tdiag\tdegree" << endl;
-	for(int i = 0; i < (int)r.n_elem; i++) {
+	int numToWrite = (int) r.n_elem;
+  if((topN > 0) && (topN <= numToWrite)) {
+    numToWrite = topN;
+  }
+  PP->printLOG("Writing " + int2str(numToWrite) + " top tanks\n");
+	for(int i = 0; i < numToWrite; i++) {
 			index = r_indices[i];
 			outputFileHandle << variableNames[index] << "\t"
 					 << r[index] << "\t"
@@ -474,7 +479,7 @@ bool CentralityRanker::PowerMethodSolver()
 	// if the absolute value of the difference between old and current r
 	// vector is < threshold, we have converged
   int iterations = 0;
-  cout << "Entering convergence loop" << endl;
+  //cout << "Entering convergence loop" << endl;
 	while(!converged) {
     ++iterations;
     
