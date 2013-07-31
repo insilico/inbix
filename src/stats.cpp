@@ -1879,6 +1879,15 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     mainEffectModel->addNumeric(i);
     mainEffectModel->label.push_back(PP->nlistname[i]);
 
+    // add covariates if specified
+    if(par::covar_file) {
+      for(int i = 0; i < par::clist_number; i++) {
+        // add covariate to the model
+        mainEffectModel->addCovariate(i);
+        mainEffectModel->label.push_back(PP->clistname[i]);
+      }
+    }
+
     // Build design matrix
     mainEffectModel->buildDesignMatrix();
 
