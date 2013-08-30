@@ -454,7 +454,7 @@ void Regain::run() {
 void Regain::mainEffect(int varIndex, bool varIsNumeric) {
   Model *mainEffectModel;
 
-  // logisic regression for binary phenotypes (traits), linear otherwise
+  // logistic regression for binary phenotypes (traits), linear otherwise
   if(par::bt) {
     LogisticModel* m = new LogisticModel(PP);
     mainEffectModel = m;
@@ -911,7 +911,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
   {
   bool useFailureValue = false;
   if(!interactionModel->isValid()) {
-      string failMsg = "\nWARNING: Invalid regression fit for interaction "
+      string failMsg = "WARNING: Invalid regression fit for interaction "
         "variables [" + coef1Label + "], [" + coef2Label + "]";
       failures.push_back(failMsg);
       useFailureValue = true;
@@ -933,9 +933,25 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
       beta = *bIt;
       se = *sIt;
       stat = beta / se;
+      /*
+      if(interactionPval == -9) {
+        cout  << "WPV: beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
+      }
+       */
       regressTestStatValues.push_back(stat);
     }
 
+    /*
+    if(interactionPval == -9) {
+      cout << "WEIRD p-value [" << interactionPval
+        << "] on coefficient for interaction variables ["
+        << coef1Label << "][" << coef2Label << "], interaction beta [" 
+        << betaInteractionCoefs[betaInteractionCoefs.size() - 1] 
+        << "], test stat [" << regressTestStatValues[regressTestStatValues.size() - 1]
+        << "] <= beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
+    }
+    */
+    
     double interactionValue = 0;
     if(par::regainUseBetaValues) {
       interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
@@ -956,8 +972,9 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         ++nanCount;
       }
       // TODO: is there a maximum beta value to threshold?
-    }else {
+    } else {
       interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
+
       if(abs(interactionValue) > par::regainLargeCoefTvalue) {
         stringstream ss;
         ss << "Large test statistic value [" << interactionValue
@@ -966,7 +983,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         warnings.push_back(ss.str());
         if(interactionValue < 0) {
           interactionValue = -par::regainLargeCoefTvalue;
-        }else {
+        } else {
           interactionValue = par::regainLargeCoefTvalue;
         }
       }
@@ -999,7 +1016,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
       regainMatrix[varIndex2][varIndex1] = failureValue;
       regainPMatrix[varIndex1][varIndex2] = 1.0;
       regainPMatrix[varIndex2][varIndex1] = 1.0;
-    }else {
+    } else {
       regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
       regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
       regainPMatrix[varIndex1][varIndex2] = interactionPval;

@@ -1849,10 +1849,11 @@ bool vectorSummary(vector_t values, vector_t& summary) {
 
 bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
 				RegressionRankResults& results) {
- 	Model *mainEffectModel;
 
   // model SNPs
+#pragma omp parallel for
   for(int i=0; i < PP->nl_all; ++i) {
+    Model *mainEffectModel;
     if(par::bt) {
       mainEffectModel = new LogisticModel(PP);
     } else {
@@ -1863,11 +1864,15 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     mainEffectModel->addAdditiveSNP(i);
     mainEffectModel->label.push_back(PP->locus[i]->name);
     snpResult = fitModel(mainEffectModel);
+#pragma omp critical
+{
     ranks.push_back(make_pair(snpResult.first, PP->locus[i]->name));
+}
     delete mainEffectModel;
   }
 
   // model numerics
+  Model *mainEffectModel;
   for(int i=0; i < PP->nlistname.size(); ++i) {
     if(par::bt) {
       mainEffectModel = new LogisticModel(PP);
