@@ -285,6 +285,7 @@ bool par::sifNetwork = false;
 bool par::sifToGain = false;
 string par::afni1dFile = "";
 bool par::afniNetwork = false;
+
 // added for ranking support - bcw - 5/16/13
 bool par::do_ranking = false;
 string par::ranker_method = "";
@@ -292,6 +293,7 @@ int par::ranker_top_n = -1;
 string par::ranker_save_data_file = "";
 string par::ranker_input_file = "";
 double par::ranker_centrality_gamma = -1;
+
 // added for data set support - bcw - 5/21/13
 bool par::exportArff = false;
 bool par::exportDelimited = false;
