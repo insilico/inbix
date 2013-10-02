@@ -127,6 +127,9 @@ bool InteractionNetwork::PrepareConnectivytMatrix() {
 	k = sum(A, 0);
 	m = 0.5 * sum(k);
 
+  // cout << "k = " << k << endl;
+  // cout << "m = " << m << endl;
+  
   return true;
 }
 
@@ -596,7 +599,12 @@ pair<double, vector<vector<unsigned int> > >
 	// real symmetric modularity matrix B
 	B.resize(n, n);
 	colvec k_vec = k.t();
+//  mat kcp = k_vec * k_vec.t();
+//  cout << "kcp:" << endl;
+//  cout << kcp << endl;
 	B = A - k_vec * k_vec.t() / (2.0 * m);
+//  cout << "initial B:" << endl;
+//  cout << B << endl;
   
 	// ------------------------- I T E R A T I O N ------------------------------
 
@@ -627,7 +635,6 @@ pair<double, vector<vector<unsigned int> > >
 		}
 
 		// adjust the diagonal
-		mat BgRowSumDiag(Bg.n_cols, Bg.n_cols);
 		rowvec rowsums = arma::sum(Bg, 0);
 		for(unsigned int i=0; i < rowsums.size(); ++i) {
 			Bg(i, i) = Bg(i, i) - rowsums(i);
@@ -865,6 +872,7 @@ pair<double, vec>
  	vec eigval;
 	mat eigvec;
 	eig_sym(eigval, eigvec, B);
+  //cout << "B:" << endl << B << endl;
   //cout << eigvec << endl;
   //cout << eigval << endl;
 
@@ -882,6 +890,7 @@ pair<double, vec>
 		}
 	}
   //cout << s_out << endl;
+  //exit(1);
 	mat Q_mat = s_out.t() * B * s_out;
 	double Q = Q_mat(0, 0);
 	Q *= (1.0 / (m * 4.0));
