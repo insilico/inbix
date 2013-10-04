@@ -17,7 +17,6 @@
 #include <iostream>
 #include <vector>
 
-#include "model.h"
 #include "zfstream.h"
 
 using namespace std;

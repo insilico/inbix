@@ -111,13 +111,15 @@ nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
 flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
 tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
 metaanal.cpp \
-ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp
+ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp \
+EpistasisEQtl.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
 fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
 gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h                     \
-ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h
+ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h \
+EpistasisEQtl.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS
@@ -145,7 +147,7 @@ SRC += lapackf.cpp
 LIB += $(LIB_LAPACK) 
 endif
 
-LIB += -larmadillo -lblas -llapack -lm -lgsl -lgslcblas
+LIB += -larmadillo -lblas -llapack -lm
 
 OBJ = $(SRC:.cpp=.o)
 

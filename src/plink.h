@@ -432,6 +432,22 @@ public:
 
 };
 
+class Transcript {
+public:
+
+	Transcript() {
+		chr = 0;
+		name = "";
+		bpStart = 0;
+		bpEnd = 0;
+	}
+
+	int chr;
+	string name;
+	int bpStart; // base-pair position - start
+	int bpEnd; // base-pair position - end
+};
+
 namespace std {
 
 	template<>
@@ -592,6 +608,9 @@ public:
 
 	// Locus information
 	vector<Locus*> locus;
+  
+  // numeric data information (gene expression) - bcw - 10/3/13
+	vector<Transcript*> transcript;
 
 	// Marker scaffold
 	map<int, CInfo> scaffold;
@@ -767,6 +786,7 @@ public:
 	void simulateSNPs_QT();
 
 	bool readPhenoFile();
+  bool setQtlPhenoFromNumericIndex(int index);
 	bool readMultiplePhenoFile();
 	bool readCovariateFile();
 	bool readNumericFile();

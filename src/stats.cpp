@@ -18,9 +18,6 @@
 #include <stdio.h>
 #include <time.h>
 
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_blas.h>
-
 #include "stats.h"
 
 // #ifdef WITH_LAPACK
@@ -1863,6 +1860,15 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     pair<double, double> snpResult;
     mainEffectModel->addAdditiveSNP(i);
     mainEffectModel->label.push_back(PP->locus[i]->name);
+    // add covariates if specified
+    if(par::covar_file) {
+      for(int i = 0; i < par::clist_number; i++) {
+        // add covariate to the model
+        mainEffectModel->addCovariate(i);
+        mainEffectModel->label.push_back(PP->clistname[i]);
+      }
+    }
+    
     snpResult = fitModel(mainEffectModel);
 #pragma omp critical
 {
@@ -1974,57 +1980,3 @@ pair<double, double> fitModel(Model* mainEffectModel) {
   return result;
 }
 
-bool matrixMultiply(matrix_t a, matrix_t b, matrix_t& c) {
-  int ar = a.size();
-  int br = b.size();
-  if(ar == 0 || br == 0) {
-    error("Internal error: multiplying 0-sized matrices");
-  }
-  
-  int ac = a[0].size();
-  int bc = b[0].size();
-  if(ac != br) {
-    error("Internal error: non-conformable matrices in multMatrix()");
-  }
-  
-  // cout << "1 - Init A and B" << endl;
-  double* A = new double[ar*ac];
-  double* B = new double[ar*ac];
-  int i, j;
-  for(i = 0; i < ar; i++) {
-    for(j = 0; j < ac; j++) {
-      A[i*ac+j] = a[i][j];
-    }
-  }
-  for(i = 0; i < br; i++) {
-    for(j = 0; j < bc; j++) {
-      B[i*bc+j] = b[i][j];
-    }
-  }
-  
-  int cr = ar;
-  int cc = bc;
-
-  // cout << "2 - dgemm" << endl;
-  double alpha = 1., beta = 0.;
-  gsl_matrix_view A_m = gsl_matrix_view_array(A, ar, ac);
-  gsl_matrix_view B_m = gsl_matrix_view_array(B, br, bc);
-  gsl_matrix *C = gsl_matrix_alloc(cr, cc);
-  gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, alpha, &A_m.matrix, 
-      &B_m.matrix, beta, C);
-
-  // cout << "3 - load c" << endl;
-  c.clear();
-  sizeMatrix(c, cr, cc);
-  for(i = 0; i < cr; i++) {
-    for(j = 0; j < cc; j++) {
-      c[i][j] = gsl_matrix_get(C, i, j);
-    }
-  }
-
-  gsl_matrix_free(C);
-  delete B;
-  delete A;
- 
-  return true;
-}

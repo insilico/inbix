@@ -299,6 +299,13 @@ bool par::exportArff = false;
 bool par::exportDelimited = false;
 string par::exportDelimiter = "\t";
 
+// added for epiqtl support - bcw - 10/3/13
+bool par::do_epiqtl = false;
+string par::epiqtl_expression_file = "";
+string par::epiqtl_coord_file = "";
+bool par::epiqtl_local_cis = false;
+int par::epiqtl_radius = -1;
+
 bool par::no_show_covar = false;
 bool par::dump_covar = false;
 bool par::dump_covar_with_phenotype = false;

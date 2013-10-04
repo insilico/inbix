@@ -2935,6 +2935,23 @@ void setOptions(CArgs & a) {
     par::exportDelimiter = a.value("--export-delimiter");
   }
   
+  // added for epiqtl support - bcw - 10/3/13
+  if(a.find("--epiqtl")) {
+    par::do_epiqtl = true;
+  }
+  if(a.find("--transcript-matrix")) {
+    par::epiqtl_expression_file = a.value("--transcript-matrix");
+  }
+  if(a.find("--coordinates")) {
+    par::epiqtl_coord_file = a.value("--coordinates");
+  }
+  if(a.find("--local-cis")) {
+    par::epiqtl_local_cis = true;
+  }
+  if(a.find("--radius")) {
+    par::epiqtl_radius = a.value_int("--radius");
+  }
+  
   ////////////////////////
   // Reference allele file
   if(a.find("--reference")) {
@@ -4141,6 +4158,12 @@ void setOptions(CArgs & a) {
             << "      --export-arff             Write data to Weka ARFF format\n"
             << "      --export-delimited        Write data to delimited format\n"
             << "      --export-delimiter {delimiter} Export delimiter\n"
+            << "\n"
+            << "      --epiqtl                  Perform epistasis eQTL analysis\n"
+            << "      --transcript-matrix       Transcript matrix file\n"
+            << "      --coordinates             Transcript coordinates file\n"
+            << "      --local-cis               Consider only SNPs within radius\n"
+            << "      --radius                  Number of kilobases considered cis\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

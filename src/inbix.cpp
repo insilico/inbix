@@ -42,6 +42,7 @@
 #include "InteractionNetwork.h"
 #include "CentralityRanker.h"
 #include "ArmadilloFuncs.h"
+#include "EpistasisEQtl.h"
 
 using namespace std;
 using namespace arma;
@@ -625,7 +626,43 @@ int main(int argc, char* argv[]) {
 		if(P.locus[l]->allele1 == "")
 			P.locus[l]->allele1 = "0";
 	}
+  
+	// perform epistatic eQTL analysis
+  if(par::do_epiqtl) {
+		P.printLOG("Performing epiQTL analysis\n");
 
+    if(par::epiqtl_expression_file == "") {
+      error("Transcript expression file is required. Use --transcript-matrix");
+    }
+    if(par::epiqtl_coord_file == "") {
+      error("Transcript coordinate file is required. Use --coordinates");
+    }
+    
+    // read the expression data as a numeric file in PLINK format
+		P.printLOG("Reading transcripts from [" + par::epiqtl_expression_file + "]\n");
+    par::numeric_filename = par::epiqtl_expression_file;
+		if(!P.readNumericFile()) {
+			error("Cannot read eQTL expression file: " + par::epiqtl_expression_file);
+		}
+    
+    EpistasisEQtl* epiqtl = new EpistasisEQtl();
+    
+    // read transcript coordinate information from file
+		P.printLOG("Reading transcript coordinates from [" + par::epiqtl_coord_file + "]\n");
+    if(!epiqtl->ReadTranscriptCoordinates(par::epiqtl_coord_file)) {
+      error("Cannot read coordinates file: " + par::epiqtl_coord_file);
+    }
+
+    // run the analysis
+    if(!epiqtl->Run()) {
+      error("epiQTL analysis failed");
+    }
+
+    // clean up and exit gracefully
+    delete epiqtl;
+    shutdown();
+  }
+  
 	// compute a co-expression matrix of the numeric data
 	if(par::do_coexpression_all || par::do_coexpression_casecontrol) {
 		if(!par::numeric_file) {

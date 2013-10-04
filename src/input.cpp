@@ -728,6 +728,17 @@ bool Plink::readClusterFile(bool verbose) {
   return true;
 }
 
+bool Plink::setQtlPhenoFromNumericIndex(int index) {
+  for(int i = 0; i < sample.size(); i++) {
+    sample[i]->phenotype = sample[i]->nlist[index];
+    sample[i]->missing = false;
+  }
+  par::bt = false;
+  par::qt = true;
+  
+  return true;
+}
+
 bool Plink::readPhenoFile() {
 
   // Assume binary trait unless we find out otherwise

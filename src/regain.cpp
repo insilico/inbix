@@ -678,13 +678,13 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
   // Was the model fitting method successful?
 #pragma omp critical
   {
-  bool useFailureValue = false;
-  if(!interactionModel->isValid()) {
-      string failMsg = "WARNING: Invalid regression fit for interaction "
-        "variables [" + coef1Label + "], [" + coef2Label + "]";
-      failures.push_back(failMsg);
-      useFailureValue = true;
-  }
+    bool useFailureValue = false;
+    if(!interactionModel->isValid()) {
+        string failMsg = "WARNING: Invalid regression fit for interaction "
+          "variables [" + coef1Label + "], [" + coef2Label + "]";
+        failures.push_back(failMsg);
+        useFailureValue = true;
+    }
 
     vector_t betaInteractionCoefs = interactionModel->getCoefs();
     vector_t betaInteractionCoefPVals = interactionModel->getPVals();
@@ -719,7 +719,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
         ++nanCount;
       }
       // TODO: is there a maximum beta value to threshold?
-    }else {
+    } else {
       interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
       if(abs(interactionValue) > par::regainLargeCoefTvalue) {
         stringstream ss;

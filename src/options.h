@@ -396,6 +396,13 @@ public:
   static bool exportArff;
   static bool exportDelimited;
   static string exportDelimiter;
+
+  // added for epiqtl support - bcw - 10/3/13
+  static bool do_epiqtl;
+	static string epiqtl_expression_file;
+	static string epiqtl_coord_file;
+  static bool epiqtl_local_cis;
+  static int epiqtl_radius;
   
 	static bool no_show_covar;
 	static bool dump_covar;
