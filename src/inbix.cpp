@@ -654,6 +654,8 @@ int main(int argc, char* argv[]) {
     }
 
     // run the analysis
+    epiqtl->SetLocalCis(par::epiqtl_local_cis);
+    epiqtl->SetRadius(par::epiqtl_radius);
     if(!epiqtl->Run()) {
       error("epiQTL analysis failed");
     }

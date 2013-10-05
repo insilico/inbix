@@ -304,7 +304,7 @@ bool par::do_epiqtl = false;
 string par::epiqtl_expression_file = "";
 string par::epiqtl_coord_file = "";
 bool par::epiqtl_local_cis = false;
-int par::epiqtl_radius = -1;
+int par::epiqtl_radius = 1000;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

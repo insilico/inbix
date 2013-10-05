@@ -82,9 +82,11 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
 
 bool EpistasisEQtl::SetRadius(int newRadius) {
   if(newRadius < 1) {
+    cerr << "Error setting cis radius to: " << newRadius << endl;
     return false;
   }
-  radius = newRadius;
+  // newRadius is in kilobases, but need to store a bases
+  radius = newRadius * 1000;
   return true;
 }
 
@@ -133,39 +135,37 @@ bool EpistasisEQtl::Run() {
   PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
   PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
 
-  ofstream TESTNUMBERS;
   TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
-  ofstream EQTL;
   EQTL.open(eqtlFilename.c_str(), ios::out);
-  ofstream EPIQTL;
   EPIQTL.open(epiqtlFilename.c_str(), ios::out);
   
   // for each transcript build main effect and epistasis regression models
-  PP->printLOG("epiQTL linear regression loop\n");
+  PP->printLOG("epiQTL linear regression loop for all transcripts\n");
+  if(localCis) {
+    PP->printLOG("epiQTL local cis mode with radius: " + 
+      int2str(int(radius / 1000)) + " kilobases\n");
+  }
 	PP->SNP2Ind();
-  for(int i=0; i < PP->nlistname.size(); ++i) {
-    string thisTranscript = PP->nlistname[i];
-    cout << "Transcript: " << thisTranscript << endl;
+  int transcriptIndex = 0;
+  string thisTranscript;
+  PP->printLOG("Processing transcripts:\n");
+  for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
+    
+    thisTranscript = PP->nlistname[transcriptIndex];
+    PP->printLOG(thisTranscript + " ");
+    //cout << "Transcript: " << thisTranscript << endl;
     
     // get transcript expression vector as phenotype
-    PP->setQtlPhenoFromNumericIndex(i);
-    
-    // get transcript chromosome
-    int thisChromosome = coordinates[thisTranscript][0];
+    PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
     // get all SNP indices on the chromosome
     vector<int> thisTranscriptSnpIndices;
-    for(int j=0; j < PP->locus.size(); ++j) {
-      Locus* thisSnp = PP->locus[j];
-      if(thisSnp->chr == thisChromosome) {
-        thisTranscriptSnpIndices.push_back(j);
-      }
-    }
-    cout << thisTranscriptSnpIndices.size() << " SNPs found for transcript" << endl;
+    GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
+    //cout << thisTranscriptSnpIndices.size() << " SNPs found for transcript" << endl;
     TESTNUMBERS << thisTranscript << "\t" << thisTranscriptSnpIndices.size() << endl;
     
     // fit main effect regression model for SNPs
-    cout << "Running main effects regression models" << endl;
+    //cout << "Running main effects regression models" << endl;
     pair<double, double> snpResult;
     int j;
 #pragma omp parallel for
@@ -201,7 +201,7 @@ bool EpistasisEQtl::Run() {
     }
     
     // interaction regression model for each pair of SNPs
-    cout << "Running interaction regression models" << endl;
+    //cout << "Running interaction regression models" << endl;
     int ii, jj;
 #pragma omp parallel for schedule(dynamic, 1) private(ii, jj)
     for(ii=0; ii < thisTranscriptSnpIndices.size(); ++ii) {
@@ -256,11 +256,54 @@ bool EpistasisEQtl::Run() {
     }
     
   } // for each transcript loop
+  PP->printLOG(thisTranscript + "\n");
   
+  PP->printLOG("epiQTL analysis finished\n");
+
   // clean up
   TESTNUMBERS.close();
   EQTL.close();
   EPIQTL.close();
   
+  return true;
+}
+
+bool EpistasisEQtl::GetSnpsForTranscript(string transcript, 
+  vector<int>& snpIndices) {
+
+  // get transcript info
+  int chromosome = coordinates[transcript][COORD_CHROM];
+  int bpStart = coordinates[transcript][COORD_BP_START];
+  int bpEnd = coordinates[transcript][COORD_BP_END];
+  int lowerThreshold = bpStart - radius;
+  int upperThreshold = bpEnd + radius;
+  
+//  cout 
+//    << chromosome  << ", " 
+//    << radius  << ", " 
+//    << "(" << lowerThreshold << "), "
+//    << bpStart  << ", " 
+//    << bpEnd << ", "
+//    << "(" << upperThreshold << ")"
+//    << endl;
+  
+  // find SNPs matching criteria
+  for(int j=0; j < PP->locus.size(); ++j) {
+    Locus* thisSnp = PP->locus[j];
+    if(thisSnp->chr == chromosome) {
+      if(localCis) {
+        // on the same chromosome and within radius of transcript
+        if(thisSnp->bp >= lowerThreshold && 
+          thisSnp->bp <= upperThreshold) {
+          snpIndices.push_back(j);
+        }
+      }
+      else {
+        // simply on the same chromosome
+        snpIndices.push_back(j);
+      }
+    }
+  }
+
   return true;
 }
