@@ -166,16 +166,13 @@ bool EpistasisEQtl::Run() {
     
     // fit main effect regression model for SNPs
     //cout << "Running main effects regression models" << endl;
-    pair<double, double> snpResult;
-    int j;
+    int thisSnpIndex = 0;
 #pragma omp parallel for
-    for(j=0; j < thisTranscriptSnpIndices.size(); ++j) {
-      int thisSnpIndex = thisTranscriptSnpIndices[j];
+    for(thisSnpIndex=0; thisSnpIndex < PP->nl_all; ++thisSnpIndex) {
       string thisSnpName = PP->locus[thisSnpIndex]->name;
       
       Model* mainEffectModel = new LinearModel(PP);
       mainEffectModel->setMissing();
-      pair<double, double> snpResult;
       mainEffectModel->addAdditiveSNP(thisSnpIndex);
       mainEffectModel->label.push_back(thisSnpName);
       // add covariates if specified
@@ -188,7 +185,7 @@ bool EpistasisEQtl::Run() {
       }
       
       // fit the model and write results
-      snpResult = fitModel(mainEffectModel);
+      pair<double, double>  snpResult = fitModel(mainEffectModel);
 #pragma omp critical
 {
       EQTL 
@@ -204,7 +201,7 @@ bool EpistasisEQtl::Run() {
     //cout << "Running interaction regression models" << endl;
     int ii, jj;
 #pragma omp parallel for schedule(dynamic, 1) private(ii, jj)
-    for(ii=0; ii < thisTranscriptSnpIndices.size(); ++ii) {
+    for(ii=0; ii < PP->nl_all; ++ii) {
       for(jj=ii+1; jj < thisTranscriptSnpIndices.size(); ++jj) {
         //cout << "MODEL" << endl;
         int snpAIndex = thisTranscriptSnpIndices[ii];
@@ -255,8 +252,7 @@ bool EpistasisEQtl::Run() {
       }
     }
     
-  } // for each transcript loop
-  PP->printLOG(thisTranscript + "\n");
+  } // END for each transcript loop
   
   PP->printLOG("epiQTL analysis finished\n");
 
