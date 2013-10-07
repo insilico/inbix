@@ -202,7 +202,7 @@ bool EpistasisEQtl::Run() {
     int ii, jj;
 #pragma omp parallel for schedule(dynamic, 1) private(ii, jj)
     for(ii=0; ii < PP->nl_all; ++ii) {
-      for(jj=ii+1; jj < thisTranscriptSnpIndices.size(); ++jj) {
+      for(jj=0; jj < thisTranscriptSnpIndices.size(); ++jj) {
         //cout << "MODEL" << endl;
         int snpAIndex = ii;
         string snpAName = PP->locus[snpAIndex]->name;
