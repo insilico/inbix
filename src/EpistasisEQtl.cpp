@@ -204,7 +204,7 @@ bool EpistasisEQtl::Run() {
     for(ii=0; ii < PP->nl_all; ++ii) {
       for(jj=ii+1; jj < thisTranscriptSnpIndices.size(); ++jj) {
         //cout << "MODEL" << endl;
-        int snpAIndex = thisTranscriptSnpIndices[ii];
+        int snpAIndex = ii;
         string snpAName = PP->locus[snpAIndex]->name;
         int snpBIndex = thisTranscriptSnpIndices[jj];
         string snpBName = PP->locus[snpBIndex]->name;
