@@ -134,34 +134,17 @@ bool EpistasisEQtl::Run() {
   }
 	PP->SNP2Ind();
   int transcriptIndex = 0;
+  string testnumbersFilename = par::output_file_name + ".testnumbers.txt";
+  PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
+  std::ofstream TESTNUMBERS;
+  TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
   string thisTranscript;
-  PP->printLOG("Processing transcripts:\n");
   for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
     
     thisTranscript = PP->nlistname[transcriptIndex];
     PP->printLOG("Transcript: " + thisTranscript + "\n");
     //cout << "Transcript: " << thisTranscript << endl;
 
-    // open output files
-    string testnumbersFilename = par::output_file_name + "." + 
-      thisTranscript + ".testnumbers.txt";
-    string eqtlFilename = par::output_file_name + "." + 
-      thisTranscript + ".eqtl.txt";
-    string epiqtlFilename = par::output_file_name + "." + 
-      thisTranscript + ".epiqtl.txt";
-
-    PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
-    PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
-    PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
-
-    std::ofstream TESTNUMBERS;
-    std::ofstream EQTL;
-    std::ofstream EPIQTL;
-
-    TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
-    EQTL.open(eqtlFilename.c_str(), ios::out);
-    EPIQTL.open(epiqtlFilename.c_str(), ios::out);
-    
     // get transcript expression vector as phenotype
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
@@ -173,8 +156,12 @@ bool EpistasisEQtl::Run() {
     
     // fit main effect regression model for SNPs
     //cout << "Running main effects regression models" << endl;
+    string eqtlFilename = par::output_file_name + "." + 
+      thisTranscript + ".eqtl.txt";
+    PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
+    std::ofstream EQTL;
+    EQTL.open(eqtlFilename.c_str(), ios::out);
     int thisSnpIndex = 0;
-//#pragma omp parallel for
     for(thisSnpIndex=0; thisSnpIndex < PP->nl_all; ++thisSnpIndex) {
       string thisSnpName = PP->locus[thisSnpIndex]->name;
       
@@ -193,16 +180,15 @@ bool EpistasisEQtl::Run() {
       
       // fit the model and write results
       pair<double, double>  snpResult = fitModel(mainEffectModel);
-//#pragma omp critical
-//{
       EQTL 
         << thisSnpName << "\t"
         << thisTranscript << "\t"
         << snpResult.first << "\t"
         << snpResult.second << endl;
-//}      
+
       delete mainEffectModel;
     }
+    EQTL.close();
     
     // interaction regression model for each pair of SNPs
     //cout << "Running interaction regression models" << endl;
@@ -260,26 +246,31 @@ bool EpistasisEQtl::Run() {
     }
 
     // write regression results
-    for(ii=0; ii < nAllSnps; ++ii) {
-      for(jj=0; jj < nCisSnps; ++jj) {
-        int snpAIndex = ii;
+    string epiqtlFilename = par::output_file_name + "." + 
+      thisTranscript + ".epiqtl.txt";
+    PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
+    std::ofstream EPIQTL;
+    EPIQTL.open(epiqtlFilename.c_str(), ios::out);
+    for(int kk=0; kk < nAllSnps; ++kk) {
+      for(int ll=0; ll < nCisSnps; ++ll) {
+        int snpAIndex = kk;
         string snpAName = PP->locus[snpAIndex]->name;
-        int snpBIndex = thisTranscriptSnpIndices[jj];
+        int snpBIndex = thisTranscriptSnpIndices[ll];
         string snpBName = PP->locus[snpBIndex]->name;
         EPIQTL 
           << snpAName << "\t" << snpBName << "\t"
           << thisTranscript << "\t"
-          << resultsMatrixBetas[ii][jj] << "\t"
-          << resultsMatrixPvals[ii][jj] << endl;
+          << resultsMatrixBetas[kk][ll] << "\t"
+          << resultsMatrixPvals[kk][ll] << endl;
       }
     }
     
     // clean up transcript
-    TESTNUMBERS.close();
-    EQTL.close();
     EPIQTL.close();
   
   } // END for each transcript loop
+  
+  TESTNUMBERS.close();
   
   PP->printLOG("epiQTL analysis finished\n");
 
