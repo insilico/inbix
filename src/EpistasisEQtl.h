@@ -33,9 +33,6 @@ public:
 private:
   bool GetSnpsForTranscript(std::string transcript, 
     std::vector<int>& snpIndices);
-  std::ofstream TESTNUMBERS;
-  std::ofstream EQTL;
-  std::ofstream EPIQTL;
   int radius;
   bool localCis;
   CoordinateTable coordinates;

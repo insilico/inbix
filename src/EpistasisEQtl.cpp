@@ -126,19 +126,6 @@ bool EpistasisEQtl::Run() {
     }
   }
   
-  // open output files
-  string testnumbersFilename = par::output_file_name + ".testnumbers.txt";
-  string eqtlFilename = par::output_file_name + ".eqtl.txt";
-  string epiqtlFilename = par::output_file_name + ".epiqtl.txt";
-
-  PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
-  PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
-  PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
-
-  TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
-  EQTL.open(eqtlFilename.c_str(), ios::out);
-  EPIQTL.open(epiqtlFilename.c_str(), ios::out);
-  
   // for each transcript build main effect and epistasis regression models
   PP->printLOG("epiQTL linear regression loop for all transcripts\n");
   if(localCis) {
@@ -152,8 +139,28 @@ bool EpistasisEQtl::Run() {
   for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
     
     thisTranscript = PP->nlistname[transcriptIndex];
-    PP->printLOG(thisTranscript + " ");
+    PP->printLOG("Transcript: " + thisTranscript + "\n");
     //cout << "Transcript: " << thisTranscript << endl;
+
+    // open output files
+    string testnumbersFilename = par::output_file_name + "." + 
+      thisTranscript + ".testnumbers.txt";
+    string eqtlFilename = par::output_file_name + "." + 
+      thisTranscript + ".eqtl.txt";
+    string epiqtlFilename = par::output_file_name + "." + 
+      thisTranscript + ".epiqtl.txt";
+
+    PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
+    PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
+    PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
+
+    std::ofstream TESTNUMBERS;
+    std::ofstream EQTL;
+    std::ofstream EPIQTL;
+
+    TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
+    EQTL.open(eqtlFilename.c_str(), ios::out);
+    EPIQTL.open(epiqtlFilename.c_str(), ios::out);
     
     // get transcript expression vector as phenotype
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
@@ -252,15 +259,15 @@ bool EpistasisEQtl::Run() {
       }
     }
     
+    // clean up transcript
+    TESTNUMBERS.close();
+    EQTL.close();
+    EPIQTL.close();
+  
   } // END for each transcript loop
   
   PP->printLOG("epiQTL analysis finished\n");
 
-  // clean up
-  TESTNUMBERS.close();
-  EQTL.close();
-  EPIQTL.close();
-  
   return true;
 }
 
