@@ -167,7 +167,7 @@ bool EpistasisEQtl::Run() {
     // fit main effect regression model for SNPs
     //cout << "Running main effects regression models" << endl;
     int thisSnpIndex = 0;
-#pragma omp parallel for
+//#pragma omp parallel for
     for(thisSnpIndex=0; thisSnpIndex < PP->nl_all; ++thisSnpIndex) {
       string thisSnpName = PP->locus[thisSnpIndex]->name;
       
@@ -186,14 +186,14 @@ bool EpistasisEQtl::Run() {
       
       // fit the model and write results
       pair<double, double>  snpResult = fitModel(mainEffectModel);
-#pragma omp critical
-{
+//#pragma omp critical
+//{
       EQTL 
         << thisSnpName << "\t"
         << thisTranscript << "\t"
         << snpResult.first << "\t"
         << snpResult.second << endl;
-}      
+//}      
       delete mainEffectModel;
     }
     
