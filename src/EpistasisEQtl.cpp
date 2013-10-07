@@ -192,11 +192,17 @@ bool EpistasisEQtl::Run() {
     
     // interaction regression model for each pair of SNPs
     //cout << "Running interaction regression models" << endl;
-    int ii, jj;
     int nAllSnps = PP->nl_all;
     int nCisSnps = thisTranscriptSnpIndices.size();
-    double resultsMatrixBetas[nAllSnps][nCisSnps];
-    double resultsMatrixPvals[nAllSnps][nCisSnps];
+    double** resultsMatrixBetas= new double*[nAllSnps];
+    for(int a=0; a < nAllSnps; ++a) {
+      resultsMatrixBetas[a] = new double[nCisSnps];
+    }
+    double** resultsMatrixPvals= new double*[nAllSnps];
+    for(int a=0; a < nAllSnps; ++a) {
+      resultsMatrixPvals[a] = new double[nCisSnps];
+    }
+    int ii, jj;
 #pragma omp parallel for private(ii, jj)
     for(ii=0; ii < nAllSnps; ++ii) {
       for(jj=0; jj < nCisSnps; ++jj) {
@@ -236,11 +242,8 @@ bool EpistasisEQtl::Run() {
         vector_t betaInteractionCoefPVals = interactionModel->getPVals();
         double interactionPval =
           betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-#pragma omp critical
-{
         resultsMatrixBetas[ii][jj] = interactionValue;
         resultsMatrixPvals[ii][jj] = interactionPval;
-}
         delete interactionModel;
       }
     }
@@ -264,10 +267,17 @@ bool EpistasisEQtl::Run() {
           << resultsMatrixPvals[kk][ll] << endl;
       }
     }
-    
-    // clean up transcript
     EPIQTL.close();
   
+    for(int a=0; a < nAllSnps; ++a) {
+      delete [] resultsMatrixBetas[a];
+    }
+    delete [] resultsMatrixBetas;
+    for(int a=0; a < nAllSnps; ++a) {
+      delete [] resultsMatrixPvals[a];
+    }
+    delete [] resultsMatrixPvals;
+    
   } // END for each transcript loop
   
   TESTNUMBERS.close();
