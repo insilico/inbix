@@ -207,9 +207,13 @@ bool EpistasisEQtl::Run() {
     // interaction regression model for each pair of SNPs
     //cout << "Running interaction regression models" << endl;
     int ii, jj;
+    int nAllSnps = PP->nl_all;
+    int nCisSnps = thisTranscriptSnpIndices.size();
+    double resultsMatrixBetas[nAllSnps][nCisSnps];
+    double resultsMatrixPvals[nAllSnps][nCisSnps];
 #pragma omp parallel for private(ii, jj)
-    for(ii=0; ii < PP->nl_all; ++ii) {
-      for(jj=0; jj < thisTranscriptSnpIndices.size(); ++jj) {
+    for(ii=0; ii < nAllSnps; ++ii) {
+      for(jj=0; jj < nCisSnps; ++jj) {
         //cout << "MODEL" << endl;
         int snpAIndex = ii;
         string snpAName = PP->locus[snpAIndex]->name;
@@ -248,14 +252,25 @@ bool EpistasisEQtl::Run() {
           betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
 #pragma omp critical
 {
-        //cout << "Writing interaction regression model" << endl;
+        resultsMatrixBetas[ii][jj] = interactionValue;
+        resultsMatrixPvals[ii][jj] = interactionPval;
+}
+        delete interactionModel;
+      }
+    }
+
+    // write regression results
+    for(ii=0; ii < nAllSnps; ++ii) {
+      for(jj=0; jj < nCisSnps; ++jj) {
+        int snpAIndex = ii;
+        string snpAName = PP->locus[snpAIndex]->name;
+        int snpBIndex = thisTranscriptSnpIndices[jj];
+        string snpBName = PP->locus[snpBIndex]->name;
         EPIQTL 
           << snpAName << "\t" << snpBName << "\t"
           << thisTranscript << "\t"
-          << interactionValue << "\t"
-          << interactionPval << endl;
-}
-        delete interactionModel;
+          << resultsMatrixBetas[ii][jj] << "\t"
+          << resultsMatrixPvals[ii][jj] << endl;
       }
     }
     

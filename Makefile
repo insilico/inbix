@@ -39,7 +39,7 @@ LIB_IGRAPH = /usr/lib/libigraph.so
 
 # optimized mode
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib 
+  -L/usr/local/lib
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY -Wno-write-strings \
 #  -L/usr/local/lib
