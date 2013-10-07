@@ -200,7 +200,7 @@ bool EpistasisEQtl::Run() {
     // interaction regression model for each pair of SNPs
     //cout << "Running interaction regression models" << endl;
     int ii, jj;
-#pragma omp parallel for schedule(dynamic, 1) private(ii, jj)
+#pragma omp parallel for private(ii, jj)
     for(ii=0; ii < PP->nl_all; ++ii) {
       for(jj=0; jj < thisTranscriptSnpIndices.size(); ++jj) {
         //cout << "MODEL" << endl;
