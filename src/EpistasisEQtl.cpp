@@ -202,10 +202,9 @@ bool EpistasisEQtl::Run() {
     for(int a=0; a < nAllSnps; ++a) {
       resultsMatrixPvals[a] = new double[nCisSnps];
     }
-    int ii, jj;
-#pragma omp parallel for private(ii, jj)
-    for(ii=0; ii < nAllSnps; ++ii) {
-      for(jj=0; jj < nCisSnps; ++jj) {
+#pragma omp parallel for
+    for(int ii=0; ii < nAllSnps; ++ii) {
+      for(int jj=0; jj < nCisSnps; ++jj) {
         //cout << "MODEL" << endl;
         int snpAIndex = ii;
         string snpAName = PP->locus[snpAIndex]->name;
