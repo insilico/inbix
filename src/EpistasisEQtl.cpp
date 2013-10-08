@@ -202,7 +202,7 @@ bool EpistasisEQtl::Run() {
     for(int a=0; a < nAllSnps; ++a) {
       resultsMatrixPvals[a] = new double[nCisSnps];
     }
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 10) 
     for(int ii=0; ii < nAllSnps; ++ii) {
       for(int jj=0; jj < nCisSnps; ++jj) {
         //cout << "MODEL" << endl;
