@@ -132,7 +132,12 @@ bool EpistasisEQtl::Run() {
     PP->printLOG("epiQTL local cis mode with radius: " + 
       int2str(int(radius / 1000)) + " kilobases\n");
   }
-	PP->SNP2Ind();
+  if(par::epiqtl_interaction_full) {
+    PP->printLOG("epiQTL FULL epistatic interaction mode\n");
+  } else {
+    PP->printLOG("epiQTL cis-cis/cis-trans interaction mode\n");
+  }
+  
   int transcriptIndex = 0;
   string testnumbersFilename = par::output_file_name + ".testnumbers.txt";
   PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
@@ -191,83 +196,140 @@ bool EpistasisEQtl::Run() {
     EQTL.close();
     
     // interaction regression model for each pair of SNPs
-    //cout << "Running interaction regression models" << endl;
     int nAllSnps = PP->nl_all;
     int nCisSnps = thisTranscriptSnpIndices.size();
+    int nInnerLoop = -1;
+    if(par::epiqtl_interaction_full) {
+      nInnerLoop = nAllSnps;
+    } else {
+      nInnerLoop = nCisSnps;
+    }
     double** resultsMatrixBetas= new double*[nAllSnps];
     for(int a=0; a < nAllSnps; ++a) {
-      resultsMatrixBetas[a] = new double[nCisSnps];
+      resultsMatrixBetas[a] = new double[nInnerLoop];
+      for(int b=0; b < nInnerLoop; ++b) {
+        resultsMatrixBetas[a][b] = 0.0;
+      }
     }
     double** resultsMatrixPvals= new double*[nAllSnps];
     for(int a=0; a < nAllSnps; ++a) {
-      resultsMatrixPvals[a] = new double[nCisSnps];
-    }
-#pragma omp parallel for schedule(dynamic, 10) 
-    for(int ii=0; ii < nAllSnps; ++ii) {
-      for(int jj=0; jj < nCisSnps; ++jj) {
-        //cout << "MODEL" << endl;
-        int snpAIndex = ii;
-        string snpAName = PP->locus[snpAIndex]->name;
-        int snpBIndex = thisTranscriptSnpIndices[jj];
-        string snpBName = PP->locus[snpBIndex]->name;
-        //cout << ii << "\t" << snpAIndex << "\t" << snpAName << endl;
-        //cout << jj << "\t" << snpBIndex << "\t" << snpBName << endl;
-        
-        //cout << "Preparing interaction regression model" << endl;
-        Model* interactionModel = new LinearModel(PP);
-        interactionModel->setMissing();
-        interactionModel->addAdditiveSNP(snpAIndex);
-        interactionModel->label.push_back(snpAName);
-        interactionModel->addAdditiveSNP(snpBIndex);
-        interactionModel->label.push_back(snpBName);
-        if(par::covar_file) {
-          for(int kk = 0; kk < par::clist_number; kk++) {
-            // add covariate to the model
-            interactionModel->addCovariate(kk);
-            interactionModel->label.push_back(PP->clistname[kk]);
-          }
-        }
-        interactionModel->addInteraction(1, 2);
-        interactionModel->label.push_back("EPI");
-        
-        // fit the model and write results
-        //cout << "Fitting interaction regression model" << endl;
-        interactionModel->buildDesignMatrix();
-        interactionModel->fitLM();
-        //cout << "Getting interaction regression model" << endl;
-        vector_t betaInteractionCoefs = interactionModel->getCoefs();
-        double interactionValue = 
-          betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-        vector_t betaInteractionCoefPVals = interactionModel->getPVals();
-        double interactionPval =
-          betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-        resultsMatrixBetas[ii][jj] = interactionValue;
-        resultsMatrixPvals[ii][jj] = interactionPval;
-        delete interactionModel;
+      resultsMatrixPvals[a] = new double[nInnerLoop];
+      for(int b=0; b < nInnerLoop; ++b) {
+        resultsMatrixPvals[a][b] = 0.0;
       }
     }
 
+    if(par::epiqtl_interaction_full) {
+#pragma omp parallel for schedule(dynamic, 10) 
+      for(int ii=0; ii < nAllSnps; ++ii) {
+        for(int jj=ii+1; jj < nAllSnps; ++jj) {
+          int snpAIndex = ii;
+          string snpAName = PP->locus[snpAIndex]->name;
+          int snpBIndex = jj;
+          string snpBName = PP->locus[snpBIndex]->name;
+          Model* interactionModel = new LinearModel(PP);
+          interactionModel->setMissing();
+          interactionModel->addAdditiveSNP(snpAIndex);
+          interactionModel->label.push_back(snpAName);
+          interactionModel->addAdditiveSNP(snpBIndex);
+          interactionModel->label.push_back(snpBName);
+          if(par::covar_file) {
+            for(int kk = 0; kk < par::clist_number; kk++) {
+              interactionModel->addCovariate(kk);
+              interactionModel->label.push_back(PP->clistname[kk]);
+            }
+          }
+          interactionModel->addInteraction(1, 2);
+          interactionModel->label.push_back("EPI");
+          interactionModel->buildDesignMatrix();
+          interactionModel->fitLM();
+          vector_t betaInteractionCoefs = interactionModel->getCoefs();
+          double interactionValue = 
+            betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+          vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+          double interactionPval =
+            betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+          resultsMatrixBetas[ii][jj] = interactionValue;
+          resultsMatrixPvals[ii][jj] = interactionPval;
+          delete interactionModel;
+        }
+      }
+    } else {
+#pragma omp parallel for schedule(dynamic, 10) 
+      for(int ii=0; ii < nAllSnps; ++ii) {
+        for(int jj=0; jj < nInnerLoop; ++jj) {
+          int snpAIndex = ii;
+          string snpAName = PP->locus[snpAIndex]->name;
+          int snpBIndex = thisTranscriptSnpIndices[jj];
+          string snpBName = PP->locus[snpBIndex]->name;
+          Model* interactionModel = new LinearModel(PP);
+          interactionModel->setMissing();
+          interactionModel->addAdditiveSNP(snpAIndex);
+          interactionModel->label.push_back(snpAName);
+          interactionModel->addAdditiveSNP(snpBIndex);
+          interactionModel->label.push_back(snpBName);
+          if(par::covar_file) {
+            for(int kk = 0; kk < par::clist_number; kk++) {
+              interactionModel->addCovariate(kk);
+              interactionModel->label.push_back(PP->clistname[kk]);
+            }
+          }
+          interactionModel->addInteraction(1, 2);
+          interactionModel->label.push_back("EPI");
+          interactionModel->buildDesignMatrix();
+          interactionModel->fitLM();
+          vector_t betaInteractionCoefs = interactionModel->getCoefs();
+          double interactionValue = 
+            betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+          vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+          double interactionPval =
+            betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+          resultsMatrixBetas[ii][jj] = interactionValue;
+          resultsMatrixPvals[ii][jj] = interactionPval;
+          delete interactionModel;
+        }
+      }
+    }
+    
     // write regression results
     string epiqtlFilename = par::output_file_name + "." + 
       thisTranscript + ".epiqtl.txt";
     PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
     std::ofstream EPIQTL;
     EPIQTL.open(epiqtlFilename.c_str(), ios::out);
-    for(int kk=0; kk < nAllSnps; ++kk) {
-      for(int ll=0; ll < nCisSnps; ++ll) {
-        int snpAIndex = kk;
-        string snpAName = PP->locus[snpAIndex]->name;
-        int snpBIndex = thisTranscriptSnpIndices[ll];
-        string snpBName = PP->locus[snpBIndex]->name;
-        EPIQTL 
-          << snpAName << "\t" << snpBName << "\t"
-          << thisTranscript << "\t"
-          << resultsMatrixBetas[kk][ll] << "\t"
-          << resultsMatrixPvals[kk][ll] << endl;
+    if(par::epiqtl_interaction_full) {
+      for(int kk=0; kk < nAllSnps; ++kk) {
+        for(int ll=kk+1; ll < nAllSnps; ++ll) {
+          int snpAIndex = kk;
+          string snpAName = PP->locus[snpAIndex]->name;
+          int snpBIndex = ll;
+          string snpBName = PP->locus[snpBIndex]->name;
+          EPIQTL 
+            << snpAName << "\t" << snpBName << "\t"
+            << thisTranscript << "\t"
+            << resultsMatrixBetas[kk][ll] << "\t"
+            << resultsMatrixPvals[kk][ll] << endl;
+        }
+      }
+    }
+    else {
+      for(int kk=0; kk < nAllSnps; ++kk) {
+        for(int ll=0; ll < nInnerLoop; ++ll) {
+          int snpAIndex = kk;
+          string snpAName = PP->locus[snpAIndex]->name;
+          int snpBIndex = thisTranscriptSnpIndices[ll];
+          string snpBName = PP->locus[snpBIndex]->name;
+          EPIQTL 
+            << snpAName << "\t" << snpBName << "\t"
+            << thisTranscript << "\t"
+            << resultsMatrixBetas[kk][ll] << "\t"
+            << resultsMatrixPvals[kk][ll] << endl;
+        }
       }
     }
     EPIQTL.close();
-  
+
+    // release dynamically allocated memory
     for(int a=0; a < nAllSnps; ++a) {
       delete [] resultsMatrixBetas[a];
     }

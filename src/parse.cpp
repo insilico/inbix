@@ -2951,6 +2951,9 @@ void setOptions(CArgs & a) {
   if(a.find("--radius")) {
     par::epiqtl_radius = a.value_int("--radius");
   }
+  if(a.find("--full")) {
+    par::epiqtl_interaction_full = true;
+  }
   
   ////////////////////////
   // Reference allele file

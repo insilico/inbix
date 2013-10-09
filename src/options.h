@@ -403,6 +403,7 @@ public:
 	static string epiqtl_coord_file;
   static bool epiqtl_local_cis;
   static int epiqtl_radius;
+  static bool epiqtl_interaction_full;
   
 	static bool no_show_covar;
 	static bool dump_covar;

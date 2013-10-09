@@ -19,7 +19,7 @@ WITH_R_PLUGINS = 1
 WITH_WEBCHECK = 1
 FORCE_32BIT = 
 WITH_ZLIB = 1
-WITH_LAPACK = 
+WITH_LAPACK = 1
 FORCE_DYNAMIC = 1
 
 # Put C++ compiler here; Windows has it's own specific version
@@ -30,7 +30,8 @@ CXX_WIN = g++.exe
 CXXFLAGS = 
 
 # Misc
-LIB_LAPACK = /usr/lib/liblapack.so.3
+#LIB_LAPACK = /usr/lib/liblapack.so.3
+LIB_LAPACK=/usr/lib/atlas-base/atlas/liblapack.so
 LIB_IGRAPH = /usr/lib/libigraph.so
 
 # --------------------------------------------------------------------
@@ -43,7 +44,6 @@ CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY -Wno-write-strings \
 #  -L/usr/local/lib
-
 
 OUTPUT = inbix
 
