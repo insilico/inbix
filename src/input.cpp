@@ -1113,7 +1113,7 @@ bool Plink::readNumericFile() {
     piid = tokens[1];
 
     // for numeric only data, create a new individual
-    if(!par::have_snps) {
+    if(!locus.size()) {
       Individual * numOnlyPerson = new Individual;
       numOnlyPerson->fid = pfid;
       numOnlyPerson->iid = piid;
@@ -1132,7 +1132,7 @@ bool Plink::readNumericFile() {
       // Store original missingness status for this person
       originalPersonMissingStatus.insert(make_pair(person, person->missing));
 
-      vector<bool> missing_status;
+      //vector<bool> missing_status;
 
       // Were any missing/bad values?
       bool okay = true;
@@ -1144,21 +1144,24 @@ bool Plink::readNumericFile() {
         if(!from_string<double>(t, tokens[c], std::dec))
           okay = false;
         person->nlist.push_back(t);
+        //missing_status.push_back(true);
+        person->nlistMissing[c] = false;
       }
 
       // Note that we've seen a numeric attribute for this individual
       hasNumeric.insert(person);
 
-      for(int c = 0; c < numNumerics; c++) {
-        if(tokens[c + 2] == par::missing_phenotype) {
-          okay = false;
-          missing_status.push_back(false);
-          person->nlistMissing[c] = true;
-        } else {
-          missing_status.push_back(true);
-          person->nlistMissing[c] = false;
-        }
-      }
+      // detect missing values
+//      for(int c = 0; c < numNumerics; c++) {
+//        if(tokens[c + 2] == par::missing_phenotype) {
+//          okay = false;
+//          missing_status.push_back(false);
+//          person->nlistMissing[c] = true;
+//        } else {
+//          missing_status.push_back(true);
+//          person->nlistMissing[c] = false;
+//        }
+//      }
 
       if(!okay) {
         person->missing = true;

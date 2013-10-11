@@ -5,6 +5,7 @@
  * Created on October 3, 2013, 11:48 AM
  */
 
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -182,14 +183,28 @@ bool EpistasisEQtl::Run() {
           mainEffectModel->label.push_back(PP->clistname[k]);
         }
       }
-      
-      // fit the model and write results
-      pair<double, double>  snpResult = fitModel(mainEffectModel);
+      // Build design matrix
+      mainEffectModel->buildDesignMatrix();
+
+      // Fit linear model
+      int tp = 1; 
+      mainEffectModel->testParameter = tp; // single variable main effect
+      mainEffectModel->fitLM();
+
+      // Obtain estimates and statistics
+      vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+      // p-values don't include intercept term
+      vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+      double mainEffectPval = betaMainEffectCoefPvals[tp - 1];
+
+      // always use first coefficient after intercept as main effect term
+      double mainEffectValue = betaMainEffectCoefs[tp];
+      double mainEffectPValue = betaMainEffectCoefPvals[tp-1];
       EQTL 
         << thisSnpName << "\t"
         << thisTranscript << "\t"
-        << snpResult.first << "\t"
-        << snpResult.second << endl;
+        << mainEffectValue << "\t"
+        << mainEffectPValue << endl;
 
       delete mainEffectModel;
     }
@@ -242,6 +257,12 @@ bool EpistasisEQtl::Run() {
           interactionModel->addInteraction(1, 2);
           interactionModel->label.push_back("EPI");
           interactionModel->buildDesignMatrix();
+          int tp = 3;
+          // add # covars to test param to get interaction param
+          if(par::covar_file) {
+            tp += par::clist_number;
+          }
+          interactionModel->testParameter = tp; // interaction
           interactionModel->fitLM();
           vector_t betaInteractionCoefs = interactionModel->getCoefs();
           double interactionValue = 
@@ -251,6 +272,15 @@ bool EpistasisEQtl::Run() {
             betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
           resultsMatrixBetas[ii][jj] = interactionValue;
           resultsMatrixPvals[ii][jj] = interactionPval;
+//          cout 
+//            << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+//            << "\t" << snpAIndex << "\t" << snpAName
+//            << "\t" << snpBIndex << "\t" << snpBName 
+//            << "\t" << interactionValue << "\t" << interactionPval
+//            << "\t" << betaInteractionCoefs[3]
+//            << "\t" << betaInteractionCoefPVals[2]
+//            << endl;
+//          exit(1);
           delete interactionModel;
         }
       }
@@ -277,6 +307,12 @@ bool EpistasisEQtl::Run() {
           interactionModel->addInteraction(1, 2);
           interactionModel->label.push_back("EPI");
           interactionModel->buildDesignMatrix();
+          int tp = 3;
+          // add # covars to test param to get interaction param
+          if(par::covar_file) {
+            tp += par::clist_number;
+          }
+          interactionModel->testParameter = tp; // interaction
           interactionModel->fitLM();
           vector_t betaInteractionCoefs = interactionModel->getCoefs();
           double interactionValue = 
