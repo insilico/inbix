@@ -19,8 +19,8 @@ WITH_R_PLUGINS = 1
 WITH_WEBCHECK = 1
 FORCE_32BIT = 
 WITH_ZLIB = 1
-WITH_LAPACK = 1
-FORCE_DYNAMIC = 1
+WITH_LAPACK =
+FORCE_DYNAMIC = 
 
 # Put C++ compiler here; Windows has it's own specific version
 CXX_UNIX = g++
@@ -28,22 +28,16 @@ CXX_WIN = g++.exe
 
 # Any other compiler flags here ( -Wall, -g, etc)
 CXXFLAGS = 
+# optimized mode
+#CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
+#  -L/usr/local/lib
+# debug mode
+CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY \
+  -Wno-write-strings -L/usr/local/lib
 
 # Misc
-#LIB_LAPACK = /usr/lib/liblapack.so.3
 LIB_LAPACK=/usr/lib/atlas-base/atlas/liblapack.so
 LIB_IGRAPH = /usr/lib/libigraph.so
-
-# --------------------------------------------------------------------
-# Do not edit below this line
-# --------------------------------------------------------------------
-
-# optimized mode
-CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib
-# debug mode
-#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY -Wno-write-strings \
-#  -L/usr/local/lib
 
 OUTPUT = inbix
 
@@ -61,6 +55,12 @@ ifeq ($(SYS),UNIX)
  CXX = $(CXX_UNIX)
  ifndef FORCE_DYNAMIC
   CXXFLAGS += -static
+  LIB += /usr/local/lib/libarmadillo.a
+  LIB += /usr/lib/atlas-base/atlas/liblapack.a
+  LIB += /usr/lib/atlas-base/atlas/libblas.a
+  LIB += /usr/lib/gcc/x86_64-linux-gnu/4.4/libgfortran.a
+ else
+  LIB += -larmadillo
  endif
 endif
 
@@ -147,8 +147,6 @@ SRC += lapackf.cpp
 LIB += $(LIB_LAPACK) 
 endif
 
-LIB += -larmadillo -lblas -llapack -lm
-
 OBJ = $(SRC:.cpp=.o)
 
 all : $(OUTPUT) 
@@ -160,6 +158,7 @@ $(OBJ) : $(HDR)
 
 .cpp.o : 
 	$(CXX) $(CXXFLAGS) -c $*.cpp
+
 .SUFFIXES : .cpp .c .o $(SUFFIXES)
 
 $(OUTPUT) : $(OBJ)

@@ -4167,6 +4167,7 @@ void setOptions(CArgs & a) {
             << "      --coordinates             Transcript coordinates file\n"
             << "      --local-cis               Consider only SNPs within radius\n"
             << "      --radius                  Number of kilobases considered cis\n"
+            << "      --full                    Consider all SNPs\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
             << "      --mperm {1000}            max(T) permutations         \n"

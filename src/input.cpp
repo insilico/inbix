@@ -1113,7 +1113,7 @@ bool Plink::readNumericFile() {
     piid = tokens[1];
 
     // for numeric only data, create a new individual
-    if(!locus.size()) {
+    if(!SNP.size()) {
       Individual * numOnlyPerson = new Individual;
       numOnlyPerson->fid = pfid;
       numOnlyPerson->iid = piid;
