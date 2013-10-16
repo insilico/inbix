@@ -154,12 +154,7 @@ bool EpistasisEQtl::Run() {
     // get transcript expression vector as phenotype
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
-    // get all SNP indices on the chromosome
-    vector<int> thisTranscriptSnpIndices;
-    GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
-    //cout << thisTranscriptSnpIndices.size() << " SNPs found for transcript" << endl;
-    TESTNUMBERS << thisTranscript << "\t" << thisTranscriptSnpIndices.size() << endl;
-    
+    // EQTL -------------------------------------------------------------------
     // fit main effect regression model for SNPs
     //cout << "Running main effects regression models" << endl;
     string eqtlFilename = par::output_file_name + "." + 
@@ -210,15 +205,17 @@ bool EpistasisEQtl::Run() {
     }
     EQTL.close();
     
-    // interaction regression model for each pair of SNPs
+    // EPIQTL -----------------------------------------------------------------
     int nAllSnps = PP->nl_all;
-    int nCisSnps = thisTranscriptSnpIndices.size();
     int nInnerLoop = -1;
+    vector<int> thisTranscriptSnpIndices;
     if(par::epiqtl_interaction_full) {
       nInnerLoop = nAllSnps;
     } else {
-      nInnerLoop = nCisSnps;
+      GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
+      nInnerLoop = thisTranscriptSnpIndices.size();
     }
+    // allocate results matrices
     double** resultsMatrixBetas= new double*[nAllSnps];
     for(int a=0; a < nAllSnps; ++a) {
       resultsMatrixBetas[a] = new double[nInnerLoop];
@@ -233,10 +230,14 @@ bool EpistasisEQtl::Run() {
         resultsMatrixPvals[a][b] = 0.0;
       }
     }
-
+    
     if(par::epiqtl_interaction_full) {
+      PP->printLOG("epiQTL linear regression loop: SNP x SNP\n");
 #pragma omp parallel for schedule(dynamic, 10) 
       for(int ii=0; ii < nAllSnps; ++ii) {
+        if(ii && (ii % 1000 == 0)) {
+          cout << ii << "/" << nAllSnps << endl;
+        }
         for(int jj=ii+1; jj < nAllSnps; ++jj) {
           int snpAIndex = ii;
           string snpAName = PP->locus[snpAIndex]->name;
@@ -285,8 +286,13 @@ bool EpistasisEQtl::Run() {
         }
       }
     } else {
+      PP->printLOG("epiQTL linear regression loop: SNP x cis/trans (" + 
+        int2str(nInnerLoop) + ")\n");
 #pragma omp parallel for schedule(dynamic, 10) 
       for(int ii=0; ii < nAllSnps; ++ii) {
+        if(ii && (ii % 1000 == 0)) {
+          cout << ii << "/" << nAllSnps << endl;
+        }
         for(int jj=0; jj < nInnerLoop; ++jj) {
           int snpAIndex = ii;
           string snpAName = PP->locus[snpAIndex]->name;
@@ -326,7 +332,7 @@ bool EpistasisEQtl::Run() {
         }
       }
     }
-    
+
     // write regression results
     string epiqtlFilename = par::output_file_name + "." + 
       thisTranscript + ".epiqtl.txt";
@@ -374,6 +380,10 @@ bool EpistasisEQtl::Run() {
       delete [] resultsMatrixPvals[a];
     }
     delete [] resultsMatrixPvals;
+
+    
+    TESTNUMBERS << thisTranscript << "\t" 
+      << (nAllSnps * nInnerLoop) << endl;
     
   } // END for each transcript loop
   
