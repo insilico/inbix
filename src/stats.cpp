@@ -1991,12 +1991,13 @@ bool numericLowValueFilter(double percentile, boolvec_t& varFlags) {
 
   // find percentile cutoff threshold
   sort(allValues.begin(), allValues.end());
-  int thresholdIndex = ceil(percentile * (double) allValues.size());
+  int thresholdIndex = floor(percentile * (double) allValues.size());
   double threshold = allValues[thresholdIndex];
   PP->printLOG("Detecting values below: " + dbl2str(threshold) + "\n");
   
   // for each numeric attribute, if all values below threshold, remove it
   int numSamples = PP->sample.size();
+  int numPass = 0;
   int numFail = 0;
   for(int i=0; i < PP->nlistname.size(); ++i) {
     int lowCount = 0;
@@ -2006,35 +2007,41 @@ bool numericLowValueFilter(double percentile, boolvec_t& varFlags) {
       }
     }
     if(lowCount == numSamples) {
-      cout << "numericLowValueFilter: " << PP->nlistname[i] 
-        << " failed low value test" << endl;
+//      cout << "numericLowValueFilter: " << PP->nlistname[i] 
+//        << " failed low value test" << endl;
       ++numFail;
       varFlags[i] = false;
     }
+    else {
+      ++numPass;
+    }
   }
 
-  cout << "numericLowValueFilter: " << numFail << " failed" << endl;
+  cout << "numericLowValueFilter: " 
+    << numPass << " passed, " << numFail << " failed" << endl;
   
   return true;
 }
 
 bool numericVarianceFilter(double percentile, boolvec_t& varFlags) {
   vector_t variances;
-  for(int i=0; i < PP->nlistname.size(); ++i) {
-    vector_t varValues;
-    for(int j=0; j < PP->sample.size(); ++j) {
-      varValues.push_back(PP->sample[j]->nlist[i]);
+  for(int i=0; i < varFlags.size(); ++i) {
+    if(varFlags[i]) {
+      vector_t varValues;
+      for(int j=0; j < PP->sample.size(); ++j) {
+        varValues.push_back(PP->sample[j]->nlist[i]);
+      }
+      vector_t summary;
+      vectorSummary(varValues, summary);
+      variances.push_back(summary[1]);
     }
-    vector_t summary;
-    vectorSummary(varValues, summary);
-    variances.push_back(summary[1]);
   }
   
   // find percentile cutoff threshold
   vector_t variancesCopy(variances.size());
   copy(variances.begin(), variances.end(), variancesCopy.begin());
   sort(variancesCopy.begin(), variancesCopy.end());
-  int thresholdIndex = ceil(percentile * (double) variancesCopy.size());
+  int thresholdIndex = floor(percentile * (double) variancesCopy.size());
   double threshold = variancesCopy[thresholdIndex];
   PP->printLOG("Detecting variance below: " + dbl2str(threshold) + "\n");
 

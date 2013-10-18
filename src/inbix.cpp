@@ -269,40 +269,29 @@ int main(int argc, char* argv[]) {
 			shutdown();
 		}
     
-    // filter numeric attributes and write new numeric file
-    if(par::do_numeric_lowval_filter || par::do_numeric_lowvar_filter) {
+    // low value filter
+    if(par::do_numeric_lowval_filter) {
       P.printLOG("Numeric filter mode\n");
-      // booleans indicate whether or not to include the variable in the
-      // numeric output file
       boolvec_t varIndicesThatPass(P.nlistname.size(), true);
-      bool writeNewNumeric = false;
-      // low value filter
-      if(par::do_numeric_lowval_filter) {
-        P.printLOG("Running numeric low value filter\n");
-        writeNewNumeric = numericLowValueFilter(
-          par::numeric_lowval_percentile, 
-          varIndicesThatPass);
-      }
-      // low variance filter
-      if(par::do_numeric_lowvar_filter) {
-        P.printLOG("Running numeric low variance filter\n");
-        writeNewNumeric = numericVarianceFilter(
-          par::numeric_lowvar_percentile,
-          varIndicesThatPass);
-      }
-
-      // write a new numeric file with just the variables that pass the filters
-      if(writeNewNumeric) {
-        string filteredFilename = par::output_file_name + ".lowfilter.num";
-        P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
-        P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
-      }
-      else {
-        cerr << "One or more filters failed. No new file written." << endl;
-      }
-      
-			shutdown();
+      P.printLOG("Running numeric low value filter\n");
+      numericLowValueFilter(par::numeric_lowval_percentile, varIndicesThatPass);
+      string filteredFilename = par::output_file_name + "lowvalfilter.num";
+      P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
+      P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
+      shutdown();
     }
+    
+    // low variance filter
+    if(par::do_numeric_lowvar_filter) {
+      P.printLOG("Running numeric low variance filter\n");
+      boolvec_t varIndicesThatPass(P.nlistname.size(), true);
+      numericVarianceFilter(par::numeric_lowvar_percentile, varIndicesThatPass);
+      string filteredFilename = par::output_file_name + "lowvarfilter.num";
+      P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
+      P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
+      shutdown();
+    }
+
 	}
 
 	// Set number of individuals
