@@ -743,6 +743,10 @@ int main(int argc, char* argv[]) {
 			} else {
 				error("Could not compute co-expression matrix for controls");
 			}
+      // write difference matrix - bcw - 10/18/13
+      string coexpFilename = par::output_file_name + ".coexpression.ccdiff";
+      mat diffMatrix = corMatrixX - corMatrixY; 
+      armaWriteMatrix(diffMatrix, coexpFilename, P.nlistname);
 		}
 		shutdown();
 	}
