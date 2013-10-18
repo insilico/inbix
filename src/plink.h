@@ -810,6 +810,9 @@ public:
   bool outputNumericExtract(string attributeFilename);
   bool outputSifToGain(string sifFilename);
   
+  // output filtered numeric data - bcw - 10/17/13
+  bool outputNumericFiltered(string newFilename, boolvec_t varFlags);
+  
 	// Summary statistic / data cleaning functions
 	void filterSNPs();
 	void processGVAR();

@@ -2373,6 +2373,35 @@ bool Plink::outputDelimitedFile(string delimitedFilename, string delimiter) {
   return true;
 }
 
+bool Plink::outputNumericFiltered(string newFilename, boolvec_t varFlags) {
+  ofstream newFile(newFilename.c_str(), ios::out);
+  if(newFile.fail()) {
+    cerr << "Could not open numeric attribute file for writing." << endl;
+    return false;
+  }
+  // write new header
+  newFile << "FID\tIID";
+  for(int i=0; i < nlistname.size(); ++i) {
+    if(varFlags[i]) {
+      newFile << "\t" << nlistname[i];
+    }
+  }
+  newFile << endl;
+  // write numeric data for each variable index that is true in varFlags
+  for(int i=0; i < sample.size(); i++) {
+    newFile << sample[i]->fid << "\t" << sample[i]->iid;
+    for(int j=0; j < nlistname.size(); ++j) {
+      if(varFlags[j]) {
+        newFile << "\t" << sample[i]->nlist[j];
+      }
+    }
+    newFile << endl;
+  }
+  newFile.close();
+
+  return true;
+}
+
 bool Plink::outputNumericExtract(string attributeFilename) {
   // read attribute names to extract
   ifstream attrFile(attributeFilename.c_str());

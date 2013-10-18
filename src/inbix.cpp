@@ -261,13 +261,48 @@ int main(int argc, char* argv[]) {
 			reportNumericSummaryStats();
 			shutdown();
 		}
-
+    
 		// extract attributes listed in user file to new file
 		if(par::do_numeric_extract) {
 			P.printLOG("Extracting numeric attributes to a new numeric file.\n");
 			P.outputNumericExtract(par::numeric_extract_file);
 			shutdown();
 		}
+    
+    // filter numeric attributes and write new numeric file
+    if(par::do_numeric_lowval_filter || par::do_numeric_lowvar_filter) {
+      P.printLOG("Numeric filter mode\n");
+      // booleans indicate whether or not to include the variable in the
+      // numeric output file
+      boolvec_t varIndicesThatPass(P.nlistname.size(), true);
+      bool writeNewNumeric = false;
+      // low value filter
+      if(par::do_numeric_lowval_filter) {
+        P.printLOG("Running numeric low value filter\n");
+        writeNewNumeric = numericLowValueFilter(
+          par::numeric_lowval_percentile, 
+          varIndicesThatPass);
+      }
+      // low variance filter
+      if(par::do_numeric_lowvar_filter) {
+        P.printLOG("Running numeric low variance filter\n");
+        writeNewNumeric = numericVarianceFilter(
+          par::numeric_lowvar_percentile,
+          varIndicesThatPass);
+      }
+
+      // write a new numeric file with just the variables that pass the filters
+      if(writeNewNumeric) {
+        string filteredFilename = par::output_file_name + ".lowfilter.num";
+        P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
+        P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
+      }
+      else {
+        cerr << "One or more filters failed. No new file written." << endl;
+      }
+      
+			shutdown();
+    }
 	}
 
 	// Set number of individuals
@@ -1036,6 +1071,12 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
+  // we're done if we have no SNPs at this point
+  // (though we might have done some numeric file reading)
+  if(P.nl_all == 0) {
+    shutdown();
+  }
+  
 	/////////////////////////////////////////
 	// SET statistics?
 	if(par::read_set)

@@ -346,6 +346,13 @@ public:
   static bool do_numeric_extract;
 	static string numeric_extract_file;
   
+  // mimic the Matlab genelowvalfilter and genelowvarfilter functions 
+  // bcw - 10/17/13
+  static bool do_numeric_lowval_filter;
+  static bool do_numeric_lowvar_filter;
+  static double numeric_lowval_percentile;
+  static double numeric_lowvar_percentile;
+  
 	// added for reGAIN support - bcw - 4/22/13
 	static bool do_regain;
 	static bool do_regain_post;

@@ -81,8 +81,9 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
 				RegressionRankResults& results);
 pair<double, double> fitModel(Model* m);
 
-// my own matrix multiply using openmp
-bool matrixMultiply(matrix_t m1, matrix_t m2, matrix_t& result);
+// mimic the Matlab gene*filter commands - bcw - 10/17/13
+bool numericLowValueFilter(double percentile, boolvec_t& varFlags);
+bool numericVarianceFilter(double percentile, boolvec_t& varFlags);
 
 // ----------------------------------------------------------------------------
 

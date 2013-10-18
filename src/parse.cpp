@@ -2792,6 +2792,19 @@ void setOptions(CArgs & a) {
     par::numeric_extract_file = a.value("--numeric-extract");
   }
 
+  // Matlab gene*filter functionality - bcw - 10/17/13
+  if(a.find("--numeric-low-value-filter")) {
+    par::do_numeric_lowval_filter = true;
+    par::numeric_lowval_percentile = 
+      a.value_double("--numeric-low-value-filter");
+  }
+  
+  if(a.find("--numeric-low-variance-filter")) {
+    par::do_numeric_lowvar_filter = true;
+    par::numeric_lowvar_percentile = 
+      a.value_double("--numeric-low-variance-filter");
+  }
+
   // reGAIN analysis support - bcw - 4/22/13
   if(a.find("--regain")) {
     par::do_regain = true;
@@ -4126,6 +4139,8 @@ void setOptions(CArgs & a) {
             << "      --coexpresson-casecontrol Compute coexpresson - case-control\n"
             << "      --numeric-summary         Report numeric file statistics\n"
             << "      --numeric-extract {file}  Extract numeric attributes\n"
+            << "      --numeric-low-value-filter {percentile}  Remove variables with values below given percentile\n"
+            << "      --numeric-low-variance-filter {percentile}  Remove variables with variance below given percentile\n"
             << "\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"

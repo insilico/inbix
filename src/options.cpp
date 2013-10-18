@@ -249,6 +249,13 @@ bool par::do_numeric_summary = false;
 bool par::do_numeric_extract = false;
 string par::numeric_extract_file = "";
 
+// mimic the Matlab genelowvalfilter and genelowvarfilter functions 
+// bcw - 10/17/13
+bool par::do_numeric_lowval_filter = false;
+bool par::do_numeric_lowvar_filter = false;
+double par::numeric_lowval_percentile = 0.1;
+double par::numeric_lowvar_percentile = 0.1;
+
 // added for reGAIN support - bcw - 4/22/13, 4/24/13
 bool par::do_regain = false;
 bool par::do_regain_post = false;
