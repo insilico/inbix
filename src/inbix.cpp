@@ -275,7 +275,7 @@ int main(int argc, char* argv[]) {
       boolvec_t varIndicesThatPass(P.nlistname.size(), true);
       P.printLOG("Running numeric low value filter\n");
       numericLowValueFilter(par::numeric_lowval_percentile, varIndicesThatPass);
-      string filteredFilename = par::output_file_name + "lowvalfilter.num";
+      string filteredFilename = par::output_file_name + ".lowvalfilter.num";
       P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
       P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
       shutdown();
@@ -286,7 +286,7 @@ int main(int argc, char* argv[]) {
       P.printLOG("Running numeric low variance filter\n");
       boolvec_t varIndicesThatPass(P.nlistname.size(), true);
       numericVarianceFilter(par::numeric_lowvar_percentile, varIndicesThatPass);
-      string filteredFilename = par::output_file_name + "lowvarfilter.num";
+      string filteredFilename = par::output_file_name + ".lowvarfilter.num";
       P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
       P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
       shutdown();
