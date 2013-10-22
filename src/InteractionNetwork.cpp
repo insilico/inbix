@@ -913,3 +913,119 @@ vector<unsigned int> InteractionNetwork::FlattenModules() {
 	
 	return flatModules;
 }
+
+bool InteractionNetwork::Deconvolve(mat& nd, double alpha, double beta, int control) {
+
+  // --------------------------------------------------------------------------
+  // check parameters
+  if((alpha > 1) || (alpha <= 0)) {
+    cerr << "alpha [" << alpha << "] must be in (0,1)" << endl;
+    return false;
+  }
+  if((beta >= 1) || (beta <= 0)) {
+    cerr << "alpha [" << beta << "] must be in (0,1)" << endl;
+    return false;
+  }
+  if((control != 0) and (control != 1)) {
+    cerr << "control [" << control << "] must be in 0 or 1" << endl;
+    return false;
+  }
+  
+  // --------------------------------------------------------------------------
+  // process the adjacency matrix
+  mat newmat = adjMatrix;
+  n = adjMatrix.n_cols;
+  //cout << "Adjacency matrix:" << endl << newmat << endl;
+  
+  // linear mapping to (0,1)
+  newmat = (newmat-min(min(newmat))) / (max(max(newmat))-min(min(newmat)));
+  //cout << "Linear map to (0,1):" << endl << newmat << endl;
+
+  // zero diagonal
+  newmat.diag() = zeros<vec>(n);
+  //cout << "Diagonal removed:" << endl << newmat << endl;
+
+  // quantile threshold
+  vector_t allValues;
+  for(int i=0; i < n; ++i) {
+    for (int j=0; j < n; ++j) {
+      allValues.push_back(newmat(i,j));
+    }
+  }
+  double y;
+  quantile(allValues, 1-alpha, y);
+  //cout << "Threshold to: " << y << endl;
+  uvec passInd = find(newmat >= y);
+  mat mat_th = zeros<mat>(n, n);
+  for(int i=0; i < passInd.size(); ++i) {
+    int index = passInd[i];
+    int row = index / ((int) n);
+    int col = index % ((int) n);
+    mat_th(row, col) = newmat(row, col);
+  }
+  //cout << "Threshold matrix:" << endl << mat_th << endl;
+
+  // make symmetric if not already
+  mat_th = (mat_th + mat_th.t()) / 2;
+  //cout << "Symmetric:" << endl << mat_th << endl;
+
+  // --------------------------------------------------------------------------
+  // eigenvector/value decomposition
+ 	vec D;
+	mat U;
+	eig_sym(D, U, mat_th);
+  //cout << eigvec << endl;
+  //cout << eigval << endl;
+  double lam_n = abs(min(D));
+  double lam_p = abs(max(D));
+  double m1 = lam_p * (1 - beta) / beta;
+  double m2 = lam_n * (1 + beta) / beta;
+  double m = max(m1, m2);
+//  cout << "Eigen calculations:" << endl 
+//    << "lam_n: " << lam_n
+//    << ", lam_p: " << lam_p
+//    << ", m1: " << m1
+//    << ", m2: " << m2
+//    << ", m: " << m
+//    << endl;
+  
+  // network deconvolution
+  for(int i=0; i < D.size(); ++i) {
+    D(i) = D(i) / (m + D(i));
+  }
+  mat mat_new1 = U * diagmat(D) * inv(U);
+  //cout << "Eigenvector/value transform:" << endl << mat_new1 << endl;
+  
+  // --------------------------------------------------------------------------
+  // handle "control" parameter
+  int n_dim = (int) n;
+  mat mat_new2;
+  if(control == 0) {
+    mat ind_edges = zeros<mat>(n_dim, n_dim);
+    uvec nzidx = find(mat_th > 0);
+    ind_edges.elem(nzidx) = ones<vec>(nzidx.size());
+
+    mat ind_nonedges = zeros<mat>(n, n);
+    uvec zidx = find(mat_th == 0);
+    ind_nonedges.elem(zidx) = ones<vec>(zidx.size());
+
+    m1 = max(max(newmat % ind_nonedges));
+    m2 = min(min(mat_new1));
+    //cout << "control = 0: m1: " << m1 << ", m2: " << m2 << endl;
+    mat_new2 = (mat_new1 + max(m1 - m2, 0.0)) % ind_edges + (newmat % ind_nonedges);
+  }
+  else {
+    m2 = min(min(mat_new1));
+    mat_new2 = (mat_new1 + max(-m2, 0.0));
+  }
+  //cout << "After control parameter handling:" << endl << mat_new2 << endl;
+
+  // linear mapping of deconvolved matrix to (0,1)
+  m1 = min(min(mat_new2));
+  m2 = max(max(mat_new2));
+  //cout << "m1: " << m1 << ", m2: " << m2 << endl;
+  nd = (mat_new2 - m1) / (m2 - m1);
+  //cout << "Deconvolved matrix:" << endl << nd << endl;
+  
+  return true;
+}

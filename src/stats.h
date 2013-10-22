@@ -85,6 +85,9 @@ pair<double, double> fitModel(Model* m);
 bool numericLowValueFilter(double percentile, boolvec_t& varFlags);
 bool numericVarianceFilter(double percentile, boolvec_t& varFlags);
 
+// quantile function - bcw - 10/22/13
+bool quantile(vector_t values, double percentile, double& percentileValue);
+
 // ----------------------------------------------------------------------------
 
 class Eigen {

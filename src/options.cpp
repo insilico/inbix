@@ -278,6 +278,11 @@ string par::regainMatrixFormat = "full";
 bool par::regainMatrixThreshold = false;
 double par::regainMatrixThresholdValue = 0.0;
 bool par::regainMatrixToSif = false;
+  // deconvolution - bcw - 10/22/13
+bool par::do_deconvolution = false;
+double par::deconvolutionAlpha = 1.0;
+double par::deconvolutionBeta = 0.9;
+int par::deconvolutionControl = 0;
 // added for modularity support - bcw - 5/13/13
 bool par::do_modularity = false;
 double par::modConnectivityThreshold = 0.0;

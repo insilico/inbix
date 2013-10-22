@@ -2875,6 +2875,22 @@ void setOptions(CArgs & a) {
     par::regainMatrixToSif = true;
   }
 
+  if(a.find("--deconvolve")) {
+		par::do_deconvolution = true;
+  }
+  
+  if(a.find("--deconvolve-alpha")) {
+		par::deconvolutionAlpha = a.value_double("--deconvolve-alpha");
+  }
+
+  if(a.find("--deconvolve-beta")) {
+		par::deconvolutionBeta = a.value_double("--deconvolve-beta");
+  }
+
+  if(a.find("--deconvolve-control")) {
+		par::deconvolutionBeta = a.value_int("--deconvolve-control");
+  }
+
   // added for modularity support - bcw - 5/13/13
   if(a.find("--sif-file")) {
     par::sifFile = a.value("--sif-file");
@@ -4156,6 +4172,11 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-format {format}  reGAIN output format \n"
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
             << "      --regain-to-sif {regain}  Convert reGAIN matrix to SIF file\n"
+            << "\n"
+            << "      --deconvolve               Deconvolve a matrix\n"
+            << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"
+            << "      --deconvolve-beta {beta}   Deconvolve alpha parameter\n"
+            << "      --deconvolve-control {0/1} Deconvolve control parameter\n"
             << "\n"
             << "      --modularity              Perform a network modularity analysis\n"
             << "      --modularity-connectivity-threshold Edge threshold for connectivity\n"

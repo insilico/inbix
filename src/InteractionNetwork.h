@@ -19,6 +19,7 @@ const double DEFAULT_CONNECTIVITY_THRESHOLD = 0;
 const double MODULARITY_THRESHOLD = 0; 
 
 enum MatrixFileType {
+  INVALID_FILE,
 	REGAIN_FILE,
 	CORR_1D_FILE,
 	CSV_FILE,
@@ -68,6 +69,8 @@ public:
 	bool ApplyPowerTransform(double transformExponent = 1.0);
 	// apply a power transform with exponent
 	bool ApplyFisherTransform();
+  // deconvolution - 10/22/13
+  bool Deconvolve(arma::mat& nd, double alpha=1, double beta=0.9, int control=0);
 private:
 	// data readers
 	bool ReadCsvFile(std::string matrixFilename);

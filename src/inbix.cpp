@@ -202,6 +202,39 @@ int main(int argc, char* argv[]) {
 	}
 
 	////////////////////////////////////////////
+	// network deconvolution - bcw - 10/22/13
+  if(par::do_deconvolution) {
+    P.printLOG("Performing network deconvolution\n");
+    string matrixFile = "";
+    MatrixFileType fileType = INVALID_FILE;
+    bool isUpperTriangular = false;
+    if(par::do_regain_post) {
+      matrixFile = par::regainFile;
+      fileType = REGAIN_FILE;
+      P.printLOG("reGAIN network\n");
+    }
+    if(par::sifNetwork) {
+      matrixFile = par::sifFile;
+      fileType = SIF_FILE;
+      P.printLOG("SIF network\n");
+    }
+    if(fileType == INVALID_FILE) {
+      error("Error running network deconvolution: no valid network file type");
+    }
+    InteractionNetwork* network = 
+      new InteractionNetwork(matrixFile, fileType, isUpperTriangular, &P);
+    mat nd;
+    if(!network->Deconvolve(nd, par::deconvolutionAlpha, 
+      par::deconvolutionBeta, par::deconvolutionControl)) {
+      error("Deconvolution failed");
+    }
+    // write resulting matrix
+    string outMatrixFilename = par::output_file_name + ".deconvolved";
+		armaWriteMatrix(nd, outMatrixFilename, network->GetNodeNames());
+    shutdown();
+  }
+		
+	////////////////////////////////////////////
 	// A SIF file specified? - bcw - 5/23/13
 	if(par::sifNetwork && par::sifToGain) {
 		P.printLOG("Converting SIF network to reGAIN\n");
@@ -1060,7 +1093,8 @@ int main(int argc, char* argv[]) {
 		} else {
 			regain->writeRegainToFile(par::regainFile + ".postproc");
 		}
-		delete regain;
+
+    delete regain;
 		shutdown();
 	}
 

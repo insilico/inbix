@@ -375,6 +375,11 @@ public:
   static bool regainMatrixThreshold;
   static double regainMatrixThresholdValue;
 	static bool regainMatrixToSif;
+  // deconvolution - bcw - 10/22/13
+  static bool do_deconvolution;
+  static double deconvolutionAlpha;
+  static double deconvolutionBeta;
+  static int deconvolutionControl;
 
 	// added for modularity support - bcw - 5/13/13
 	static bool do_modularity;

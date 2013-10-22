@@ -2065,3 +2065,17 @@ bool numericVarianceFilter(double percentile, boolvec_t& varFlags) {
 
   return true;
 }
+
+bool quantile(vector_t values, double percentile, double& percentileValue) {
+
+  if(values.size() < 1) {
+    cerr << "quantile error: no values" << endl;
+    return false;
+  }
+
+  sort(values.begin(), values.end());
+  percentileValue = floor(percentile * (double) values.size());
+  
+  return true;
+}
+
