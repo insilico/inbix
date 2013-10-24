@@ -2074,7 +2074,8 @@ bool quantile(vector_t values, double percentile, double& percentileValue) {
   }
 
   sort(values.begin(), values.end());
-  percentileValue = floor(percentile * (double) values.size());
+  int percentileIndex = floor(percentile * (double) values.size());
+  percentileValue = values[percentileIndex];
   
   return true;
 }

@@ -926,7 +926,7 @@ bool InteractionNetwork::Deconvolve(mat& nd, double alpha, double beta, int cont
     cerr << "alpha [" << beta << "] must be in (0,1)" << endl;
     return false;
   }
-  if((control != 0) and (control != 1)) {
+  if((control != 0) && (control != 1)) {
     cerr << "control [" << control << "] must be in 0 or 1" << endl;
     return false;
   }
