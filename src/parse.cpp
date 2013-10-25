@@ -4175,7 +4175,7 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"
-            << "      --deconvolve-beta {beta}   Deconvolve alpha parameter\n"
+            << "      --deconvolve-beta {beta}   Deconvolve beta parameter\n"
             << "      --deconvolve-control {0/1} Deconvolve control parameter\n"
             << "\n"
             << "      --modularity              Perform a network modularity analysis\n"

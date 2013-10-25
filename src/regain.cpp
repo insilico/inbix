@@ -90,7 +90,7 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
       }
     }
     BETAS << "\tB_I\tB_I P-VAL" << endl;
-  }else {
+  } else {
     BETAS << hdr << "1\t" << hdr << "2\tB_0\tB_1\tB_1 P-VAL\tB_2\tB_2 P-VAL";
     if(par::covar_file) {
       for(int i = 0; i < par::clist_number; i++) {
@@ -136,7 +136,7 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
     numAttributes = 0;
     if(integratedAttributes) {
       numAttributes = PP->nl_all + PP->nlistname.size();
-    }else {
+    } else {
       numAttributes = PP->nl_all;
     }
     PP->printLOG("Total number of attributes [ " + int2str(numAttributes) + " ]\n");
@@ -278,11 +278,11 @@ bool Regain::readRegainFromFile(string regainFilename) {
         attributeNames.push_back(tokens[i]);
       }
       continue;
-    }else {
+    } else {
       // process upper reGAIN matrix values, ignoring lower
       if(tokens.size() < numAttributes) {
         matrixCol = matrixRow;
-      }else {
+      } else {
         matrixCol = 0;
       }
       for(int tokenIdx = 0; tokenIdx < tokens.size(); ++tokenIdx, ++matrixCol) {
@@ -316,7 +316,7 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
     hIt != attributeNames.end(); ++hIt, ++hIdx) {
     if(hIdx) {
       outFile << "\t" << *hIt;
-    }else {
+    } else {
       outFile << *hIt;
     }
   }
@@ -339,7 +339,7 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
         case REGAIN_OUTPUT_FORMAT_FULL:
           if(j) {
             outFile << "\t" << valueToWrite;
-          }else {
+          } else {
             outFile << valueToWrite;
           }
           break;
@@ -347,10 +347,10 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
           if(j < i) {
             // write tabs
             outFile << "\t";
-          }else {
+          } else {
             if(j < (numAttributes - 1)) {
               outFile << valueToWrite << "\t";
-            }else {
+            } else {
               outFile << valueToWrite;
             }
           }
@@ -406,11 +406,11 @@ void Regain::run() {
       // main effect of SNP/numeric attribute 1 - diagonal of the reGAIN matrix
       if(varIndex1 == varIndex2) {
         mainEffect(varIndex1, varIndex1 >= PP->nl_all);
-      }else {
+      } else {
         if(pureInteractions) {
           pureInteractionEffect(varIndex1, varIndex1 >= PP->nl_all,
             varIndex2, varIndex2 >= PP->nl_all);
-        }else {
+        } else {
           interactionEffect(varIndex1, varIndex1 >= PP->nl_all,
             varIndex2, varIndex2 >= PP->nl_all);
         }
@@ -430,8 +430,9 @@ void Regain::run() {
   if(failures.size()) {
     double numCombinations = (numAttributes * (numAttributes - 1)) / 2.0;
     double numFailures = (double) failures.size();
-    double percentFailures = (numFailures / numCombinations) * 100.0;
-    PP->printLOG(dbl2str(numFailures) + " failures in regression models "
+    double percentFailures = (numFailures / (numCombinations + numAttributes)) * 100.0;
+    PP->printLOG(dbl2str(numFailures) + " failures in " + 
+      dbl2str(numCombinations + numAttributes)+ " regression models "
       + dbl2str(percentFailures) + "%\n");
     string failureFilename = par::output_file_name + ".regression.failures";
     PP->printLOG("Writing failure messages to [ " + failureFilename + " ]\n");
@@ -458,7 +459,7 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
   if(par::bt) {
     LogisticModel* m = new LogisticModel(PP);
     mainEffectModel = m;
-  }else {
+  } else {
     LinearModel* m = new LinearModel(PP);
     mainEffectModel = m;
   }
@@ -470,14 +471,14 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
   string coefLabel = "";
   if(varIsNumeric) {
     coefLabel = PP->nlistname[varIndex - PP->nl_all];
-  }else {
+  } else {
     coefLabel = PP->locus[varIndex]->name;
   }
 
   // Main effect of SNP/numeric attribute
   if(varIsNumeric) {
     mainEffectModel->addNumeric(varIndex - PP->nl_all);
-  }else {
+  } else {
     mainEffectModel->addAdditiveSNP(varIndex);
   }
   mainEffectModel->label.push_back(coefLabel);
@@ -496,105 +497,105 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
   mainEffectModel->fitLM();
 
 #pragma omp critical
-{
-  // Was the model fitting method successful?
-  bool useFailureValue = false;
-  if(!mainEffectModel->isValid()) {
+  {
+    // Was the model fitting method successful?
+    bool useFailureValue = false;
+    if(!mainEffectModel->isValid()) {
       string failMsg = "WARNING: Invalid main effect regression fit for variable [" +
         coefLabel + "]";
       failures.push_back(failMsg);
       useFailureValue = true;
-  }
+    }
 
-  // Obtain estimates and statistics
-  vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
-  // p-values don't include intercept term
-  vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-  double mainEffectPval = betaMainEffectCoefPvals[tp - 1];
-  vector_t mainEffectModelSE = mainEffectModel->getSE();
+    // Obtain estimates and statistics
+    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+    // p-values don't include intercept term
+    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+    double mainEffectPval = betaMainEffectCoefPvals[tp - 1];
+    vector_t mainEffectModelSE = mainEffectModel->getSE();
 
-  // always use first coefficient after intercept as main effect term
-  double mainEffectValue = 0;
-  if(par::regainUseBetaValues) {
-    mainEffectValue = betaMainEffectCoefs[tp];
-    // report large p-value of coefficient as a warning
-    if(mainEffectPval > par::regainLargeCoefPvalue) {
-      stringstream ss;
-      ss << "Large p-value [" << mainEffectPval
-        << "] on coefficient for variable [" << coefLabel << "]";
-      warnings.push_back(ss.str());
-      mainEffectValue = 0;
-    }
-    if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
-      mainEffectValue = par::regainLargeCoefTvalue;
-      ++infCount;
-    }
-    if(isnan(mainEffectValue)) {
-      mainEffectValue = 0;
-      ++nanCount;
-    }
-  } else {
-    mainEffectValue = betaMainEffectCoefs[tp] /
-      mainEffectModelSE[tp];
-    // report large t-test value of coefficient as a warning
-    if(mainEffectValue > par::regainLargeCoefTvalue) {
-      stringstream ss;
-      ss << "Large test statistic value [" << mainEffectValue
-        << "] on coefficient for variable [" << coefLabel << "]";
-      warnings.push_back(ss.str());
-      mainEffectValue = par::regainLargeCoefTvalue;
-    }
-    if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
-      mainEffectValue = par::regainLargeCoefTvalue;
-      ++infCount;
-    }
-    if(isnan(mainEffectValue)) {
-      mainEffectValue = 0;
-      ++nanCount;
-    }
-  }
-
-  double mainEffectValueTransformed = mainEffectValue;
-  switch(outputTransform) {
-    case REGAIN_OUTPUT_TRANSFORM_NONE:
-      break;
-    case REGAIN_OUTPUT_TRANSFORM_THRESH:
-      if(mainEffectValue < outputThreshold) {
-        mainEffectValueTransformed = 0.0;
+    // always use first coefficient after intercept as main effect term
+    double mainEffectValue = 0;
+    if(par::regainUseBetaValues) {
+      mainEffectValue = betaMainEffectCoefs[tp];
+      // report large p-value of coefficient as a warning
+      if(mainEffectPval > par::regainLargeCoefPvalue) {
+        stringstream ss;
+        ss << "Large p-value [" << mainEffectPval
+          << "] on coefficient for variable [" << coefLabel << "]";
+        warnings.push_back(ss.str());
+        mainEffectValue = 0;
       }
-      break;
-    case REGAIN_OUTPUT_TRANSFORM_ABS:
-      mainEffectValueTransformed = abs(mainEffectValue);
-      break;
-  }
-
-  if(useFailureValue) {
-    regainMatrix[varIndex][varIndex] = failureValue;
-    regainPMatrix[varIndex][varIndex] = 1.0;
-  }else {
-    regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
-    regainPMatrix[varIndex][varIndex] = mainEffectPval;
-  }
-
-  // update main effect betas file
-  if(varIsNumeric) {
-    MEBETAS << PP->nlistname[varIndex - PP->nl_all];
-  }else {
-    MEBETAS << PP->locus[varIndex]->name;
-  }
-  for(unsigned int i = 0; i < betaMainEffectCoefs.size(); ++i) {
-    // B0 coefficient doesn't have pval
-    if(i == 0) {
-      MEBETAS << "\t" << betaMainEffectCoefs[i];
-    }else {
-      // adjust pvals index since there's no B0 pval
-      MEBETAS << "\t" << betaMainEffectCoefs[i]
-        << "\t" << betaMainEffectCoefPvals[i - 1];
+      if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
+        mainEffectValue = par::regainLargeCoefTvalue;
+        ++infCount;
+      }
+      if(isnan(mainEffectValue)) {
+        mainEffectValue = 0;
+        ++nanCount;
+      }
+    } else {
+      mainEffectValue = betaMainEffectCoefs[tp] /
+        mainEffectModelSE[tp];
+      // report large t-test value of coefficient as a warning
+      if(mainEffectValue > par::regainLargeCoefTvalue) {
+        stringstream ss;
+        ss << "Large test statistic value [" << mainEffectValue
+          << "] on coefficient for variable [" << coefLabel << "]";
+        warnings.push_back(ss.str());
+        mainEffectValue = par::regainLargeCoefTvalue;
+      }
+      if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
+        mainEffectValue = par::regainLargeCoefTvalue;
+        ++infCount;
+      }
+      if(isnan(mainEffectValue)) {
+        mainEffectValue = 0;
+        ++nanCount;
+      }
     }
-  }
-  MEBETAS << endl;
-} // end #prgama critical
-  
+
+    double mainEffectValueTransformed = mainEffectValue;
+    switch(outputTransform) {
+      case REGAIN_OUTPUT_TRANSFORM_NONE:
+        break;
+      case REGAIN_OUTPUT_TRANSFORM_THRESH:
+        if(mainEffectValue < outputThreshold) {
+          mainEffectValueTransformed = 0.0;
+        }
+        break;
+      case REGAIN_OUTPUT_TRANSFORM_ABS:
+        mainEffectValueTransformed = abs(mainEffectValue);
+        break;
+    }
+
+    if(useFailureValue) {
+      regainMatrix[varIndex][varIndex] = failureValue;
+      regainPMatrix[varIndex][varIndex] = 1.0;
+    } else {
+      regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
+      regainPMatrix[varIndex][varIndex] = mainEffectPval;
+    }
+
+    // update main effect betas file
+    if(varIsNumeric) {
+      MEBETAS << PP->nlistname[varIndex - PP->nl_all];
+    } else {
+      MEBETAS << PP->locus[varIndex]->name;
+    }
+    for(unsigned int i = 0; i < betaMainEffectCoefs.size(); ++i) {
+      // B0 coefficient doesn't have pval
+      if(i == 0) {
+        MEBETAS << "\t" << betaMainEffectCoefs[i];
+      } else {
+        // adjust pvals index since there's no B0 pval
+        MEBETAS << "\t" << betaMainEffectCoefs[i]
+          << "\t" << betaMainEffectCoefPvals[i - 1];
+      }
+    }
+    MEBETAS << endl;
+  } // end #prgama critical
+
   // free model memory
   delete mainEffectModel;
 }
@@ -615,7 +616,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
   if(par::bt) {
     LogisticModel* m = new LogisticModel(PP);
     interactionModel = m;
-  }else {
+  } else {
     LinearModel* m = new LinearModel(PP);
     interactionModel = m;
   }
@@ -627,20 +628,20 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
   string coef1Label = "";
   if(var1IsNumeric) {
     coef1Label = PP->nlistname[varIndex1 - PP->nl_all];
-  }else {
+  } else {
     coef1Label = PP->locus[varIndex1]->name;
   }
   string coef2Label = "";
   if(var2IsNumeric) {
     coef2Label = PP->nlistname[varIndex2 - PP->nl_all];
-  }else {
+  } else {
     coef2Label = PP->locus[varIndex2]->name;
   }
 
   // Main effect of SNP/numeric attribute 1
   if(var1IsNumeric) {
     interactionModel->addNumeric(varIndex1 - PP->nl_all);
-  }else {
+  } else {
     interactionModel->addAdditiveSNP(varIndex1);
   }
   interactionModel->label.push_back(coef1Label);
@@ -648,7 +649,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
   // Main effect of SNP/numeric attribute 2
   if(var2IsNumeric) {
     interactionModel->addNumeric(varIndex2 - PP->nl_all);
-  }else {
+  } else {
     interactionModel->addAdditiveSNP(varIndex2);
   }
   interactionModel->label.push_back(coef2Label);
@@ -680,10 +681,10 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
   {
     bool useFailureValue = false;
     if(!interactionModel->isValid()) {
-        string failMsg = "WARNING: Invalid regression fit for interaction "
-          "variables [" + coef1Label + "], [" + coef2Label + "]";
-        failures.push_back(failMsg);
-        useFailureValue = true;
+      string failMsg = "WARNING: Invalid regression fit for interaction "
+        "variables [" + coef1Label + "], [" + coef2Label + "]";
+      failures.push_back(failMsg);
+      useFailureValue = true;
     }
 
     vector_t betaInteractionCoefs = interactionModel->getCoefs();
@@ -729,7 +730,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
         warnings.push_back(ss.str());
         if(interactionValue < 0) {
           interactionValue = -par::regainLargeCoefTvalue;
-        }else {
+        } else {
           interactionValue = par::regainLargeCoefTvalue;
         }
       }
@@ -762,7 +763,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
       regainMatrix[varIndex2][varIndex1] = failureValue;
       regainPMatrix[varIndex1][varIndex2] = 1.0;
       regainPMatrix[varIndex2][varIndex1] = 1.0;
-    }else {
+    } else {
       regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
       regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
       regainPMatrix[varIndex1][varIndex2] = interactionPval;
@@ -796,7 +797,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
       // B0 coefficient doesn't have pval
       if(i == 0) {
         BETAS << "\t" << betaInteractionCoefs[i];
-      }else {
+      } else {
         // adjust pvals index since there's no B0 pval
         BETAS << "\t" << betaInteractionCoefs[i]
           << "\t" << betaInteractionCoefPVals[i - 1];
@@ -844,7 +845,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
   if(par::bt) {
     LogisticModel* m = new LogisticModel(PP);
     interactionModel = m;
-  }else {
+  } else {
     LinearModel* m = new LinearModel(PP);
     interactionModel = m;
   }
@@ -860,7 +861,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
     varType1 = NUMERIC;
     coef1Label = PP->nlistname[varIndex1 - PP->nl_all];
     var1TypeIndex = varIndex1 - PP->nl_all;
-  }else {
+  } else {
     varType1 = ADDITIVE;
     coef1Label = PP->locus[varIndex1]->name;
   }
@@ -871,7 +872,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
     varType2 = NUMERIC;
     coef2Label = PP->nlistname[varIndex2 - PP->nl_all];
     var2TypeIndex = varIndex2 - PP->nl_all;
-  }else {
+  } else {
     varType2 = ADDITIVE;
     coef2Label = PP->locus[varIndex2]->name;
   }
@@ -909,13 +910,13 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
   // Was the model fitting method successful?
 #pragma omp critical
   {
-  bool useFailureValue = false;
-  if(!interactionModel->isValid()) {
+    bool useFailureValue = false;
+    if(!interactionModel->isValid()) {
       string failMsg = "WARNING: Invalid regression fit for interaction "
         "variables [" + coef1Label + "], [" + coef2Label + "]";
       failures.push_back(failMsg);
       useFailureValue = true;
-  }
+    }
 
     vector_t betaInteractionCoefs = interactionModel->getCoefs();
     vector_t betaInteractionCoefPVals = interactionModel->getPVals();
@@ -950,8 +951,8 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         << "], test stat [" << regressTestStatValues[regressTestStatValues.size() - 1]
         << "] <= beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
     }
-    */
-    
+     */
+
     double interactionValue = 0;
     if(par::regainUseBetaValues) {
       interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
@@ -1050,7 +1051,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
       // B0 coefficient doesn't have pval
       if(i == 0) {
         BETAS << "\t" << betaInteractionCoefs[i];
-      }else {
+      } else {
         // adjust pvals index since there's no B0 pval
         BETAS << "\t" << betaInteractionCoefs[i]
           << "\t" << betaInteractionCoefPVals[i - 1];
@@ -1094,7 +1095,7 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
   double** regainMat;
   if(pvals) {
     regainMat = regainPMatrix;
-  }else {
+  } else {
     regainMat = regainMatrix;
   }
 
@@ -1144,7 +1145,7 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
     if(cn) {
       REGAIN_MATRIX << "\t" << PP->locus[cn]->name;
       if(writeComponents) SNP_MATRIX << "\t" << PP->locus[cn]->name;
-    }else {
+    } else {
       REGAIN_MATRIX << PP->locus[cn]->name;
       if(writeComponents) SNP_MATRIX << PP->locus[cn]->name;
     }
@@ -1153,14 +1154,14 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
   for(int cn = 0; cn < PP->nlistname.size(); ++cn) {
     if(!cn && !PP->nl_all) {
       REGAIN_MATRIX << PP->nlistname[cn];
-    }else {
+    } else {
       REGAIN_MATRIX << "\t" << PP->nlistname[cn];
     }
     if(writeComponents) {
       if(cn) {
         NUM_MATRIX << "\t" << PP->nlistname[cn];
         INT_MATRIX << "\t" << PP->nlistname[cn];
-      }else {
+      } else {
         NUM_MATRIX << PP->nlistname[cn];
         INT_MATRIX << PP->nlistname[cn];
       }
@@ -1186,7 +1187,7 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
           if(writeComponents) {
             if(i < PP->nl_all) {
               SNP_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
-            }else {
+            } else {
               tabs = "";
               for(int k = PP->nl_all; k < j; k++) {
                 tabs += "\t";
@@ -1194,7 +1195,7 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
               NUM_MATRIX << tabs << dbl2str_fixed(regainMat[i][j], 6);
             }
           }
-        }else {
+        } else {
           // otherwise write symmetric entries for REGAIN_OUTPUT_FORMAT_FULL
           for(int k = 0; k <= j; k++) {
             string lineEnd = "";
@@ -1205,7 +1206,7 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
             if(writeComponents) {
               if(i < PP->nl_all) {
                 SNP_MATRIX << dbl2str_fixed(regainMat[i][k], 6) << lineEnd;
-              }else {
+              } else {
                 for(int l = PP->nl_all; l <= j; l++) {
                   if(l != j) {
                     lineEnd = "\t";
@@ -1216,20 +1217,20 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
             }
           }
         }
-      }else {
+      } else {
         REGAIN_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
         if(writeComponents) {
           if(i < PP->nl_all) {
             if(j < PP->nl_all) {
               SNP_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
-            }else {
+            } else {
               if(j == PP->nl_all) {
                 INT_MATRIX << dbl2str_fixed(regainMat[i][j], 6);
-              }else {
+              } else {
                 INT_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
               }
             }
-          }else {
+          } else {
             NUM_MATRIX << "\t" << dbl2str_fixed(regainMat[i][j], 6);
           }
         }
@@ -1240,7 +1241,7 @@ void Regain::writeRegain(bool pvals, bool fdrprune) {
       if(i < PP->nl_all) {
         SNP_MATRIX << "\n";
         INT_MATRIX << "\n";
-      }else {
+      } else {
         NUM_MATRIX << "\n";
       }
     }
@@ -1271,7 +1272,7 @@ void Regain::fdrPrune(double fdr) {
     // test whether current p-value < current l
     if(gainIntPvals[i].first < l) {
       R = i;
-    }else {
+    } else {
       break;
     }
   }
@@ -1360,7 +1361,7 @@ bool Regain::updateStats() {
         if(regainMatrix[i][j] > maxMainEffect) {
           maxMainEffect = regainMatrix[i][j];
         }
-      }else {
+      } else {
         if(regainMatrix[i][j] < minInteraction) {
           minInteraction = regainMatrix[i][j];
         }
