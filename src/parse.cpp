@@ -2792,6 +2792,11 @@ void setOptions(CArgs & a) {
     par::numeric_extract_file = a.value("--numeric-extract");
   }
 
+  // data set transforms prior to analysis - bcw - 10/30/13
+  if(a.find("--numeric-mean-center")) {
+    par::do_numeric_mean_centering = true;
+  }
+
   // Matlab gene*filter functionality - bcw - 10/17/13
   if(a.find("--numeric-low-value-filter")) {
     par::do_numeric_lowval_filter = true;
@@ -4157,6 +4162,7 @@ void setOptions(CArgs & a) {
             << "      --numeric-extract {file}  Extract numeric attributes\n"
             << "      --numeric-low-value-filter {percentile}  Remove variables with values below given percentile\n"
             << "      --numeric-low-variance-filter {percentile}  Remove variables with variance below given percentile\n"
+            << "      --numeric-mean-center     Subtract the variable mean from numeric variables before analysis\n"            
             << "\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"

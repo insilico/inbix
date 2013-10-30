@@ -249,6 +249,9 @@ bool par::do_numeric_summary = false;
 bool par::do_numeric_extract = false;
 string par::numeric_extract_file = "";
 
+// data set transforms prior to analysis - bcw - 10/30/13
+bool par::do_numeric_mean_centering = false;
+
 // mimic the Matlab genelowvalfilter and genelowvarfilter functions 
 // bcw - 10/17/13
 bool par::do_numeric_lowval_filter = false;

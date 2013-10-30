@@ -88,6 +88,9 @@ bool numericVarianceFilter(double percentile, boolvec_t& varFlags);
 // quantile function - bcw - 10/22/13
 bool quantile(vector_t values, double percentile, double& percentileValue);
 
+// data set transforms prior to analysis - bcw - 10/30/13
+bool numericMeanCenter();
+
 // ----------------------------------------------------------------------------
 
 class Eigen {

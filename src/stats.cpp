@@ -2080,3 +2080,17 @@ bool quantile(vector_t values, double percentile, double& percentileValue) {
   return true;
 }
 
+// data set transforms prior to analysis - bcw - 10/30/13
+bool numericMeanCenter() {
+  for(int i=0; i < PP->nlistname.size(); ++i) {
+    double varSum = 0;
+    for(int j=0; j < PP->sample.size(); ++j) {
+      varSum += PP->sample[j]->nlist[i];
+    }
+    double varAvg = varSum / (double) PP->sample.size();
+    for(int j=0; j < PP->sample.size(); ++j) {
+      PP->sample[j]->nlist[i] -= varAvg;
+    }
+  }  
+  return true;
+}
