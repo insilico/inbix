@@ -350,7 +350,7 @@ void Model::buildDesignMatrix() {
 
 	/////////////////////////////////////////
 	// VIF-based check for multicollinearity
-	all_valid = checkVIF();
+	//all_valid = checkVIF();
 
 	///////////////////////
 	// Add Y variable also

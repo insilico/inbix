@@ -686,7 +686,8 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
       failures.push_back(failMsg);
       useFailureValue = true;
     }
-
+    useFailureValue = false;
+    
     vector_t betaInteractionCoefs = interactionModel->getCoefs();
     vector_t betaInteractionCoefPVals = interactionModel->getPVals();
     double interactionPval =
@@ -699,6 +700,17 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
     for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
       regressTestStatValues.push_back(*bIt / *sIt);
     }
+    // !!!!! DEBUGGING RAW VALUES !!!!!
+#if defined(DEBUG_REGAIN)
+    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+      << "\t" << coef1Label << "\t" << coef2Label
+      << "\t" << setw(12) << betaInteractionCoefs[3]
+      << "\t" << setw(6) << betaInteractionCoefPVals[2]
+      << "\t" << setw(12) << interactionModelSE[3]
+      << "\t" << setw(12)
+      << betaInteractionCoefs[3] / interactionModelSE[3]
+      << endl;
+#endif    
 
     double interactionValue = 0;
     if(par::regainUseBetaValues) {
@@ -722,26 +734,26 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
       // TODO: is there a maximum beta value to threshold?
     } else {
       interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-      if(abs(interactionValue) > par::regainLargeCoefTvalue) {
-        stringstream ss;
-        ss << "Large test statistic value [" << interactionValue
-          << "] on coefficient for interaction variables ["
-          << coef1Label << "][" << coef2Label << "]";
-        warnings.push_back(ss.str());
-        if(interactionValue < 0) {
-          interactionValue = -par::regainLargeCoefTvalue;
-        } else {
-          interactionValue = par::regainLargeCoefTvalue;
-        }
-      }
-      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
-        interactionValue = par::regainLargeCoefTvalue;
-        ++infCount;
-      }
-      if(isnan(interactionValue)) {
-        interactionValue = 0;
-        ++nanCount;
-      }
+//      if(abs(interactionValue) > par::regainLargeCoefTvalue) {
+//        stringstream ss;
+//        ss << "Large test statistic value [" << interactionValue
+//          << "] on coefficient for interaction variables ["
+//          << coef1Label << "][" << coef2Label << "]";
+//        warnings.push_back(ss.str());
+//        if(interactionValue < 0) {
+//          interactionValue = -par::regainLargeCoefTvalue;
+//        } else {
+//          interactionValue = par::regainLargeCoefTvalue;
+//        }
+//      }
+//      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+//        interactionValue = par::regainLargeCoefTvalue;
+//        ++infCount;
+//      }
+//      if(isnan(interactionValue)) {
+//        interactionValue = 0;
+//        ++nanCount;
+//      }
     }
 
     double interactionValueTransformed = interactionValue;
@@ -770,17 +782,6 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
       regainPMatrix[varIndex2][varIndex1] = interactionPval;
     }
 
-    // !!!!! DEBUGGING RAW VALUES !!!!!
-#if defined(DEBUG_REGAIN)
-    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-      << "\t" << coef1Label << "\t" << coef2Label
-      << "\t" << setw(12) << betaInteractionCoefs[3]
-      << "\t" << setw(6) << betaInteractionCoefPVals[2]
-      << "\t" << setw(12) << interactionModelSE[3]
-      << "\t" << setw(12)
-      << betaInteractionCoefs[3] / interactionModelSE[3]
-      << endl;
-#endif    
 
     // store p-value along with (varIndex1, varIndex2) location of
     // item.  This is used later for FDR pruning
