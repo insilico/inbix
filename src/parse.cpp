@@ -2797,6 +2797,11 @@ void setOptions(CArgs & a) {
     par::do_numeric_mean_centering = true;
   }
 
+  // differential coexpression analysis - bcw - 10/30/13
+  if(a.find("--dcgain")) {
+    par::do_differential_coexpression = true;
+  }
+
   // Matlab gene*filter functionality - bcw - 10/17/13
   if(a.find("--numeric-low-value-filter")) {
     par::do_numeric_lowval_filter = true;
@@ -4178,6 +4183,8 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-format {format}  reGAIN output format \n"
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
             << "      --regain-to-sif {regain}  Convert reGAIN matrix to SIF file\n"
+            << "\n"
+            << "      --dcgain                  Perform a differential coexpression analysis   \n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"

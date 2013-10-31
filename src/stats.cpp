@@ -2094,3 +2094,75 @@ bool numericMeanCenter() {
   }  
   return true;
 }
+
+// get cases and controls into vectors for a numeric variable index
+bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
+	// determine the number of affected and unaffected individuals
+	int nAff = 0;
+	int nUnaff = 0;
+	for(int i=0; i < PP->sample.size(); i++) {
+		if(PP->sample[i]->aff) {
+			++nAff;
+		}
+		else {
+			++nUnaff;
+		}
+	}
+
+	// size return vectors
+	cases.resize(nAff);
+	controls.resize(nUnaff);
+	
+	// load numerics into passed matrices
+	int aIdx = 0;
+	int uIdx = 0;
+	for(int i=0; i < PP->sample.size(); i++) {
+			if(PP->sample[i]->aff) {
+				cases[aIdx] = PP->sample[i]->nlist[varIndex];
+			} else {
+				controls[uIdx] = PP->sample[i]->nlist[varIndex];
+			}
+		if(PP->sample[i]->aff) {
+			++aIdx;
+		}
+		else {
+			++uIdx;
+		}
+	}
+  
+  return true;
+}
+
+// t-test of two groups - bcw - 10/30/13
+bool tTest(int varIndex, double& t) {
+  // get the group data values into vectors
+  vector_t g1_data;
+  vector_t g2_data;
+  getNumericCaseControl(varIndex, g1_data, g2_data);
+  if(g1_data.size() == 0) {
+    cerr << "Group 1 size = 0 in tTest" << endl;
+    return false;
+  }
+  double g1_n = (double) g1_data.size();
+  if(g2_data.size() == 0) {
+    cerr << "Group 2 size = 0 in tTest" << endl;
+    return false;
+  }
+  double g2_n = (double) g2_data.size();
+
+  // gets summary information for each group (case - control)
+  vector_t g1_summary;
+  vectorSummary(g1_data, g1_summary);
+  double g1_mean = g1_summary[0];
+  double g1_var = g1_summary[1];
+  vector_t g2_summary;
+  vectorSummary(g2_data, g2_summary);
+  double g2_mean = g2_summary[0];
+  double g2_var = g2_summary[1];
+  t = 
+    (g2_mean - g1_mean) / 
+    sqrt((g1_var / g1_n) + (g2_var / g2_n));
+
+  return true;
+}
+

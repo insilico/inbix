@@ -346,6 +346,9 @@ public:
   static bool do_numeric_extract;
   static string numeric_extract_file;
 
+  // differential coexpression analysis - bcw - 10/30/13
+  static bool do_differential_coexpression;
+  
   // data set transforms prior to analysis - bcw - 10/30/13
   static bool do_numeric_mean_centering;
   

@@ -249,6 +249,9 @@ bool par::do_numeric_summary = false;
 bool par::do_numeric_extract = false;
 string par::numeric_extract_file = "";
 
+// differential coexpression analysis - bcw - 10/30/13
+bool par::do_differential_coexpression = false;
+
 // data set transforms prior to analysis - bcw - 10/30/13
 bool par::do_numeric_mean_centering = false;
 
