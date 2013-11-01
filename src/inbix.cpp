@@ -1046,7 +1046,6 @@ int main(int argc, char* argv[]) {
     // algorithm from R script z_test.R
     double n1 = nAff;
     double n2 = nUnaff;
-    cout << n1 << "\t" << n2 << endl;
     for(int i=0; i < numVars; ++i) {
       for(int j=0; j < numVars; ++j) {
         if(j <= i) {
@@ -1065,6 +1064,13 @@ int main(int argc, char* argv[]) {
       }
     }
     // write results
+    if(par::do_dcgain_abs) {
+      for(int i=0; i < results.n_rows; ++i) {
+        for(int j=0; j < results.n_cols; ++j) {
+          results(i, j) = abs(results(i, j));
+        }
+      }
+    }
     string dcgainFilename = par::output_file_name + ".dcgain";
     armaWriteMatrix(results, dcgainFilename, P.nlistname);
     string dcgainPvalsFilename = par::output_file_name + ".pvals.dcgain";

@@ -351,6 +351,7 @@ public:
   
   // data set transforms prior to analysis - bcw - 10/30/13
   static bool do_numeric_mean_centering;
+  static bool do_dcgain_abs;
   
   // mimic the Matlab genelowvalfilter and genelowvarfilter functions 
   // bcw - 10/17/13
@@ -358,7 +359,7 @@ public:
   static bool do_numeric_lowvar_filter;
   static double numeric_lowval_percentile;
   static double numeric_lowvar_percentile;
-
+ 
   // added for reGAIN support - bcw - 4/22/13
   static bool do_regain;
   static bool do_regain_post;

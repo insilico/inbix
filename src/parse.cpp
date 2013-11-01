@@ -2801,6 +2801,9 @@ void setOptions(CArgs & a) {
   if(a.find("--dcgain")) {
     par::do_differential_coexpression = true;
   }
+  if(a.find("--dcgain-abs")) {
+    par::do_dcgain_abs = true;
+  }
 
   // Matlab gene*filter functionality - bcw - 10/17/13
   if(a.find("--numeric-low-value-filter")) {
@@ -4184,7 +4187,8 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-transform {transform}  reGAIN output transform\n"
             << "      --regain-to-sif {regain}  Convert reGAIN matrix to SIF file\n"
             << "\n"
-            << "      --dcgain                  Perform a differential coexpression analysis   \n"
+            << "      --dcgain                  Perform a differential coexpression analysis\n"
+            << "      --dcgain-abs              Take absolute value of dcgain matrix\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"

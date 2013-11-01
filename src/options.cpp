@@ -251,6 +251,7 @@ string par::numeric_extract_file = "";
 
 // differential coexpression analysis - bcw - 10/30/13
 bool par::do_differential_coexpression = false;
+bool par::do_dcgain_abs = false;
 
 // data set transforms prior to analysis - bcw - 10/30/13
 bool par::do_numeric_mean_centering = false;
