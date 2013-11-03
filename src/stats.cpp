@@ -1847,6 +1847,9 @@ bool vectorSummary(vector_t values, vector_t& summary) {
 bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
 				RegressionRankResults& results) {
 
+  // should the sorted results be reversed, i.e., by p-value
+  bool sortDescending = false;
+  
   // model SNPs
 #pragma omp parallel for
   for(int i=0; i < PP->nl_all; ++i) {
@@ -1925,12 +1928,15 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     switch(rankType) {
       case REGRESSION_RANK_STAT:
         rankValue = abs(mainEffectValueS);
+        sortDescending = true;
         break;
       case REGRESSION_RANK_BETA:
         rankValue = mainEffectValueB;
+        sortDescending = true;
         break;
       case REGRESSION_RANK_PVAL:
-        rankValue = -log10(mainEffectValueP);
+        // rankValue = -log10(mainEffectValueP);
+        rankValue = mainEffectValueP;
         break;
     }
 
@@ -1946,7 +1952,9 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
 
   // sort results in reverse order
 	sort(ranks.begin(), ranks.end());
-  reverse(ranks.begin(), ranks.end());
+  if(sortDescending) {
+    reverse(ranks.begin(), ranks.end());
+  }
   
   return true;
 }

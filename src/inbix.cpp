@@ -877,7 +877,7 @@ int main(int argc, char* argv[]) {
 				rankByRegression(REGRESSION_RANK_BETA, ranks, results);
 			}
 			if(par::ranker_method == "regressionp") {
-				P.printLOG("Using regression -log10(p-values)\n");
+				P.printLOG("Using regression p-values\n");
 				rankByRegression(REGRESSION_RANK_PVAL, ranks, results);
 			}
 			string outFile = par::output_file_name + ".ranks";
