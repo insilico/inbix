@@ -2103,6 +2103,27 @@ bool numericMeanCenter() {
   return true;
 }
 
+bool numericStandardize() {
+  for(int i=0; i < PP->nlistname.size(); ++i) {
+    vector_t varVals;
+    for(int j=0; j < PP->sample.size(); ++j) {
+      varVals.push_back(PP->sample[j]->nlist[i]);
+    }
+    vector_t summary;
+    vectorSummary(varVals, summary);
+    if(summary[2]) {
+      for(int j=0; j < PP->sample.size(); ++j) {
+        PP->sample[j]->nlist[i] /= summary[2];
+      }
+    }
+    else {
+      cout << "WARNING: standard deviation 0 in numericStandardize" 
+        << " for variable index: " << i << endl;
+    }
+  }  
+  return true;
+}
+
 // get cases and controls into vectors for a numeric variable index
 bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
 	// determine the number of affected and unaffected individuals

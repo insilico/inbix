@@ -255,6 +255,7 @@ bool par::do_dcgain_abs = false;
 
 // data set transforms prior to analysis - bcw - 10/30/13
 bool par::do_numeric_mean_centering = false;
+bool par::do_numeric_standardize = false;
 
 // mimic the Matlab genelowvalfilter and genelowvarfilter functions 
 // bcw - 10/17/13

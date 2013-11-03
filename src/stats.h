@@ -90,6 +90,7 @@ bool quantile(vector_t values, double percentile, double& percentileValue);
 
 // data set transforms prior to analysis - bcw - 10/30/13
 bool numericMeanCenter();
+bool numericStandardize();
 
 // cases and controls values for a numeric variable index - bcw - 10/30/13
 bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls);

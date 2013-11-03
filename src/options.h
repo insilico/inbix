@@ -351,6 +351,8 @@ public:
   
   // data set transforms prior to analysis - bcw - 10/30/13
   static bool do_numeric_mean_centering;
+  static bool do_numeric_standardize;
+
   static bool do_dcgain_abs;
   
   // mimic the Matlab genelowvalfilter and genelowvarfilter functions 

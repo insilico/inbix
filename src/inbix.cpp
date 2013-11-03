@@ -289,21 +289,29 @@ int main(int argc, char* argv[]) {
 		}
 		par::have_numerics = true;
 
-    // data set transforms prior to analysis - bcw - 10/30/13
-    if(par::do_numeric_mean_centering) {
-      P.printLOG("Mean centering numeric variables.\n");
-      // subtract the attribute mean from each attribute value
-      if(!numericMeanCenter()) {
-        error("Mean centering failed.");
-      }
-    }
-    
 		if(par::do_numeric_summary) {
 			P.printLOG("Reporting numeric file summary statistics.\n");
 			reportNumericSummaryStats();
 			shutdown();
 		}
     
+    // data set transforms prior to analysis - bcw - 10/30/13
+    if(par::do_numeric_mean_centering) {
+      P.printLOG("Mean centering numeric variables.\n");
+      // subtract the attribute mean from each attribute value
+      if(!numericMeanCenter()) {
+        error("Mean centering numerics failed.");
+      }
+    }
+    
+    if(par::do_numeric_standardize) {
+      P.printLOG("Standardizing numeric variables.\n");
+      // divide numeric values by their standard deviations
+      if(!numericStandardize()) {
+        error("Standardizing numerics failed.");
+      }
+    }
+
 		// extract attributes listed in user file to new file
 		if(par::do_numeric_extract) {
 			P.printLOG("Extracting numeric attributes to a new numeric file.\n");
@@ -1016,6 +1024,7 @@ int main(int argc, char* argv[]) {
       }
     }
     double df = nAff + nUnaff - 2;
+		P.printLOG("Performing t-tests\n");
     for(int i=0; i < numVars; ++i) {
       double t;
       tTest(i, t);
@@ -1044,6 +1053,7 @@ int main(int argc, char* argv[]) {
     }
 
     // algorithm from R script z_test.R
+		P.printLOG("Performing Z-tests for interactions\n");
     double n1 = nAff;
     double n2 = nUnaff;
     for(int i=0; i < numVars; ++i) {

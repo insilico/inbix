@@ -2797,6 +2797,10 @@ void setOptions(CArgs & a) {
     par::do_numeric_mean_centering = true;
   }
 
+  if(a.find("--numeric-standardize")) {
+    par::do_numeric_standardize = true;
+  }
+
   // differential coexpression analysis - bcw - 10/30/13
   if(a.find("--dcgain")) {
     par::do_differential_coexpression = true;
@@ -4171,6 +4175,7 @@ void setOptions(CArgs & a) {
             << "      --numeric-low-value-filter {percentile}  Remove variables with values below given percentile\n"
             << "      --numeric-low-variance-filter {percentile}  Remove variables with variance below given percentile\n"
             << "      --numeric-mean-center     Subtract the variable mean from numeric variables before analysis\n"            
+            << "      --numeric-standardize     Divide numeric variables by their standard deviation before analysis\n"            
             << "\n"
             << "      --regain                  Perform a reGAIN analysis   \n"
             << "      --regain-file {regain file} Postprocess an existing reGAIN file\n"
