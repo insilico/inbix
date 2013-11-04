@@ -296,17 +296,11 @@ int main(int argc, char* argv[]) {
 		}
     
     // data set transforms prior to analysis - bcw - 10/30/13
-    if(par::do_numeric_mean_centering) {
+    if(par::do_numeric_standardize) {
       P.printLOG("Mean centering numeric variables.\n");
-      // subtract the attribute mean from each attribute value
       if(!numericMeanCenter()) {
         error("Mean centering numerics failed.");
       }
-    }
-    
-    if(par::do_numeric_standardize) {
-      P.printLOG("Standardizing numeric variables.\n");
-      // divide numeric values by their standard deviations
       if(!numericStandardize()) {
         error("Standardizing numerics failed.");
       }

@@ -350,7 +350,6 @@ public:
   static bool do_differential_coexpression;
   
   // data set transforms prior to analysis - bcw - 10/30/13
-  static bool do_numeric_mean_centering;
   static bool do_numeric_standardize;
 
   static bool do_dcgain_abs;
