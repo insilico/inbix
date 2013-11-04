@@ -297,12 +297,27 @@ int main(int argc, char* argv[]) {
     
     // data set transforms prior to analysis - bcw - 10/30/13
     if(par::do_numeric_standardize) {
-      P.printLOG("Mean centering numeric variables.\n");
+      P.printLOG("Standardizing numeric variables.\n");
       if(!numericMeanCenter()) {
         error("Mean centering numerics failed.");
       }
       if(!numericStandardize()) {
         error("Standardizing numerics failed.");
+      }
+      if(par::exportDelimited) {
+        P.printLOG("Performing data set export to delimited format\n");
+        // switch from SNP-major to individual-major data orientation!
+        P.SNP2Ind();
+        string fileExtension = ".delim";
+        if(par::exportDelimiter == "\t") {
+          fileExtension = ".tab";
+        }
+        if(par::exportDelimiter == ",") {
+          fileExtension = ".csv";
+        }
+        string delimitedFilename = par::output_file_name + fileExtension;
+        P.outputDelimitedFile(delimitedFilename, par::exportDelimiter);
+        shutdown();
       }
     }
 
@@ -805,6 +820,7 @@ int main(int argc, char* argv[]) {
 		P.outputArffFile(arffFilename);
 		shutdown();
 	}
+
 	// delimited format for Excel, R, etc - bcw - 5/22/13
 	if(par::exportDelimited) {
 		P.printLOG("Performing data set export to delimited format\n");

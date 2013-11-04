@@ -345,7 +345,7 @@ public:
   static bool do_numeric_summary;
   static bool do_numeric_extract;
   static string numeric_extract_file;
-
+  
   // differential coexpression analysis - bcw - 10/30/13
   static bool do_differential_coexpression;
   

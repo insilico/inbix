@@ -350,6 +350,7 @@ void Model::buildDesignMatrix() {
 
 	/////////////////////////////////////////
 	// VIF-based check for multicollinearity
+  // commented out - bcw - 10/31/13
 	//all_valid = checkVIF();
 
 	///////////////////////

@@ -2351,12 +2351,12 @@ bool Plink::outputDelimitedFile(string delimitedFilename, string delimiter) {
     }
     else {
       if(par::bt) {
-        if(sample[i]->phenotype == 1) {
+        if(!sample[i]->aff) {
           DELIM_FILE << delimiter << "0" << endl;
           ncontrol++;
         } 
         else { 
-          if(sample[i]->phenotype == 2) {
+          if(sample[i]->aff) {
             DELIM_FILE << delimiter << "1" << endl;
             ncase++;
           }   
