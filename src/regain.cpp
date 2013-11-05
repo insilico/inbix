@@ -994,8 +994,8 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         interactionValue = 0;
         ++nanCount;
       }
-      // TODO: is there a maximum beta value to threshold?
     } else {
+      interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
       if(abs(interactionValue) > par::regainLargeCoefTvalue) {
         stringstream ss;
         ss << "Large test statistic value [" << interactionValue
