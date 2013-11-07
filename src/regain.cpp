@@ -946,6 +946,8 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
       useFailureValue = true;
     }
     else {
+      betaInteractionCoefs = interactionModel->getCoefs();
+      betaInteractionCoefPVals = interactionModel->getPVals();
       interactionPval =
         betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
       vector_t interactionModelSE = interactionModel->getSE();
@@ -960,24 +962,8 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         beta = *bIt;
         se = *sIt;
         stat = beta / se;
-        /*
-        if(interactionPval == -9) {
-          cout  << "WPV: beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
-        }
-         */
         regressTestStatValues.push_back(stat);
       }
-
-      /*
-      if(interactionPval == -9) {
-        cout << "WEIRD p-value [" << interactionPval
-          << "] on coefficient for interaction variables ["
-          << coef1Label << "][" << coef2Label << "], interaction beta [" 
-          << betaInteractionCoefs[betaInteractionCoefs.size() - 1] 
-          << "], test stat [" << regressTestStatValues[regressTestStatValues.size() - 1]
-          << "] <= beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
-      }
-       */
 
       if(par::regainUseBetaValues) {
         interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
