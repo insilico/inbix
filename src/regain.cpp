@@ -932,188 +932,192 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
   // Was the model fitting method successful?
 #pragma omp critical
   {
+    double interactionValue = 0;
+    double interactionPval = 0;
+    double interactionValueTransformed = 0;
     bool useFailureValue = false;
+    vector_t betaInteractionCoefs;
+    vector_t betaInteractionCoefPVals;
+    
     if(!interactionModel->isValid()) {
       string failMsg = "WARNING: Invalid regression fit for interaction "
         "variables [" + coef1Label + "], [" + coef2Label + "]";
       failures.push_back(failMsg);
       useFailureValue = true;
     }
+    else {
+      interactionPval =
+        betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+      vector_t interactionModelSE = interactionModel->getSE();
+      // calculate statistical test value from beta/SE (t-test or z-test)
+      vector_t::const_iterator bIt = betaInteractionCoefs.begin();
+      vector_t::const_iterator sIt = interactionModelSE.begin();
+      vector_t regressTestStatValues;
+      double beta = 0;
+      double se = 0;
+      double stat = 0;
+      for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
+        beta = *bIt;
+        se = *sIt;
+        stat = beta / se;
+        /*
+        if(interactionPval == -9) {
+          cout  << "WPV: beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
+        }
+         */
+        regressTestStatValues.push_back(stat);
+      }
 
-    vector_t betaInteractionCoefs = interactionModel->getCoefs();
-    vector_t betaInteractionCoefPVals = interactionModel->getPVals();
-    double interactionPval =
-      betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-    vector_t interactionModelSE = interactionModel->getSE();
-    // calculate statistical test value from beta/SE (t-test or z-test)
-    vector_t::const_iterator bIt = betaInteractionCoefs.begin();
-    vector_t::const_iterator sIt = interactionModelSE.begin();
-    vector_t regressTestStatValues;
-    double beta = 0;
-    double se = 0;
-    double stat = 0;
-    for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
-      beta = *bIt;
-      se = *sIt;
-      stat = beta / se;
       /*
       if(interactionPval == -9) {
-        cout  << "WPV: beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
+        cout << "WEIRD p-value [" << interactionPval
+          << "] on coefficient for interaction variables ["
+          << coef1Label << "][" << coef2Label << "], interaction beta [" 
+          << betaInteractionCoefs[betaInteractionCoefs.size() - 1] 
+          << "], test stat [" << regressTestStatValues[regressTestStatValues.size() - 1]
+          << "] <= beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
       }
        */
-      regressTestStatValues.push_back(stat);
-    }
 
-    /*
-    if(interactionPval == -9) {
-      cout << "WEIRD p-value [" << interactionPval
-        << "] on coefficient for interaction variables ["
-        << coef1Label << "][" << coef2Label << "], interaction beta [" 
-        << betaInteractionCoefs[betaInteractionCoefs.size() - 1] 
-        << "], test stat [" << regressTestStatValues[regressTestStatValues.size() - 1]
-        << "] <= beta: " << beta << ", SE: " << se << ", test stat: " << stat << endl;
-    }
-     */
-
-    double interactionValue = 0;
-    if(par::regainUseBetaValues) {
-      interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-      if(interactionPval > par::regainLargeCoefPvalue) {
-        stringstream ss;
-        ss << "Large p-value [" << interactionPval
-          << "] on coefficient for interaction variables ["
-          << coef1Label << "][" << coef2Label << "]";
-        warnings.push_back(ss.str());
-        interactionValue = 0;
-      }
-      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
-        interactionValue = par::regainLargeCoefTvalue;
-        ++infCount;
-      }
-      if(isnan(interactionValue)) {
-        interactionValue = 0;
-        ++nanCount;
-      }
-    } else {
-      interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-      if(abs(interactionValue) > par::regainLargeCoefTvalue) {
-        stringstream ss;
-        ss << "Large test statistic value [" << interactionValue
-          << "] on coefficient for interaction variables ["
-          << coef1Label << "][" << coef2Label << "]";
-        warnings.push_back(ss.str());
-        if(interactionValue < 0) {
-          interactionValue = -par::regainLargeCoefTvalue;
-        } else {
+      if(par::regainUseBetaValues) {
+        interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+        if(interactionPval > par::regainLargeCoefPvalue) {
+          stringstream ss;
+          ss << "Large p-value [" << interactionPval
+            << "] on coefficient for interaction variables ["
+            << coef1Label << "][" << coef2Label << "]";
+          warnings.push_back(ss.str());
+          interactionValue = 0;
+        }
+        if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
           interactionValue = par::regainLargeCoefTvalue;
+          ++infCount;
         }
-        // DEBUG TEST
-        interactionValue = 0;
-      }
-      if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
-        interactionValue = 0;
-        ++infCount;
-        stringstream ss;
-        ss << "Regression test statistic is +/-infinity on coefficient "
-          << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
-        warnings.push_back(ss.str());
-      }
-      if(isnan(interactionValue)) {
-        interactionValue = 0;
-        ++nanCount;
-        stringstream ss;
-        ss << "Regression test statistic is not a number NaN on coefficient "
-          << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
-        warnings.push_back(ss.str());
-      }
-    }
-
-    double interactionValueTransformed = interactionValue;
-    switch(outputTransform) {
-      case REGAIN_OUTPUT_TRANSFORM_NONE:
-        break;
-      case REGAIN_OUTPUT_TRANSFORM_THRESH:
-        if(interactionValue < outputThreshold) {
-          interactionValueTransformed = 0.0;
+        if(isnan(interactionValue)) {
+          interactionValue = 0;
+          ++nanCount;
         }
-        break;
-      case REGAIN_OUTPUT_TRANSFORM_ABS:
-        interactionValueTransformed = abs(interactionValue);
-        break;
-    }
+      } else {
+        interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
+        if(abs(interactionValue) > par::regainLargeCoefTvalue) {
+          stringstream ss;
+          ss << "Large test statistic value [" << interactionValue
+            << "] on coefficient for interaction variables ["
+            << coef1Label << "][" << coef2Label << "]";
+          warnings.push_back(ss.str());
+          if(interactionValue < 0) {
+            interactionValue = -par::regainLargeCoefTvalue;
+          } else {
+            interactionValue = par::regainLargeCoefTvalue;
+          }
+          // DEBUG TEST
+          interactionValue = 0;
+        }
+        if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+          interactionValue = 0;
+          ++infCount;
+          stringstream ss;
+          ss << "Regression test statistic is +/-infinity on coefficient "
+            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+          warnings.push_back(ss.str());
+        }
+        if(isnan(interactionValue)) {
+          interactionValue = 0;
+          ++nanCount;
+          stringstream ss;
+          ss << "Regression test statistic is not a number NaN on coefficient "
+            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+          warnings.push_back(ss.str());
+        }
+      }
 
-    if(useFailureValue) {
-      regainMatrix[varIndex1][varIndex2] = failureValue;
-      regainMatrix[varIndex2][varIndex1] = failureValue;
-      regainPMatrix[varIndex1][varIndex2] = 1.0;
-      regainPMatrix[varIndex2][varIndex1] = 1.0;
-    } else {
-      regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
-      regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
-      regainPMatrix[varIndex1][varIndex2] = interactionPval;
-      regainPMatrix[varIndex2][varIndex1] = interactionPval;
-    }
+      if(useFailureValue) {
+        regainMatrix[varIndex1][varIndex2] = failureValue;
+        regainMatrix[varIndex2][varIndex1] = failureValue;
+        regainPMatrix[varIndex1][varIndex2] = 1.0;
+        regainPMatrix[varIndex2][varIndex1] = 1.0;
+      } else {
+        interactionValueTransformed = interactionValue;
+        switch(outputTransform) {
+          case REGAIN_OUTPUT_TRANSFORM_NONE:
+            break;
+          case REGAIN_OUTPUT_TRANSFORM_THRESH:
+            if(interactionValue < outputThreshold) {
+              interactionValueTransformed = 0.0;
+            }
+            break;
+          case REGAIN_OUTPUT_TRANSFORM_ABS:
+            interactionValueTransformed = abs(interactionValue);
+            break;
+        }
+        regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
+        regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+        regainPMatrix[varIndex1][varIndex2] = interactionPval;
+        regainPMatrix[varIndex2][varIndex1] = interactionPval;
+      }
 
-    // !!!!! DEBUGGING RAW VALUES !!!!!
+      // !!!!! DEBUGGING RAW VALUES !!!!!
 #if defined(DEBUG_REGAIN)
-    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-      << "\t" << coef1Label << "\t" << coef2Label
-      << "\t" << setw(12) << betaInteractionCoefs[1]
-      << "\t" << setw(6) << betaInteractionCoefPVals[0]
-      << "\t" << setw(12) << interactionModelSE[1]
-      << "\t" << setw(12)
-      << betaInteractionCoefs[1] / interactionModelSE[1]
-      << endl;
+      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+        << "\t" << coef1Label << "\t" << coef2Label
+        << "\t" << setw(12) << betaInteractionCoefs[1]
+        << "\t" << setw(6) << betaInteractionCoefPVals[0]
+        << "\t" << setw(12) << interactionModelSE[1]
+        << "\t" << setw(12)
+        << betaInteractionCoefs[1] / interactionModelSE[1]
+        << endl;
 #endif
 
-    // store p-value along with (varIndex1, varIndex2) location of
-    // item.  This is used later for FDR pruning
-    if(doFdrPrune) {
-      pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
-      matrixElement interactionPvalElement =
-        make_pair(interactionPval, indexPair);
-      gainIntPvals.push_back(interactionPvalElement);
-    }
-
-    // update BETAS file
-    BETAS << coef1Label << "\t" << coef2Label;
-    for(unsigned int i = 0; i < betaInteractionCoefs.size(); ++i) {
-      // B0 coefficient doesn't have pval
-      if(i == 0) {
-        BETAS << "\t" << betaInteractionCoefs[i];
-      } else {
-        // adjust pvals index since there's no B0 pval
-        BETAS << "\t" << betaInteractionCoefs[i]
-          << "\t" << betaInteractionCoefPVals[i - 1];
+      // store p-value along with (varIndex1, varIndex2) location of
+      // item.  This is used later for FDR pruning
+      if(doFdrPrune) {
+        pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
+        matrixElement interactionPvalElement =
+          make_pair(interactionPval, indexPair);
+        gainIntPvals.push_back(interactionPvalElement);
       }
-    }
-    BETAS << endl;
 
-    // update SIF files); add to SIF if interaction >= SIF threshold
-    if(interactionValueTransformed >= sifThresh) {
-      SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
-        << coef2Label << endl;
-      if(writeComponents) {
-        // numeric
-        if(var1IsNumeric && var2IsNumeric) {
-          NUM_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
-            << coef2Label << endl;
-        }// integrative
-        else if(var1IsNumeric && !var2IsNumeric) {
-          INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
-            << coef2Label << endl;
-        }// integrative
-        else if(!var1IsNumeric && var2IsNumeric) {
-          INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
-            << coef2Label << endl;
-        }// SNP
-        else {
-          SNP_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
-            << coef2Label << endl;
+      // update BETAS file
+      BETAS << coef1Label << "\t" << coef2Label;
+      for(unsigned int i = 0; i < betaInteractionCoefs.size(); ++i) {
+        // B0 coefficient doesn't have pval
+        if(i == 0) {
+          BETAS << "\t" << betaInteractionCoefs[i];
+        } else {
+          // adjust pvals index since there's no B0 pval
+          BETAS << "\t" << betaInteractionCoefs[i]
+            << "\t" << betaInteractionCoefPVals[i - 1];
         }
       }
-    }
+      BETAS << endl;
 
+      // update SIF files); add to SIF if interaction >= SIF threshold
+      if(interactionValueTransformed >= sifThresh) {
+        SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+          << coef2Label << endl;
+        if(writeComponents) {
+          // numeric
+          if(var1IsNumeric && var2IsNumeric) {
+            NUM_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+          }// integrative
+          else if(var1IsNumeric && !var2IsNumeric) {
+            INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+          }// integrative
+          else if(!var1IsNumeric && var2IsNumeric) {
+            INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+          }// SNP
+          else {
+            SNP_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+              << coef2Label << endl;
+          }
+        }
+      }
+    
+    } // end if failure else block
+    
     // end pragma
   }
 
