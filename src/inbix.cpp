@@ -1078,7 +1078,7 @@ int main(int argc, char* argv[]) {
         double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
         results(i, j) = Z_ij;
         results(j, i) = Z_ij;
-        double p = 1 - normdist(Z_ij);
+        double p = 2 * normdist(-abs(Z_ij));
         pvals(i, j) = p;
         pvals(j, i) = p;
       }
