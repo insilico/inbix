@@ -536,7 +536,7 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
         mainEffectValue = 0;
       }
       if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
-        mainEffectValue = par::regainLargeCoefTvalue;
+        mainEffectValue = 0;
         ++infCount;
       }
       if(isnan(mainEffectValue)) {
@@ -736,7 +736,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
           interactionValue = 0;
         }
         if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
-          interactionValue = par::regainMaxBetaValue;
+          interactionValue = 0;
           ++infCount;
         }
         if(isnan(interactionValue)) {
@@ -976,7 +976,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
           interactionValue = 0;
         }
         if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
-          interactionValue = par::regainLargeCoefTvalue;
+          interactionValue = 0;
           ++infCount;
         }
         if(isnan(interactionValue)) {
