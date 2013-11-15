@@ -364,6 +364,7 @@ public:
   // added for reGAIN support - bcw - 4/22/13
   static bool do_regain;
   static bool do_regain_post;
+  static bool do_regain_pvalue_threshold;
   static string regainFile;
   static const double regainLargeCoefPvalue;
   static const double regainLargeCoefTvalue;
@@ -377,6 +378,7 @@ public:
   static bool regainUseBetaValues;
   static bool regainPureInteractions;
   static double regainFailValue;
+  static double regainPvalueThreshold;
   // regain matrix output - bcw - 4/30/13
   static string regainMatrixTransform;
   static string regainMatrixFormat;

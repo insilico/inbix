@@ -583,6 +583,11 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
       regainPMatrix[varIndex][varIndex] = 1.0;
     } else {
       regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
+      if(par::do_regain_pvalue_threshold) {
+        if(mainEffectPval > par::regainPvalueThreshold) {
+          regainMatrix[varIndex][varIndex] = 0;
+        }
+      }
       regainPMatrix[varIndex][varIndex] = mainEffectPval;
     }
 
@@ -800,6 +805,12 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
     } else {
       regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
       regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+      if(par::do_regain_pvalue_threshold) {
+        if(interactionPval > par::regainPvalueThreshold) {
+          regainMatrix[varIndex1][varIndex2] = 0;
+          regainMatrix[varIndex2][varIndex1] = 0;
+        }
+      }
       regainPMatrix[varIndex1][varIndex2] = interactionPval;
       regainPMatrix[varIndex2][varIndex1] = interactionPval;
     }
@@ -1038,6 +1049,12 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         }
         regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
         regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+        if(par::do_regain_pvalue_threshold) {
+          if(interactionPval > par::regainPvalueThreshold) {
+            regainMatrix[varIndex1][varIndex2] = 0;
+            regainMatrix[varIndex2][varIndex1] = 0;
+          }
+        }
         regainPMatrix[varIndex1][varIndex2] = interactionPval;
         regainPMatrix[varIndex2][varIndex1] = interactionPval;
       }

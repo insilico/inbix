@@ -266,6 +266,7 @@ double par::numeric_lowvar_percentile = 0.1;
 // added for reGAIN support - bcw - 4/22/13, 4/24/13
 bool par::do_regain = false;
 bool par::do_regain_post = false;
+bool par::do_regain_pvalue_threshold = false;
 string par::regainFile = "no file";
 double const par::regainLargeCoefPvalue = 0.99;
 double const par::regainLargeCoefTvalue = 10;
@@ -279,6 +280,7 @@ double par::regainSifThreshold = -9999999;
 bool par::regainUseBetaValues = false;
 bool par::regainPureInteractions = false;
 double par::regainFailValue = 0;
+double par::regainPvalueThreshold = 0.1;
 // regain matrix output - bcw - 4/30/13
 string par::regainMatrixTransform = "none";
 string par::regainMatrixFormat = "full";

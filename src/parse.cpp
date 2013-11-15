@@ -2835,6 +2835,11 @@ void setOptions(CArgs & a) {
     par::regainFailValue = a.value_double("--regain-fail-value");
   }
 
+  if(a.find("--regain-pvalue-threshold")) {
+    par::do_regain_pvalue_threshold = true;
+    par::regainPvalueThreshold = a.value_double("--regain-pvalue-threshold");
+  }
+
   if(a.find("--regain-compress")) {
     par::regainCompress = true;
   }
@@ -4177,6 +4182,7 @@ void setOptions(CArgs & a) {
             << "      --regain-use-beta-values  Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions Exclude main effects from interactions\n"
             << "      --regain-fail-value {value} Value to use if regression failure\n"
+            << "      --regain-pvalue-threshold {value} P-value threshold for writing reGAIN values\n"
             << "      --regain-compress         Compress reGAIN output      \n"
             << "      --regain-components       Write reGAIN components     \n"
             << "      --regain-fdr {rate}       Set reGAIN FDR              \n"

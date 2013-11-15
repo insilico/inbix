@@ -1038,8 +1038,13 @@ int main(int argc, char* argv[]) {
     for(int i=0; i < numVars; ++i) {
       double t;
       tTest(i, t);
-      results(i, i) = t;
       double p = pT(t, df);
+      results(i, i) = t;
+      if(par::do_regain_pvalue_threshold) {
+        if(p > par::regainPvalueThreshold) {
+          results(i, i) = 0;
+        }
+      }
       pvals(i, i) = p;
     }
 
@@ -1076,9 +1081,15 @@ int main(int argc, char* argv[]) {
         double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
         double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
         double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
+        double p = 2 * normdist(-abs(Z_ij));
         results(i, j) = Z_ij;
         results(j, i) = Z_ij;
-        double p = 2 * normdist(-abs(Z_ij));
+        if(par::do_regain_pvalue_threshold) {
+          if(p > par::regainPvalueThreshold) {
+            results(i, j) = 0;
+            results(j, i) = 0;
+          }
+        }
         pvals(i, j) = p;
         pvals(j, i) = p;
       }
