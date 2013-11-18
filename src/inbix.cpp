@@ -857,7 +857,7 @@ int main(int argc, char* argv[]) {
 				cr.SetGlobalGamma(par::ranker_centrality_gamma);
 			}
 			if(par::ranker_method == "centrality_power") {
-				P.printLOG("Centrality using the power method, fixed gamma\n");
+				P.printLOG("Centrality using fixed gamma 0.85, power method\n");
 				cr.SetGlobalGamma(0.85);
 				if(!cr.CalculateCentrality(POWER_METHOD)) {
 					error("Centrality ranking failed");
@@ -865,7 +865,7 @@ int main(int argc, char* argv[]) {
 			}
 			if(par::ranker_method == "centrality" ||
 							par::ranker_method == "centrality_gauss") {
-				P.printLOG("Centrality using the gauss method, variable-gamma\n");
+				P.printLOG("Centrality using average gamma\n");
 				if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
 					error("Centrality ranking failed");
 				}
