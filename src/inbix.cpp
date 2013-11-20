@@ -84,6 +84,8 @@ int main(int argc, char* argv[]) {
 	//////////////////////////
 	// Start logging, title
 	LOG.open(string(par::output_file_name + ".log").c_str());
+
+#ifndef EPIQTL
 	P.printLOG("\n"
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
@@ -91,7 +93,8 @@ int main(int argc, char* argv[]) {
 					"|  (C) 2013 Bill White, GNU General Public License, v2     |\n"
 					"@----------------------------------------------------------@\n"
 					"\n");
-
+#endif
+  
 	//////////////////////////
 	// Fully parse command line
 	setOptions(a);

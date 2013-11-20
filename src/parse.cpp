@@ -2987,18 +2987,23 @@ void setOptions(CArgs & a) {
     par::do_epiqtl = true;
   }
   if(a.find("--transcript-matrix")) {
+    par::do_epiqtl = true;
     par::epiqtl_expression_file = a.value("--transcript-matrix");
   }
   if(a.find("--coordinates")) {
+    par::do_epiqtl = true;
     par::epiqtl_coord_file = a.value("--coordinates");
   }
   if(a.find("--local-cis")) {
+    par::do_epiqtl = true;
     par::epiqtl_local_cis = true;
   }
   if(a.find("--radius")) {
+    par::do_epiqtl = true;
     par::epiqtl_radius = a.value_int("--radius");
   }
   if(a.find("--full")) {
+    par::do_epiqtl = true;
     par::epiqtl_interaction_full = true;
   }
   
@@ -4111,6 +4116,7 @@ void setOptions(CArgs & a) {
 
   /////////////////////////////////////////////
   //  Help -- display all options
+#ifndef EPIQTL
   if(a.find("--help") || a.find("-h")) {
 
     cout << "\n"
@@ -4245,7 +4251,20 @@ void setOptions(CArgs & a) {
 
     shutdown();
   }
-
+#else
+    if(a.find("--help") || a.find("-h")) {
+      cout
+            << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
+            << "      --covar {covarfile}       Specify covariate file           \n"
+            << "      --transcript-matrix       Transcript matrix file\n"
+            << "      --coordinates             Transcript coordinates file\n"
+            << "      --local-cis               Consider only SNPs within radius\n"
+            << "      --radius                  Number of kilobases considered cis\n"
+            << "      --full                    Consider all SNPs\n";
+      shutdown();
+    }
+#endif
+  
   // By default, most tests are SNP major
   par::SNP_major = true;
 

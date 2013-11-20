@@ -30,7 +30,7 @@ CXX_WIN = g++.exe
 CXXFLAGS = 
 # optimized mode
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib
+  -L/usr/local/lib -DEPIQTL
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY \
 #  -Wno-write-strings -L/usr/local/lib
@@ -39,7 +39,7 @@ CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 LIB_LAPACK=/usr/lib/atlas-base/atlas/liblapack.so
 LIB_IGRAPH = /usr/lib/libigraph.so
 
-OUTPUT = inbix
+OUTPUT = inbix_static
 
 # Some system specific flags
 ifeq ($(SYS),WIN)
@@ -166,10 +166,10 @@ $(OUTPUT) : $(OBJ)
 FORCE:
 
 clean:
-	rm -f *.o *~ inbix
+	rm -f *.o *~ $(OUTPUT)
 
 install:
-	cp inbix /usr/local/bin
+	cp $(OUTPUT) /usr/local/bin
 
 dist:
 	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*

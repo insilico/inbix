@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
+#include <fstream>
 #include "plink.h"
 #include "model.h"
 #include "linear.h"
@@ -337,8 +337,8 @@ bool EpistasisEQtl::Run() {
     string epiqtlFilename = par::output_file_name + "." + 
       thisTranscript + ".epiqtl.txt";
     PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
-    std::ofstream EPIQTL;
-    EPIQTL.open(epiqtlFilename.c_str(), ios::out);
+    ofstream EPIQTL_OUT;
+    EPIQTL_OUT.open(epiqtlFilename.c_str(), ios::out);
     if(par::epiqtl_interaction_full) {
       for(int kk=0; kk < nAllSnps; ++kk) {
         for(int ll=kk+1; ll < nAllSnps; ++ll) {
@@ -346,7 +346,7 @@ bool EpistasisEQtl::Run() {
           string snpAName = PP->locus[snpAIndex]->name;
           int snpBIndex = ll;
           string snpBName = PP->locus[snpBIndex]->name;
-          EPIQTL 
+          EPIQTL_OUT
             << snpAName << "\t" << snpBName << "\t"
             << thisTranscript << "\t"
             << resultsMatrixBetas[kk][ll] << "\t"
@@ -361,7 +361,7 @@ bool EpistasisEQtl::Run() {
           string snpAName = PP->locus[snpAIndex]->name;
           int snpBIndex = thisTranscriptSnpIndices[ll];
           string snpBName = PP->locus[snpBIndex]->name;
-          EPIQTL 
+          EPIQTL_OUT
             << snpAName << "\t" << snpBName << "\t"
             << thisTranscript << "\t"
             << resultsMatrixBetas[kk][ll] << "\t"
@@ -369,7 +369,7 @@ bool EpistasisEQtl::Run() {
         }
       }
     }
-    EPIQTL.close();
+    EPIQTL_OUT.close();
 
     // release dynamically allocated memory
     for(int a=0; a < nAllSnps; ++a) {

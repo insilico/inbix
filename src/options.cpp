@@ -120,14 +120,14 @@ bool   par::lfile_allele_count = false;
 bool   par::preserve_all_genotypes = false;
 bool   par::preserve_mendel_errors = false;
 bool   par::zero_cluster = false;
-string par::zero_cluster_filename = "plink.zero";
+string par::zero_cluster_filename = "inbix.zero";
 bool   par::oblig_missing = false;
-string par::oblig_missing_filename = "plink.zero";
-string par::oblig_clusters_filename = "plink.clst";
+string par::oblig_missing_filename = "inbix.zero";
+string par::oblig_clusters_filename = "inbix.clst";
 bool   par::loop_over = false;
 string par::loop_over_label = "";
 int    par::loop_counter = 0;
-string par::loop_over_filename = "plink.clst";
+string par::loop_over_filename = "inbix.clst";
 bool   par::list_by_allele = false;
 bool   par::list_twolocus = false;
 string par::twolocus_snp1 = "";
@@ -173,11 +173,11 @@ string par::update_allele_file = "dummy";
 
 bool par::compound_genotype_code = false;
 
-string par::tpedfile = "plink.tped";
-string par::tfamfile = "plink.tfam";
+string par::tpedfile = "inbix.tped";
+string par::tfamfile = "inbix.tfam";
 bool par::tfile_input = false;
 
-string par::lpedfile = "plink.lgen";
+string par::lpedfile = "inbix.lgen";
 bool par::lfile_input = false;
 
 bool par::ref_file = false;
@@ -189,16 +189,16 @@ bool par::gvar_to_standard = false;
 bool par::load_gvar = false;
 bool par::gvar_include_all_variants = false;
 bool par::gvar_verbose_association = false;
-string par::gmapfile = "plink.map";
-string par::gfamfile = "plink.fam";
-string par::gvarfile = "plink.gvar";
+string par::gmapfile = "inbix.map";
+string par::gfamfile = "inbix.fam";
+string par::gvarfile = "inbix.gvar";
 
 bool par::gvar_full_report = false;
 
 bool   par::flip_strand = false;
-string par::flip_file = "plink.flip";
+string par::flip_file = "inbix.flip";
 bool par::flip_subset = false;
-string par::flip_subset_file = "plink.file";
+string par::flip_subset_file = "inbix.file";
 
 bool par::compress_file = false;
 bool par::uncompress_file = false;
@@ -219,8 +219,11 @@ bool par::ped_skip_pheno = false;
 
 bool par::SNP_major = true;
 bool par::out_SNP_major = true;
-
+#ifndef EPIQTL
 string par::output_file_name = "inbix";
+#else
+string par::output_file_name = "epiqtl";
+#endif
 bool par::silent = false;
 bool par::gplink = false;
 bool par::cli = false;
@@ -375,10 +378,10 @@ string par::filter_value = "1";
 string par::number_list_string = "";
 bool   par::number_list_positive = true;
 
-string par::pheno_filename = "plink.phe";
-string par::covar_filename = "plink.cov";
-string par::clist_filename = "plink.cov";
-string par::filter_filename = "plink.cov";
+string par::pheno_filename = "inbix.phe";
+string par::covar_filename = "inbix.cov";
+string par::clist_filename = "inbix.cov";
+string par::filter_filename = "inbix.cov";
 
 string par::missing_genotype = "0";
 string par::missing_phenotype = "-9";
@@ -409,9 +412,9 @@ int par::mishap_window = 1;
 bool par::calcFst = false;
 
 bool par::score_risk = false;
-string par::score_risk_file = "plink.risk";
+string par::score_risk_file = "inbix.risk";
 bool par::score_risk_ranges = false;
-string par::score_risk_ranges_file = "plink.ranges";
+string par::score_risk_ranges_file = "inbix.ranges";
 int par::score_risk_ranges_min = 0;
 bool par::score_impute_expected = true;
 bool par::score_risk_on_qrange = false;
@@ -505,7 +508,7 @@ bool   par::gettag_listall = false;
 
 bool    par::clumpld = false;
 bool    par::clumpld_best = false;
-string  par::clumpld_results = "plink.assoc";
+string  par::clumpld_results = "inbix.assoc";
 string  par::clumpld_column = "P";
 bool    par::clumpld_verbose = false;
 bool    par::clumpld_indep = true;
@@ -621,8 +624,8 @@ bool par::genome_only_check_rels = false;
 bool par::genome_output_minimal = false;
 bool par::genome_output_full = false;
 bool par::genome_2sets = false;
-string par::genome_setlist1 = "plink.set1";
-string par::genome_setlist2 = "plink.set2";
+string par::genome_setlist1 = "inbix.set1";
+string par::genome_setlist2 = "inbix.set2";
 bool par::genome_test = false;
 double par::genome_test_threshold = 0.01;
 int par::genome_test_min_snp = 20;
@@ -648,8 +651,8 @@ double par::fixed_prev = 0;
 
 bool par::sol_family = false;
 
-string par::tagfile = "plink.tag";
-string par::mapfile_impute = "plink.impute.map";
+string par::tagfile = "inbix.tag";
+string par::mapfile_impute = "inbix.impute.map";
 bool par::impute_tags = false;
 bool par::sliding_window = false;
 string par::sliding_window_size = "2";
@@ -733,7 +736,7 @@ bool par::qt_means = false;
 bool par::conditioning_snp_single = false;
 string par::conditioning_snp_name = "rs1234";
 bool par::conditioning_snps = false;
-string par::conditioning_snps_file = "plink.list";
+string par::conditioning_snps_file = "inbix.list";
 
 int par::xchr_model = 1;
 bool par::glm_sex_effect = false;
@@ -823,13 +826,13 @@ bool par::logscale = false;
 
 bool par::ibs_sharing_test = false;
 
-string par::keep_file = "plink.list";
-string par::remove_file = "plink.list";
+string par::keep_file = "inbix.list";
+string par::remove_file = "inbix.list";
 
 bool par::extract_set = false;
 bool par::exclude_set = false;
-string par::exclude_file = "plink.list";
-string par::extract_file = "plink.list";
+string par::exclude_file = "inbix.list";
+string par::extract_file = "inbix.list";
 bool par::snp_range_list = false;
 
 bool par::thin_snps = false;
@@ -847,7 +850,7 @@ double par::geno_qual_max = 1;
 
 
 bool par::make_set = false;
-string par::make_set_file = "plink.set";
+string par::make_set_file = "inbix.set";
 int par::make_set_border = 0;
 bool par::make_set_collapse = false;
 bool par::make_set_ignore_group = false;
@@ -896,12 +899,12 @@ bool   par::set_r2_phase          = false;
 double par::set_chisq_threshold   = 3.84146;
 bool   par::set_r2_write          = false;
 bool   par::set_r2_read           = false;
-string par::set_r2_read_file      = "plink.ldset";
+string par::set_r2_read_file      = "inbix.ldset";
 
 string par::subsetfile            = "dummy.file";
 bool   par::use_subset            = false;
 
-string par::setfile               = "plink.set";
+string par::setfile               = "inbix.set";
 bool par::set_score               = false;
 double par::set_score_p           = 1;
 bool par::set_table               = false;
@@ -1020,7 +1023,7 @@ bool par::cluster_ibm_constraint = false;
 double par::cluster_ibm_constraint_value = 0;
 bool par::cluster_missing = false;
 bool par::cluster_selcon = false;
-string par::cluster_selcon_file = "plink.clst";
+string par::cluster_selcon_file = "inbix.clst";
 int par::max_cluster_N = -1;
 double par:: merge_p = 0;
 int par::ibstest_gap = 500000; // 500 kb
@@ -1035,14 +1038,14 @@ bool par::outlier_detection = false;
 bool par::bmatch = false;
 bool par::bmatch_usertype = false;
 bool par::qmatch = false;
-string par::bmatch_filename = "plink.bmatch";
-string par::qmatch_filename = "plink.qmatch";
-string par::bmatch_direction_filename = "plink.bm";
-string par::qmatch_threshold_filename = "plink.qt";
+string par::bmatch_filename = "inbix.bmatch";
+string par::qmatch_filename = "inbix.qmatch";
+string par::bmatch_direction_filename = "inbix.bm";
+string par::qmatch_threshold_filename = "inbix.qt";
 
 bool par::include_cluster = false;
 bool par::include_cluster_from_file = false;
-string par::include_cluster_filename = "plink.clst";
+string par::include_cluster_filename = "inbix.clst";
 int par::analyse_cluster = 0;
 
 bool par::af_write = false;
@@ -1050,15 +1053,15 @@ bool par::af_count = false;
 bool par::af_read = false;
 
 bool par::ibd_read = false;
-string par::ibd_file = "plink.genome";
+string par::ibd_file = "inbix.genome";
 bool par::ibd_read_minimal = false;
 bool par::ibd_read_list = false;
-string par::ibd_file_list = "plink.genome.list";
+string par::ibd_file_list = "inbix.genome.list";
 
 bool par::inc_write = false;
 bool par::inc_read = false;
-string par::inc_file = "plink.inc";
-string par::af_file = "plink.frq";
+string par::inc_file = "inbix.inc";
+string par::af_file = "inbix.frq";
 
 bool par::locked = false;
 
@@ -1077,8 +1080,8 @@ bool par::keep_indiv = false;
 
 bool par::extract_before_exclude = true;
 bool par::remove_before_keep = true;
-string par::remove_indiv_list = "plink.list";
-string par::keep_indiv_list = "plink.list";
+string par::remove_indiv_list = "inbix.list";
+string par::keep_indiv_list = "inbix.list";
 
 int par::pp_maxsnp = 6;
 int par::pp_maxfid = 6;
@@ -1094,7 +1097,7 @@ bool par::cnv_writelist = false;
 bool par::cnv_list = false;
 bool par::display_cnv_track = false;
 int par::cnv_col = 0;
-string par::cnv_listname = "plink.cnv";
+string par::cnv_listname = "inbix.cnv";
 int par::cnv_min_kb = -1;
 double par::cnv_min_score = -1;
 int par::cnv_min_sites = -1;
@@ -1106,9 +1109,9 @@ bool par::cnv_dup_only = false;
 int par::cnv_type = -1;
 bool par::cnv_intersect = false;
 bool par::cnv_exclude = false;
-string par::cnv_intersect_file = "plink.file";
+string par::cnv_intersect_file = "inbix.file";
 bool par::cnv_intersect_subset = false;
-string par::cnv_intersect_subset_file = "plink.file";
+string par::cnv_intersect_subset_file = "inbix.file";
 double par::cnv_overlap = -1;
 bool par::cnv_count = false;
 bool par::cnv_defined_overlap = false;
