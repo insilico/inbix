@@ -166,7 +166,7 @@ void CentralityRanker::WriteToFile(string outFile, int topN)
   if((topN > 0) && (topN <= numToWrite)) {
     numToWrite = topN;
   }
-  PP->printLOG("Writing " + int2str(numToWrite) + " top tanks\n");
+  PP->printLOG("Writing " + int2str(numToWrite) + " top ranks\n");
 	for(int i = 0; i < numToWrite; i++) {
 			index = r_indices[i];
 			outputFileHandle << variableNames[index] << "\t"

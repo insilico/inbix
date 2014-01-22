@@ -214,19 +214,21 @@ int main(int argc, char* argv[]) {
     if(par::do_regain_post) {
       matrixFile = par::regainFile;
       fileType = REGAIN_FILE;
-      P.printLOG("reGAIN network\n");
+      P.printLOG("Reading correlation from reGAIN format\n");
     }
     if(par::sifNetwork) {
       matrixFile = par::sifFile;
       fileType = SIF_FILE;
-      P.printLOG("SIF network\n");
+      P.printLOG("Reading correlation SIF format\n");
     }
     if(fileType == INVALID_FILE) {
       error("Error running network deconvolution: no valid network file type");
     }
+    P.printLOG("Creating network\n");
     InteractionNetwork* network = 
       new InteractionNetwork(matrixFile, fileType, isUpperTriangular, &P);
     mat nd;
+    P.printLOG("Running deconvolve\n");
     if(!network->Deconvolve(nd, par::deconvolutionAlpha, 
       par::deconvolutionBeta, par::deconvolutionControl)) {
       error("Deconvolution failed");

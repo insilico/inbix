@@ -78,7 +78,7 @@ private:
 	bool ReadBrainCorr1DFile(std::string corr1dFilename);
 	bool ReadSifFile(std::string sifFilename);
 
-  bool PrepareConnectivytMatrix();
+  bool PrepareConnectivityMatrix();
   
 	// matrix writers
 	bool WriteDelimitedFile(std::string outFilename, std::string fileType);

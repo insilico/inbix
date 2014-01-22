@@ -99,7 +99,7 @@ InteractionNetwork::InteractionNetwork(double** variablesMatrix,
 InteractionNetwork::~InteractionNetwork()
 {}
 
-bool InteractionNetwork::PrepareConnectivytMatrix() {
+bool InteractionNetwork::PrepareConnectivityMatrix() {
 
 	// keep original adjacency matrix
 	A = adjMatrix;
@@ -276,7 +276,9 @@ bool InteractionNetwork::Merge(
 			double beta_ij_2 = otherAdjacencyMatrix(i , j);
 			double probWgE1 = alpha * (1.0 - exp(-omega * beta_ij_1));
 			double probWgE2 = alpha * (1.0 - exp(-omega * beta_ij_2));
-			posteriorProb = probWgE1 * probWgE2 * priorProbEdges;
+      double p = probWgE1 * probWgE2 * priorProbEdges;
+			posteriorProb = p * (1 + log(1 / p));
+      
 //			cout
 //				<< "B_ij_1: " << beta_ij_1 << " "
 //				<< "B_ij_2: " << beta_ij_2 << " "
@@ -594,7 +596,7 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 pair<double, vector<vector<unsigned int> > >
 	InteractionNetwork::ModularityLeadingEigenvector() {
 
-	PrepareConnectivytMatrix();
+	PrepareConnectivityMatrix();
 
 	// real symmetric modularity matrix B
 	B.resize(n, n);
