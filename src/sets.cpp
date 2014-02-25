@@ -768,11 +768,11 @@ vector_t Set::profileTestScore()
       //////////////////////////////////////////////
       // Reset original missing status
 
-      vector<Individual*>::iterator i = PP->sample.begin();
-      while ( i != PP->sample.end() )
+      vector<Individual*>::iterator it = PP->sample.begin();
+      while ( it != PP->sample.end() )
 	{
-	  (*i)->missing = (*i)->flag;
-	  ++i;
+	  (*it)->missing = (*it)->flag;
+	  ++it;
 	}
 
       ////////////////////////////////////////////////

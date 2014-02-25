@@ -19,8 +19,9 @@ WITH_R_PLUGINS = 1
 WITH_WEBCHECK = 1
 FORCE_32BIT = 
 WITH_ZLIB = 1
-WITH_LAPACK =
-FORCE_DYNAMIC = $(INBIX_FORCE_DYNAMIC)
+WITH_LAPACK = 
+#FORCE_DYNAMIC = $(INBIX_FORCE_DYNAMIC)
+FORCE_DYNAMIC = 1
 
 # Put C++ compiler here; Windows has it's own specific version
 CXX_UNIX = g++
@@ -36,7 +37,8 @@ CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
   -L/usr/local/lib
 
 # Misc
-LIB_LAPACK = /usr/lib/atlas-base/atlas/liblapack.so
+LIB_LAPACK = /usr/lib/liblapack.so
+LIB_BLAS = /usr/lib/libblas.so
 LIB_IGRAPH = /usr/lib/libigraph.so
 
 OUTPUT = inbix
@@ -56,11 +58,13 @@ ifeq ($(SYS),UNIX)
  ifndef FORCE_DYNAMIC
   CXXFLAGS += -static
   LIB += /usr/local/lib/libarmadillo.a
-  LIB += /usr/lib/atlas-base/atlas/liblapack.a
-  LIB += /usr/lib/atlas-base/atlas/libblas.a
+  LIB += $(LIB_LAPACK)
+  LIB += /usr/lib/libblas/libblas.a
   LIB += /usr/lib/gcc/x86_64-linux-gnu/4.4/libgfortran.a
  else
   LIB += -larmadillo
+  LIB += -llapack
+  LIB += -lblas
  endif
 endif
 
