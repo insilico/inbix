@@ -533,13 +533,12 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
         ss << "Large p-value [" << mainEffectPval
           << "] on coefficient for variable [" << coefLabel << "]";
         warnings.push_back(ss.str());
-        mainEffectValue = 0;
       }
-      if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
+      if(std::isinf(mainEffectValue)) {
         mainEffectValue = 0;
         ++infCount;
       }
-      if(isnan(mainEffectValue)) {
+      if(std::isnan(mainEffectValue)) {
         mainEffectValue = 0;
         ++nanCount;
       }
@@ -554,11 +553,11 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
         warnings.push_back(ss.str());
         mainEffectValue = par::regainLargeCoefTvalue;
       }
-      if(isinf(mainEffectValue) == 1 || isinf(mainEffectValue) == -1) {
+      if(std::isinf(mainEffectValue)) {
         mainEffectValue = par::regainLargeCoefTvalue;
         ++infCount;
       }
-      if(isnan(mainEffectValue)) {
+      if(std::isnan(mainEffectValue)) {
         mainEffectValue = 0;
         ++nanCount;
       }
@@ -738,13 +737,12 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
             << "] on coefficient for interaction variables ["
             << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
-          interactionValue = 0;
         }
-        if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        if(std::isinf(interactionValue)) {
           interactionValue = 0;
           ++infCount;
         }
-        if(isnan(interactionValue)) {
+        if(std::isnan(interactionValue)) {
           interactionValue = 0;
           ++nanCount;
         }
@@ -764,7 +762,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
           // DEBUG TEST
           interactionValue = 0;
         }
-        if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        if(std::isinf(interactionValue)) {
           interactionValue = 0;
           ++infCount;
           stringstream ss;
@@ -772,7 +770,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
             << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
         }
-        if(isnan(interactionValue)) {
+        if(std::isnan(interactionValue)) {
           interactionValue = 0;
           ++nanCount;
           stringstream ss;
@@ -984,13 +982,12 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
             << "] on coefficient for interaction variables ["
             << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
-          interactionValue = 0;
         }
-        if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        if(std::isinf(interactionValue)) {
           interactionValue = 0;
           ++infCount;
         }
-        if(isnan(interactionValue)) {
+        if(std::isnan(interactionValue)) {
           interactionValue = 0;
           ++nanCount;
         }
@@ -1010,7 +1007,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
           // DEBUG TEST
           interactionValue = 0;
         }
-        if(isinf(interactionValue) == 1 || isinf(interactionValue) == -1) {
+        if(std::isinf(interactionValue)) {
           interactionValue = 0;
           ++infCount;
           stringstream ss;
@@ -1018,7 +1015,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
             << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
         }
-        if(isnan(interactionValue)) {
+        if(std::isnan(interactionValue)) {
           interactionValue = 0;
           ++nanCount;
           stringstream ss;

@@ -63,9 +63,9 @@ int main(int argc, char* argv[]) {
 
 	set_new_handler(NoMem);
 
-	PVERSION = "0.01"; // 4 chars
+	PVERSION = "0.02"; // 4 chars
 	PREL = " "; // space or p (full, or prelease) 
-	PDATE = "2013       "; // 11 chars
+	PDATE = "2014       "; // 11 chars
 
 	//////////////////
 	// The major class
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
 					"|----------------------------------------------------------|\n"
-					"|  (C) 2013 Bill White, GNU General Public License, v2     |\n"
+					"|  (C) 2014 Bill White, GNU General Public License, v2     |\n"
 					"@----------------------------------------------------------@\n"
 					"\n");
 #endif
@@ -892,7 +892,7 @@ int main(int argc, char* argv[]) {
 			rankedlist_t ranks;
 			RegressionRankResults results;
 			if(par::ranker_method == "regressions") {
-				P.printLOG("Using regression statistic values\n");
+				P.printLOG("Using regression standardized coefficient values\n");
 				rankByRegression(REGRESSION_RANK_STAT, ranks, results);
 			}
 			if(par::ranker_method == "regressionb") {
