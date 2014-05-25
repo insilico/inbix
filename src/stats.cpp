@@ -1648,7 +1648,7 @@ bool matrixWrite(matrix_t m, string mFilename,
 
   // write the covariance matrix to a file
   for(int i=0; i < m.size(); ++i) {
-    for(int j=0; j < m.size(); ++j) {
+    for(int j=0; j < m[i].size(); ++j) {
       if(j) {
         outFile << "\t" << m[i][j];
       }

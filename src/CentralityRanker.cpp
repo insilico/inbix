@@ -47,7 +47,7 @@ CentralityRanker::CentralityRanker(string gainFileParam, bool isUpperTriangular)
 }
 
 CentralityRanker::CentralityRanker(double** variablesMatrix, unsigned int dim,
-		vector<string>& variableNames)
+		vector<string>& varNames)
 {
 	// setup G matrix for  algorithm
 	G.resize(dim, dim);
@@ -57,9 +57,11 @@ CentralityRanker::CentralityRanker(double** variablesMatrix, unsigned int dim,
 			G(i, j) = G(j, i) = variablesMatrix[i][j];
 		}
 	}
+	variableNames.clear();
 	for(unsigned int i=0; i < dim; ++i) {
-		variableNames.push_back(variableNames[i]);
+		variableNames.push_back(varNames[i]);
 	}
+
 	// set default values
 	gainFile = "";
 	gamma = 0.0;
@@ -148,6 +150,18 @@ bool CentralityRanker::SetGammaVector(vector_t& gammaVectorValues)
 		gammaVector.push_back(*it);
 	}
 	return true;
+}
+
+bool CentralityRanker::Permute(int numPerms) 
+{
+	if(numPerms < 1) {
+		cerr << "CentralityRanker::Permute invalid number of permutations: "
+				<< numPerms << endl;
+		return false;
+	}
+	for(int i = 0; i < numPerms; i++) {
+
+	}	
 }
 
 void CentralityRanker::WriteToFile(string outFile, int topN)
@@ -502,4 +516,12 @@ bool CentralityRanker::PowerMethodSolver()
 	}
 
 	return converged;
+}
+
+vector_t CentralityRanker::GetResultsByVariable() 
+{
+	vector_t grr(r.size());
+	copy(r.begin(), r.end(), grr.begin());
+
+	return grr;
 }

@@ -316,8 +316,12 @@ string par::ranker_method = "";
 int par::ranker_top_n = -1;
 string par::ranker_save_data_file = "";
 string par::ranker_input_file = "";
-double par::ranker_centrality_gamma = -1;
-
+double par::ranker_centrality_gamma = 0.85;
+// added for SNPrank permutation testing - bcw - 5/23/14
+bool par::do_ranker_permutation = false;
+int par::rankerPermNum = 100;
+string par::rankerPermMethod = "regain";
+double par::rankerPermThreshold = 0.05;
 // added for data set support - bcw - 5/21/13
 bool par::exportArff = false;
 bool par::exportDelimited = false;

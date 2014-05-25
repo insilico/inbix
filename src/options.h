@@ -413,6 +413,11 @@ public:
   static string ranker_save_data_file;
   static string ranker_input_file;
   static double ranker_centrality_gamma;
+  // added for SNPrank permutation testing - bcw - 5/23/14
+  static bool do_ranker_permutation;
+  static string rankerPermMethod;
+  static int rankerPermNum;
+  static double rankerPermThreshold;
 
   // added for data set support - bcw - 5/21/13
   static bool exportArff;

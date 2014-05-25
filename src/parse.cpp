@@ -2970,6 +2970,20 @@ void setOptions(CArgs & a) {
   if(a.find("--rank-centrality-gamma")) {
     par::ranker_centrality_gamma = a.value_double("--rank-centrality-gamma");
   }
+  
+  // added for SNPrank permutation testing - bcw - 5/23/14
+  if(a.find("--permute-gain-method")) {
+    par::do_ranker_permutation = true;
+    par::rankerPermMethod = a.value("--permute-gain-method");
+  }
+  if(a.find("--permute-gain-num")) {
+    par::do_ranker_permutation = true;
+    par::rankerPermNum = a.value_int("--permute-gain-num");
+  }
+  if(a.find("--permute-gain-threshold")) {
+    par::do_ranker_permutation = true;
+    par::rankerPermThreshold = a.value_double("--permute-gain-threshold");
+  }
 
   // added for data set support - bcw - 5/21/13
   if(a.find("--export-arff")) {
@@ -4222,6 +4236,10 @@ void setOptions(CArgs & a) {
             << "      --rank-save-data {file name} Save ranker results to new data file\n"
             << "      --rank-file {ranker file} Load an existing ranker file\n"
             << "      --rank-centrality-gamma {gamma} Use a specified gamma\n"
+            << "\n"
+            << "      --permute-gain-method {method} Permute GAIN method (regain|dcgain)"
+            << "      --permute-gain-num {numPerms} Permute GAIN+SNPrank numPerms times"
+            << "      --permute-gain-threshold {numPerms} Permute GAIN+SNPrank significance threshold"
             << "\n"
             << "      --export-arff             Write data to Weka ARFF format\n"
             << "      --export-delimited        Write data to delimited format\n"

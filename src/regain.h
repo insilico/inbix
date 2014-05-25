@@ -91,6 +91,7 @@ public:
   void setFailureValue(double fValue);
   bool updateStats();
   bool logMatrixStats();
+  double** getRawMatrix() { return regainMatrix; }
 private:
   // output options - bcw - 4/30/13
   bool useOutputThreshold;

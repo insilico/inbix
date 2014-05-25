@@ -1,6 +1,6 @@
 // inbix.cpp - Insilico Bioinformatics - Bill White
 //
-// (c) 2013 McKinney Insilico Bioinformatics Lab
+// (c) 2014 McKinney Insilico Bioinformatics Lab
 // The University of Tulsa
 //
 // Code borrowed heavily from the PLINK project
@@ -870,7 +870,7 @@ int main(int argc, char* argv[]) {
 			}
 			if(par::ranker_method == "centrality" ||
 							par::ranker_method == "centrality_gauss") {
-				P.printLOG("Centrality using average gamma\n");
+				P.printLOG("Centrality using adaptive gamma\n");
 				if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
 					error("Centrality ranking failed");
 				}
@@ -945,6 +945,107 @@ int main(int argc, char* argv[]) {
 			P.printLOG("Ranking Random\n");
 			P.printLOG("***** Random ranking not implemented *****\n");
 		}
+		shutdown();
+	}
+
+	// --------------------------------------------------------------------------
+	// permuted GAIN - bcw - 5/23/14
+	if(par::do_ranker_permutation) {
+		cerr << "TESTING with reGAIN!" << endl;
+		
+		P.printLOG("Performing GAIN permutation analysis\n");
+		P.SNP2Ind();
+
+		int M = P.nlistname.size();
+		int N = P.sample.size();
+
+		matrix_t permResults;
+		int perm = 0;
+		for(; perm < par::rankerPermNum; ++perm)	{
+
+			// permute phenotype labels - careful!
+			vector<int> phenos(N);
+			permute(phenos); // this might not do what you expect
+			vector<int> newPhenos;
+			for(int i=0; i < N; i++) {
+				newPhenos.push_back(P.sample[phenos[i]]->phenotype);
+			}
+			for(int i=0; i < N; i++) {
+				if(newPhenos[i] == 1) {
+					P.sample[i]->pperson->aff = false;
+				} else {
+					P.sample[i]->pperson->aff = true;
+				}
+			}
+
+			// run GAIN method rankerNumPerm times
+			Regain* regain = new Regain(
+							par::regainCompress,
+							par::regainSifThreshold,
+							par::have_numerics,
+							par::regainComponents,
+							par::regainFdrPrune,
+							true);
+			// reGAIN transform options
+			if(par::regainMatrixTransform == "none") {
+				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+			} else {
+				if(par::regainMatrixTransform == "threshold") {
+					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+				} else {
+					if(par::regainMatrixTransform == "abs") {
+						regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+					} else {
+						error("reGAIN output transform allowed options: {none, threshold, abs}");
+					}
+				}
+			}
+			regain->performPureInteraction(false);
+			regain->run();
+
+			// run snprank
+			CentralityRanker* cr = new CentralityRanker(regain->getRawMatrix(), M, P.nlistname);
+			cr->SetGlobalGamma(0.85);
+			if(!cr->CalculateCentrality(GAUSS_ELIMINATION)) {
+				error("SNPrank failed");
+			}
+			
+			// save scores to results matrix
+			permResults.push_back(cr->GetResultsByVariable());
+
+			delete cr;
+			delete regain;
+		}
+		// display(permResults);
+
+		// calculate variable thresholds
+		int thresholdIndex = (int) floor(perm * (1.0 - par::rankerPermThreshold));
+	 	P.printLOG("\nUsing permutation threshold [" + dbl2str(par::rankerPermThreshold) + "]\n");
+		// cout 
+		// 	<< "M: " << M
+		// 	<< " N: " << N 
+		// 	<< " perm: " << perm
+		// 	<< " threshold index: " << thresholdIndex 
+		// 	<< endl;
+	 	string saveFilename = par::output_file_name + "_thresholds.txt";
+	 	P.printLOG("Writing permutation thresholds to [" + saveFilename + "]\n");
+		ofstream outputFileHandle(saveFilename.c_str());
+		for(int col=0; col < M; ++col) {
+			vector_t colScores;
+			for(int row=0; row < perm; ++row) {
+				// get all of this variable's SNPrank scores
+				colScores.push_back(permResults[row][col]);
+			}
+			// sort the scores
+			sort(colScores.begin(), colScores.end());
+			// get the threshold value
+			outputFileHandle << P.nlistname[col] << "\t" << colScores[thresholdIndex] << endl;
+		}
+		outputFileHandle.close();
+
+	 	saveFilename = par::output_file_name + ".perm";
+		matrixWrite(permResults, saveFilename, P.nlistname);
+
 		shutdown();
 	}
 

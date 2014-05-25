@@ -28,9 +28,11 @@ public:
 	bool CalculateCentrality(SolverMethod method);
 	void SetGlobalGamma(double gammaParam);
 	bool SetGammaVector(vector_t& gammaVectorValues);
+	bool Permute(int numPerms);
 	// write results
 	void WriteToFile(std::string outfile, int topN = -1);
 	void WriteToConsole(int topN = -1);
+	vector_t GetResultsByVariable();
 private:
 	// reads the GAIN input file
 	bool ReadGainFile(std::string gainFilename, bool isUpperTriangular=false);
