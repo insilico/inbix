@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <cassert>
 
 #include <armadillo>
 
@@ -951,75 +952,146 @@ int main(int argc, char* argv[]) {
 	// --------------------------------------------------------------------------
 	// permuted GAIN - bcw - 5/23/14
 	if(par::do_ranker_permutation) {
-		cerr << "TESTING with reGAIN!" << endl;
-		
+	
 		P.printLOG("Performing GAIN permutation analysis\n");
 		P.SNP2Ind();
 
 		int M = P.nlistname.size();
 		int N = P.sample.size();
-
-		matrix_t permResults;
-		int perm = 0;
-		for(; perm < par::rankerPermNum; ++perm)	{
+		mat permResults;
+		permResults.resize(par::rankerPermNum, M);
+		int numPerms = par::rankerPermNum;
+		for(int perm = 0; perm < numPerms; ++perm)	{
 
 			// permute phenotype labels - careful!
-			vector<int> phenos(N);
-			permute(phenos); // this might not do what you expect
+			int n1 = 0, n2 = 0;
+			vector<int> pIdx(N);
+			permute(pIdx); // this might not do what you expect
 			vector<int> newPhenos;
 			for(int i=0; i < N; i++) {
-				newPhenos.push_back(P.sample[phenos[i]]->phenotype);
+				newPhenos.push_back(P.sample[pIdx[i]]->phenotype);
 			}
 			for(int i=0; i < N; i++) {
 				if(newPhenos[i] == 1) {
 					P.sample[i]->pperson->aff = false;
+					P.sample[i]->aff = false;
+					P.sample[i]->phenotype = 1;
+					++n1;
 				} else {
 					P.sample[i]->pperson->aff = true;
+					P.sample[i]->aff = true;
+					P.sample[i]->phenotype = 2;
+					++n2;
 				}
 			}
 
-			// run GAIN method rankerNumPerm times
-			Regain* regain = new Regain(
-							par::regainCompress,
-							par::regainSifThreshold,
-							par::have_numerics,
-							par::regainComponents,
-							par::regainFdrPrune,
-							true);
-			// reGAIN transform options
-			if(par::regainMatrixTransform == "none") {
-				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-			} else {
-				if(par::regainMatrixTransform == "threshold") {
-					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+			CentralityRanker* cr = 0;
+			if(par::rankerPermMethod == "regain") {
+				// run reGAIN 
+				Regain* regain = new Regain(
+								par::regainCompress,
+								par::regainSifThreshold,
+								par::have_numerics,
+								par::regainComponents,
+								par::regainFdrPrune,
+								true);
+				// reGAIN transform options
+				if(par::regainMatrixTransform == "none") {
+					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
 				} else {
-					if(par::regainMatrixTransform == "abs") {
-						regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+					if(par::regainMatrixTransform == "threshold") {
+						regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
 					} else {
-						error("reGAIN output transform allowed options: {none, threshold, abs}");
+						if(par::regainMatrixTransform == "abs") {
+							regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+						} else {
+							error("reGAIN output transform allowed options: {none, threshold, abs}");
+						}
 					}
 				}
+				regain->performPureInteraction(false);
+				regain->run();
+				// SNPrank
+				cr = new CentralityRanker(regain->getRawMatrix(), M, P.nlistname);
+
+				delete regain;
 			}
-			regain->performPureInteraction(false);
-			regain->run();
+			
+			if(par::rankerPermMethod == "dcgain") {
+				mat dcgain(M, M);
+		    // t-test for diagonal
+		    double df = N - 2;
+		    for(int i=0; i < M; ++i) {
+		      double t;
+		      tTest(i, t);
+		      dcgain(i, i) = t;
+		    }
+
+		    // z-test for off-diagonal elements
+		    mat X;
+		    mat Y;
+		    if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
+		      error("Cannot read numeric data into case-control matrices");
+		    }
+
+		    // compute covariances/correlations
+		    mat covMatrixX;
+		    mat corMatrixX;
+		    if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
+		      error("Could not compute coexpression matrix for cases");
+		    }
+		    mat covMatrixY;
+		    mat corMatrixY;
+		    if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
+		      error("Could not compute coexpression matrix for controls");
+		    }
+
+		    // algorithm from R script z_test.R
+		    for(int i=0; i < M; ++i) {
+		      for(int j=0; j < M; ++j) {
+		        if(j <= i) {
+		          continue;
+		        }
+		        double r_ij_1 = corMatrixX(i, j);
+		        double r_ij_2 = corMatrixY(i, j);
+		        double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
+		        double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
+		        double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1 / ((double) n1 - 3) + 1 / ((double) n2 - 3)));
+		        dcgain(i, j) = Z_ij;
+		        dcgain(j, i) = Z_ij;
+		      }
+		    }
+
+		    if(par::do_dcgain_abs) {
+		      for(int i=0; i < dcgain.n_rows; ++i) {
+		        for(int j=0; j < dcgain.n_cols; ++j) {
+		          dcgain(i, j) = abs(dcgain(i, j));
+		        }
+		      }
+		    }
+
+				cr = new CentralityRanker(dcgain, P.nlistname);
+			}			
 
 			// run snprank
-			CentralityRanker* cr = new CentralityRanker(regain->getRawMatrix(), M, P.nlistname);
+			assert(cr);
 			cr->SetGlobalGamma(0.85);
 			if(!cr->CalculateCentrality(GAUSS_ELIMINATION)) {
 				error("SNPrank failed");
 			}
 			
-			// save scores to results matrix
-			permResults.push_back(cr->GetResultsByVariable());
+			// save scores to dcgain matrix
+			vec snprankResults = cr->GetResultsByVariable();
+			//cout << snprankResults << endl;
+			permResults.row(perm) = snprankResults.t();
 
 			delete cr;
-			delete regain;
+			cr = 0;
 		}
 		// display(permResults);
 
 		// calculate variable thresholds
-		int thresholdIndex = (int) floor(perm * (1.0 - par::rankerPermThreshold));
+		int thresholdIndex = (int) floor(numPerms * (1.0 - par::rankerPermThreshold));
 	 	P.printLOG("\nUsing permutation threshold [" + dbl2str(par::rankerPermThreshold) + "]\n");
 		// cout 
 		// 	<< "M: " << M
@@ -1031,20 +1103,16 @@ int main(int argc, char* argv[]) {
 	 	P.printLOG("Writing permutation thresholds to [" + saveFilename + "]\n");
 		ofstream outputFileHandle(saveFilename.c_str());
 		for(int col=0; col < M; ++col) {
-			vector_t colScores;
-			for(int row=0; row < perm; ++row) {
-				// get all of this variable's SNPrank scores
-				colScores.push_back(permResults[row][col]);
-			}
+			colvec colScores = permResults.col(col);
 			// sort the scores
 			sort(colScores.begin(), colScores.end());
 			// get the threshold value
-			outputFileHandle << P.nlistname[col] << "\t" << colScores[thresholdIndex] << endl;
+			outputFileHandle << P.nlistname[col] << "\t" << colScores(thresholdIndex) << endl;
 		}
 		outputFileHandle.close();
 
 	 	saveFilename = par::output_file_name + ".perm";
-		matrixWrite(permResults, saveFilename, P.nlistname);
+		armaWriteMatrix(permResults, saveFilename, P.nlistname);
 
 		shutdown();
 	}

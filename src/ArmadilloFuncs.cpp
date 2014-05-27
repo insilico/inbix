@@ -229,6 +229,6 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 			++uIdx;
 		}
 	}
-	
+
 	return true;
 }

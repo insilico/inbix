@@ -69,7 +69,7 @@ CentralityRanker::CentralityRanker(double** variablesMatrix, unsigned int dim,
   Gdiag.resize(n, n);
 }
 
-CentralityRanker::CentralityRanker(mat& A, vector<string>& variableNames)
+CentralityRanker::CentralityRanker(mat& A, vector<string> varNames)
 {
 	unsigned int dim = A.n_cols;
 	// setup G matrix for SNPrank algorithm
@@ -81,7 +81,7 @@ CentralityRanker::CentralityRanker(mat& A, vector<string>& variableNames)
 		}
 	}
 	for(unsigned int i=0; i < dim; ++i) {
-		variableNames.push_back(variableNames[i]);
+		variableNames.push_back(varNames[i]);
 	}
 	// set default values
 	gainFile = "";
@@ -516,12 +516,4 @@ bool CentralityRanker::PowerMethodSolver()
 	}
 
 	return converged;
-}
-
-vector_t CentralityRanker::GetResultsByVariable() 
-{
-	vector_t grr(r.size());
-	copy(r.begin(), r.end(), grr.begin());
-
-	return grr;
 }

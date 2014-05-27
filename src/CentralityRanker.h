@@ -22,7 +22,7 @@ public:
 	// matrix constructor for calling as a library method
 	CentralityRanker(double** variablesMatrix, unsigned int dim,
 			std::vector<std::string>& variableNames);
-	CentralityRanker(arma::mat& A, std::vector<std::string>& variableNames);
+	CentralityRanker(arma::mat& A, std::vector<std::string> varNames);
 	virtual ~CentralityRanker();
 
 	bool CalculateCentrality(SolverMethod method);
@@ -32,7 +32,7 @@ public:
 	// write results
 	void WriteToFile(std::string outfile, int topN = -1);
 	void WriteToConsole(int topN = -1);
-	vector_t GetResultsByVariable();
+	arma::vec GetResultsByVariable() { return r; }
 private:
 	// reads the GAIN input file
 	bool ReadGainFile(std::string gainFilename, bool isUpperTriangular=false);
