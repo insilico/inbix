@@ -1091,7 +1091,7 @@ int main(int argc, char* argv[]) {
 		// display(permResults);
 
 		// calculate variable thresholds
-		int thresholdIndex = (int) floor(numPerms * (1.0 - par::rankerPermThreshold));
+		int thresholdIndex = (int) floor(numPerms * (1.0 - par::rankerPermThreshold)) - 1;
 	 	P.printLOG("\nUsing permutation threshold [" + dbl2str(par::rankerPermThreshold) + "]\n");
 		// cout 
 		// 	<< "M: " << M

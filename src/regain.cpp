@@ -760,7 +760,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
             interactionValue = par::regainLargeCoefTvalue;
           }
           // DEBUG TEST
-          interactionValue = 0;
+          // interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
           interactionValue = 0;
