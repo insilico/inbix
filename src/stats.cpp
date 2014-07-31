@@ -1876,8 +1876,8 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
 #pragma omp critical
 {
     ranks.push_back(make_pair(snpResult.first, PP->locus[i]->name));
-}
     delete mainEffectModel;
+}
   }
 
   // model numerics

@@ -256,6 +256,10 @@ string par::numeric_extract_file = "";
 bool par::do_differential_coexpression = false;
 bool par::do_dcgain_abs = false;
 
+// differential modularity analysis - bcw - 7/31/14
+bool par::do_differential_modularity = false;
+bool par::do_dmgain_abs = false;
+
 // data set transforms prior to analysis - bcw - 10/30/13
 bool par::do_numeric_standardize = false;
 

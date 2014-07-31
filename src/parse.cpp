@@ -2805,6 +2805,14 @@ void setOptions(CArgs & a) {
     par::do_dcgain_abs = true;
   }
 
+  // differential modularity analysis - bcw - 7/31/14
+  if(a.find("--dmgain")) {
+    par::do_differential_modularity = true;
+  }
+  if(a.find("--dmgain-abs")) {
+    par::do_dmgain_abs = true;
+  }
+
   // Matlab gene*filter functionality - bcw - 10/17/13
   if(a.find("--numeric-low-value-filter")) {
     par::do_numeric_lowval_filter = true;
@@ -4215,6 +4223,9 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --dcgain                  Perform a differential coexpression analysis\n"
             << "      --dcgain-abs              Take absolute value of dcgain matrix\n"
+            << "\n"
+            << "      --dmgain                  Perform a differential modularity analysis\n"
+            << "      --dmgain-abs              Take absolute value of dmgain matrix\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"

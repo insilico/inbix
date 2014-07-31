@@ -348,11 +348,14 @@ public:
   
   // differential coexpression analysis - bcw - 10/30/13
   static bool do_differential_coexpression;
+  static bool do_dcgain_abs;
+  
+  // differential modularity analysis - bcw - 7/31/14
+  static bool do_differential_modularity;
+  static bool do_dmgain_abs;
   
   // data set transforms prior to analysis - bcw - 10/30/13
   static bool do_numeric_standardize;
-
-  static bool do_dcgain_abs;
   
   // mimic the Matlab genelowvalfilter and genelowvarfilter functions 
   // bcw - 10/17/13

@@ -1284,6 +1284,107 @@ int main(int argc, char* argv[]) {
   }
   
 	////////////////////////////////////////////
+	// dmGAIN analysis requested - bcw - 7/31/14
+	// from bam email modification of dcGAIN - 7/29/14
+	if(par::do_differential_modularity) {
+		P.printLOG("Performing dmGAIN analysis\n");
+    int numVars = P.nlistname.size();
+    mat results(numVars, numVars);
+    mat pvals(numVars, numVars);
+
+    // t-test for diagonal
+    int nAff = 0;
+    int nUnaff = 0;
+    for(int i=0; i < PP->sample.size(); i++) {
+      if(PP->sample[i]->aff) {
+        ++nAff;
+      }
+      else {
+        ++nUnaff;
+      }
+    }
+    double df = nAff + nUnaff - 2;
+		P.printLOG("Performing t-tests\n");
+    for(int i=0; i < numVars; ++i) {
+      double t;
+      tTest(i, t);
+      double p = pT(t, df);
+      results(i, i) = t;
+      if(par::do_regain_pvalue_threshold) {
+        if(p > par::regainPvalueThreshold) {
+          results(i, i) = 0;
+        }
+      }
+      pvals(i, i) = p;
+    }
+
+    // z-test for off-diagonal elements
+    P.printLOG("Computing coexpression for CASES and CONTROLS.\n");
+    mat X;
+    mat Y;
+    if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
+      error("Cannot read numeric data into case-control matrices");
+    }
+    // compute covariances/correlations
+    mat covMatrixX;
+    mat corMatrixX;
+    if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
+      error("Could not compute coexpression matrix for cases");
+    }
+    mat covMatrixY;
+    mat corMatrixY;
+    if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
+      error("Could not compute coexpression matrix for controls");
+    }
+
+    // algorithm from R script z_test.R, modified by bam email 7/29/14
+    colvec k_1 = sum(corMatrixX, 1);
+		double two_m_1 = sum(k_1);
+		colvec k_2 = sum(corMatrixY, 1);
+		double two_m_2 = sum(k_2);
+
+		P.printLOG("Performing Z-tests for interactions\n");
+    double n1 = nAff;
+    double n2 = nUnaff;
+    for(int i=0; i < numVars; ++i) {
+      for(int j=0; j < numVars; ++j) {
+        if(j <= i) {
+          continue;
+        }
+        double r_ij_1 = corMatrixX(i, j);
+        double r_ij_2 = corMatrixY(i, j);
+        double z_ij_1 = corMatrixX(i, j) - k_1(i) * k_1(j) / two_m_1;
+        double z_ij_2 = corMatrixY(i, j) - k_2(i) * k_2(j) / two_m_2;
+        double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
+        double p = 2 * normdist(-abs(Z_ij));
+        results(i, j) = Z_ij;
+        results(j, i) = Z_ij;
+        if(par::do_regain_pvalue_threshold) {
+          if(p > par::regainPvalueThreshold) {
+            results(i, j) = 0;
+            results(j, i) = 0;
+          }
+        }
+        pvals(i, j) = p;
+        pvals(j, i) = p;
+      }
+    }
+    // write results
+    if(par::do_dmgain_abs) {
+      for(int i=0; i < results.n_rows; ++i) {
+        for(int j=0; j < results.n_cols; ++j) {
+          results(i, j) = abs(results(i, j));
+        }
+      }
+    }
+    string dmgainFilename = par::output_file_name + ".dmgain";
+    armaWriteMatrix(results, dmgainFilename, P.nlistname);
+    string dmgainPvalsFilename = par::output_file_name + ".pvals.dmgain";
+    armaWriteMatrix(pvals, dmgainPvalsFilename, P.nlistname);
+    shutdown();
+  }
+
+	////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {
 		P.printLOG("Performing reGAIN analysis\n");
