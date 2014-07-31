@@ -2195,3 +2195,37 @@ bool tTest(int varIndex, double& t) {
   return true;
 }
 
+// z-test of two groups - bcw - 7/31/14
+bool zTest(int varIndex, double& z) {
+  // get the group data values into vectors
+  vector_t g1_data;
+  vector_t g2_data;
+  getNumericCaseControl(varIndex, g1_data, g2_data);
+  if(g1_data.size() == 0) {
+    cerr << "Group 1 size = 0 in zTest" << endl;
+    return false;
+  }
+  double g1_n = (double) g1_data.size();
+  if(g2_data.size() == 0) {
+    cerr << "Group 2 size = 0 in zTest" << endl;
+    return false;
+  }
+  double g2_n = (double) g2_data.size();
+
+  // gets summary information for each group (case - control)
+  vector_t g1_summary;
+  vectorSummary(g1_data, g1_summary);
+  double g1_mean = g1_summary[0];
+  double g1_var = g1_summary[1];
+  double z_i_1 = 0.5 * log((abs((1 + g1_mean) / (1 - g1_mean))));
+
+  vector_t g2_summary;
+  vectorSummary(g2_data, g2_summary);
+  double g2_mean = g2_summary[0];
+  double g2_var = g2_summary[1];
+  double z_i_2 = 0.5 * log((abs((1 + g2_mean) / (1 - g2_mean))));
+
+  z = abs(z_i_1 - z_i_2) / sqrt((1/(g1_n - 3) + 1 / (g2_n - 3)));
+
+  return true;
+}

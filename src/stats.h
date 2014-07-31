@@ -98,6 +98,9 @@ bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls);
 // t-test variable index case/control - bcw - 10/30/13
 bool tTest(int varIndex, double& t);
 
+// z-test variable index case/control - bcw - 7/31/14
+bool zTest(int varIndex, double& z);
+
 // ----------------------------------------------------------------------------
 
 class Eigen {
