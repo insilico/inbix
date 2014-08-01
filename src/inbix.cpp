@@ -1208,12 +1208,16 @@ int main(int argc, char* argv[]) {
       }
     }
     double df = nAff + nUnaff - 2;
-		P.printLOG("Performing t-tests\n");
+		P.printLOG("Performing z-tests\n");
     for(int i=0; i < numVars; ++i) {
-      double t;
-      tTest(i, t);
-      double p = pT(t, df);
-      results(i, i) = t;
+      // double t;
+      // tTest(i, t);
+      // double p = pT(t, df);
+      // results(i, i) = t;
+      double z;
+      zTest(i, z);
+      double p = 1.0;
+      results(i, i) = z;
       if(par::do_regain_pvalue_threshold) {
         if(p > par::regainPvalueThreshold) {
           results(i, i) = 0;
