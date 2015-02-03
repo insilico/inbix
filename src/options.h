@@ -403,6 +403,7 @@ public:
   static bool modPowerTransform;
   static double modPowerTransformExponent;
   static bool modFisherTransform;
+  static double modFisherTransformCutoff;
   static string sifFile;
   static bool sifNetwork;
   static bool sifToGain;

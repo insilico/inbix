@@ -122,10 +122,9 @@ bool InteractionNetwork::PrepareConnectivityMatrix() {
 		}
 	}
 
-	inbixEnv->printLOG("--- Matrix prepared for modularity\n"); 
-  inbixEnv->printLOG("Minimum: " + dbl2str(A.min()) + "\n");
-  inbixEnv->printLOG("Maximum: " + dbl2str(A.max()) + "\n");
-	
+	inbixEnv->printLOG("--- Connectivity matrix finalized\n");
+	this->PrintSummary();
+
 	k = sum(A, 0);
 	m = 0.5 * sum(k);
 
@@ -327,8 +326,12 @@ bool InteractionNetwork::ApplyFisherTransform() {
 	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
 		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
 			double r = adjMatrix(i, j);
-			if(r == 1) { r = 0.999999; }
-			if(r == -1) { r = -0.999999; }
+			if(r > par::modFisherTransformCutoff) { 
+				r = par::modFisherTransformCutoff; 
+			}
+			if(r == -par::modFisherTransformCutoff) { 
+				r = -par::modFisherTransformCutoff; 
+			}
 			adjMatrix(i, j) = log((1 + r) / (1 - r));
 		}
 	}
