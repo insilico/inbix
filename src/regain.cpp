@@ -533,6 +533,7 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
         ss << "Large p-value [" << mainEffectPval
           << "] on coefficient for variable [" << coefLabel << "]";
         warnings.push_back(ss.str());
+        mainEffectValue = 0;
       }
       if(std::isinf(mainEffectValue)) {
         mainEffectValue = 0;
@@ -737,6 +738,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
             << "] on coefficient for interaction variables ["
             << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
+          interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
           interactionValue = 0;
@@ -982,6 +984,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
             << "] on coefficient for interaction variables ["
             << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
+          interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
           interactionValue = 0;
