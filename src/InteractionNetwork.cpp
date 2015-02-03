@@ -109,8 +109,10 @@ bool InteractionNetwork::PrepareConnectivityMatrix() {
 	A.diag() = zeros<vec>(n);
 	for(unsigned int i=0; i < n; ++i) {
 		for(unsigned int j=0; j < n; ++j) {
-			if(A(i, j) <= connectivityThreshold) {
-				A(i, j) = 0.0;
+			if(useConnectivityThreshold) {
+				if(A(i, j) <= connectivityThreshold) {
+					A(i, j) = 0.0;
+				}
 			}
 			else {
         if(useBinaryThreshold) {
@@ -133,7 +135,14 @@ bool InteractionNetwork::PrepareConnectivityMatrix() {
   return true;
 }
 
+bool InteractionNetwork::SetConnectivityThresholding(bool binaryFlag) {
+  useConnectivityThreshold = binaryFlag;
+  
+  return true;
+}
+
 bool InteractionNetwork::SetConnectivityThreshold(double threshold) {
+	useConnectivityThreshold = true;
   connectivityThreshold = threshold;
   return true;
 }
@@ -318,6 +327,8 @@ bool InteractionNetwork::ApplyFisherTransform() {
 	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
 		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
 			double r = adjMatrix(i, j);
+			if(r == 1) { r = 0.999999; }
+			if(r == -1) { r = -0.999999; }
 			adjMatrix(i, j) = log((1 + r) / (1 - r));
 		}
 	}
