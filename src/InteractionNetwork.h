@@ -37,6 +37,7 @@ public:
 	virtual ~InteractionNetwork();
 
   // set edge threshold
+  bool SetConnectivityThresholding(bool connFlag);
   bool SetConnectivityThreshold(double threshold);
   bool SetBinaryThresholding(bool binaryFlag);
   
@@ -108,10 +109,11 @@ private:
 	// modularity matrix
 	arma::mat B;
 	
-  // edge threshold
+  // edge thresholds
+  bool useConnectivityThreshold;
   double connectivityThreshold;
   bool useBinaryThreshold;
-  
+
 	// communities/modules
 	double Q;
 	std::vector<std::vector<unsigned int> > modules;
