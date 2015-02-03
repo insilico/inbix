@@ -1163,6 +1163,7 @@ int main(int argc, char* argv[]) {
 		if(par::modEnableConnectivityThreshold) {
 			P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " +
 							dbl2str(par::modConnectivityThreshold) + "\n");
+			network->SetConnectivityThresholding(par::modEnableConnectivityThreshold);
 			network->SetConnectivityThreshold(par::modConnectivityThreshold);
 			if(par::modUseBinaryThreshold) {
 				P.printLOG("Using binary thresholding to 1 if > threshold\n");
