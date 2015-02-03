@@ -4147,7 +4147,7 @@ void setOptions(CArgs & a) {
             << "A few common options are listed here:\n"
             << "\n";
 
-    cout << "plink --file {fileroot}         Specify .ped and .map files \n"
+    cout << "inbix --file {fileroot}            Specify .ped and .map files \n"
             << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
             << "      --numeric-file {numeric file}  Specify numeric attribute file\n"
             << "\n"
