@@ -2134,7 +2134,9 @@ bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
 			++nAff;
 		}
 		else {
-			++nUnaff;
+ 			if(!PP->sample[i]->missing) {
+  			++nUnaff;
+  		}
 		}
 	}
 
@@ -2149,13 +2151,18 @@ bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
 			if(PP->sample[i]->aff) {
 				cases[aIdx] = PP->sample[i]->nlist[varIndex];
 			} else {
-				controls[uIdx] = PP->sample[i]->nlist[varIndex];
+			  // handle missing phenos - bcw - 2/5/15
+  			if(!PP->sample[i]->missing) {
+  				controls[uIdx] = PP->sample[i]->nlist[varIndex];
+  			}
 			}
 		if(PP->sample[i]->aff) {
 			++aIdx;
 		}
 		else {
-			++uIdx;
+			if(!PP->sample[i]->missing) {
+  			++uIdx;
+  		}
 		}
 	}
   

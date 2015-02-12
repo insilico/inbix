@@ -2805,6 +2805,14 @@ void setOptions(CArgs & a) {
     par::do_dcgain_abs = true;
   }
 
+  // hack for Caleb's project - bcw - 2/5/15
+  if(a.find("--dcgain-caleb")) {
+    par::do_dcgain_caleb = true;
+  }
+  if(a.find("--dcgain-num-snps")) {
+    par::dcgain_num_snps = a.value_int("--dcgain-num-snps");
+  }
+
   // differential modularity analysis - bcw - 7/31/14
   if(a.find("--dmgain")) {
     par::do_differential_modularity = true;
@@ -4223,6 +4231,8 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --dcgain                  Perform a differential coexpression analysis\n"
             << "      --dcgain-abs              Take absolute value of dcgain matrix\n"
+            << "      --dcgain-caleb            Perform Caleb's differential coexpression analysis\n"
+            << "      --dcgain-num-snps         Number of SNPs for FDR calculation\n"
             << "\n"
             << "      --dmgain                  Perform a differential modularity analysis\n"
             << "      --dmgain-abs              Take absolute value of dmgain matrix\n"

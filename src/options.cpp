@@ -255,6 +255,8 @@ string par::numeric_extract_file = "";
 // differential coexpression analysis - bcw - 10/30/13
 bool par::do_differential_coexpression = false;
 bool par::do_dcgain_abs = false;
+bool par::do_dcgain_caleb = false;
+int par::dcgain_num_snps = 0;
 
 // differential modularity analysis - bcw - 7/31/14
 bool par::do_differential_modularity = false;

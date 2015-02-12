@@ -37,13 +37,9 @@ CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
   -L/usr/local/lib
 
 # Misc
-ifndef FORCE_DYNAMIC
-LIB_LAPACK = /usr/lib/liblapack.a
-else
 LIB_LAPACK = /usr/lib/liblapack.so
 LIB_BLAS = /usr/lib/libblas.so
 LIB_IGRAPH = /usr/lib/libigraph.so
-endif
 
 OUTPUT = inbix
 
@@ -62,9 +58,9 @@ ifeq ($(SYS),UNIX)
  ifndef FORCE_DYNAMIC
   CXXFLAGS += -static
   LIB += /usr/local/lib/libarmadillo.a
-  LIB += $(LIB_LAPACK)
+  LIB += /usr/lib/liblapack.a
   LIB += /usr/lib/libblas/libblas.a
-  LIB += /usr/lib/gcc/x86_64-linux-gnu/4.7/libgfortran.a
+  LIB += /usr/lib/gcc/x86_64-linux-gnu/4.4/libgfortran.a
  else
   LIB += -larmadillo
   LIB += -llapack

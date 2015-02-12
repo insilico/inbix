@@ -64,9 +64,9 @@ int main(int argc, char* argv[]) {
 
 	set_new_handler(NoMem);
 
-	PVERSION = "0.02"; // 4 chars
+	PVERSION = "0.03"; // 4 chars
 	PREL = " "; // space or p (full, or prelease) 
-	PDATE = "2014       "; // 11 chars
+	PDATE = "2015       "; // 11 chars
 
 	//////////////////
 	// The major class
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
 					"|----------------------------------------------------------|\n"
-					"|  (C) 2014 Bill White, GNU General Public License, v2     |\n"
+					"|  (C) 2015 Bill White, GNU General Public License, v2     |\n"
 					"@----------------------------------------------------------@\n"
 					"\n");
 #endif
@@ -1191,8 +1191,25 @@ int main(int argc, char* argv[]) {
 
 	////////////////////////////////////////////
 	// dcGAIN analysis requested - bcw - 10/30/13
-	if(par::do_differential_coexpression) {
+	ofstream calebFile;
+	if(par::do_differential_coexpression || par::do_dcgain_caleb) {
 		P.printLOG("Performing dcGAIN analysis\n");
+    if(par::do_dcgain_caleb && par::dcgain_num_snps < 1) {
+      error("Number of SNPs must be specified for this analysis!");
+    }
+    else {
+      P.printLOG("Performing Caleb's dcGAIN p-value FDR test at 0.05.\n");
+      P.printLOG("FDR for [" + int2str(par::dcgain_num_snps) + "] SNPS\n");
+      string calebFilename = par::output_file_name + ".caleb.pvals";
+      P.printLOG("Writing results to [ " + calebFilename + " ]\n");
+      calebFile.open(calebFilename.c_str());
+      if(calebFile.fail()) {
+        error("Cannot open results file for writing.");
+      }
+      calebFile.precision(6);
+      calebFile.fixed;
+    }
+
     int numVars = P.nlistname.size();
     mat results(numVars, numVars);
     mat pvals(numVars, numVars);
@@ -1227,6 +1244,25 @@ int main(int argc, char* argv[]) {
       pvals(i, i) = p;
     }
 
+    double nVars = 0;
+    double nCombs = 0;
+    double nSnps = (double) par::dcgain_num_snps;
+    double correctedP = 1.0;
+   	if(par::do_dcgain_caleb) {
+	    nVars = (double) numVars;
+	    nCombs = (nVars * (nVars - 1.0)) / 2.0;
+	    nSnps = (double) par::dcgain_num_snps;
+	    // 0.05, is a magic number - Schoolhouse Rock!
+    	correctedP = 0.05 / (nCombs * nSnps);
+	    // cout 
+	    // 	<< nVars << "\t" 
+	    // 	<< nCombs <<  "\t"
+	    // 	<< nSnps << "\t"
+	    // 	<< correctedP
+	    // 	<< endl;
+	    printf("FDR Corrected p-value: %g\n", correctedP);
+    }
+
     // z-test for off-diagonal elements
     P.printLOG("Computing coexpression for CASES and CONTROLS.\n");
     mat X;
@@ -1250,6 +1286,9 @@ int main(int argc, char* argv[]) {
 		P.printLOG("Performing Z-tests for interactions\n");
     double n1 = nAff;
     double n2 = nUnaff;
+    int goodFdrCount = 0;
+    double minP = 1.0;
+    double maxP = 0.0;
     for(int i=0; i < numVars; ++i) {
       for(int j=0; j < numVars; ++j) {
         if(j <= i) {
@@ -1260,7 +1299,25 @@ int main(int argc, char* argv[]) {
         double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
         double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
         double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
-        double p = 2 * normdist(-abs(Z_ij));
+        double p = 2 * normdist(-abs(Z_ij)); 
+        if(par::do_dcgain_caleb) {
+          string gene1 = P.nlistname[i];
+          string gene2 = P.nlistname[j];
+			    // printf("p-value [%g] < [%g] ?\n", p, correctedP);
+          // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
+          //  << correctedP << " Passed FDR test!" << endl;
+          if(p < minP) minP = p;
+          if(p > maxP) maxP = p;
+          if(p <  correctedP) {
+            ++goodFdrCount;
+            string gene1 = P.nlistname[i];
+            string gene2 = P.nlistname[j];
+            // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
+            //  << correctedP << " Passed FDR test!" << endl;
+				    printf("p-value [%g] < [%g] PASSED!\n", p, correctedP);
+            calebFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+          }
+        }
         results(i, j) = Z_ij;
         results(j, i) = Z_ij;
         if(par::do_regain_pvalue_threshold) {
@@ -1273,6 +1330,13 @@ int main(int argc, char* argv[]) {
         pvals(j, i) = p;
       }
     }
+    
+    if(par::do_dcgain_caleb) {
+	    P.printLOG("Found [" + int2str(goodFdrCount) + "] FDR tested p-values, min/max: " + 
+	    	dbl2str(minP) + " / " + dbl2str(maxP) + "\n");
+      calebFile.close();
+    }
+    
     // write results
     if(par::do_dcgain_abs) {
       for(int i=0; i < results.n_rows; ++i) {

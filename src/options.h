@@ -349,6 +349,9 @@ public:
   // differential coexpression analysis - bcw - 10/30/13
   static bool do_differential_coexpression;
   static bool do_dcgain_abs;
+  // added for Caleb's study of eQTL SNPS
+  static bool do_dcgain_caleb;
+  static int dcgain_num_snps;
   
   // differential modularity analysis - bcw - 7/31/14
   static bool do_differential_modularity;

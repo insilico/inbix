@@ -200,7 +200,9 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 			++nAff;
 		}
 		else {
-			++nUnaff;
+      if(!PP->sample[i]->missing) {
+		    ++nUnaff;
+		  }
 		}
 	}
 	PP->printLOG("Detected " + int2str(nAff) + " affected and " + 
@@ -226,7 +228,9 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 			++aIdx;
 		}
 		else {
-			++uIdx;
+      if(!PP->sample[i]->missing) {
+  			++uIdx;
+  		}
 		}
 	}
 

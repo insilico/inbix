@@ -1048,6 +1048,7 @@ public:
 	int deleteSNPs(set<string>&);
 	int deleteSNPs(set<Locus*>&);
 	int deleteIndividuals(vector<bool>&);
+	int deleteIndividualsNumeric(vector<bool>&);
 	int deleteIndividuals(set<Individual*>&);
 	void thinSNPs();
 
