@@ -27,4 +27,6 @@ bool armaWriteMatrix(arma::mat& m, std::string mFilename,
 bool armaGetPlinkNumericToMatrixAll(arma::mat& X);
 bool armaGetPlinkNumericToMatrixCaseControl(arma::mat& X, arma::mat& Y);
 
+bool armaDcgain(arma::mat& results, arma::mat& pvals);
+
 #endif	/* ARMADILLOFUNCS_H */

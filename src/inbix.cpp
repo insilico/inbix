@@ -1190,152 +1190,155 @@ int main(int argc, char* argv[]) {
 	}
 
 	////////////////////////////////////////////
-	// dcGAIN analysis requested - bcw - 10/30/13
-	ofstream calebFile;
-	if(par::do_differential_coexpression || par::do_dcgain_caleb) {
-		P.printLOG("Performing dcGAIN analysis\n");
-    if(par::do_dcgain_caleb && par::dcgain_num_snps < 1) {
-      error("Number of SNPs must be specified for this analysis!");
+	// dcVar analysis requested - bcw - 2/22/15
+	if(par::do_dcvar) {
+		P.printLOG("Performing dcVar analysis\n");
+		// NOTE: THE SNP2Ind() CALL IS CRITICAL!!! 2/24/15
+		P.SNP2Ind();
+    int numVariants = P.nl_all;
+    int numGenes = P.nlistname.size();
+		// make sure we have variants
+		if(numVariants < 1) {
+      error("Variants file must specified at least one variant for this analysis!");
     }
-    else {
-      P.printLOG("Performing Caleb's dcGAIN p-value FDR test at 0.05.\n");
-      P.printLOG("FDR for [" + int2str(par::dcgain_num_snps) + "] SNPS\n");
-      string calebFilename = par::output_file_name + ".caleb.pvals";
-      P.printLOG("Writing results to [ " + calebFilename + " ]\n");
-      calebFile.open(calebFilename.c_str());
-      if(calebFile.fail()) {
-        error("Cannot open results file for writing.");
-      }
-      calebFile.precision(6);
-      calebFile.fixed;
+		// make sure we have genes
+		if(numGenes < 1) {
+      error("Gene expression file must specified for this analysis!");
     }
+		P.printLOG(int2str(numVariants) + " variants, and " + int2str(numGenes) + " genes\n");
 
+		// insure doubles used in all intermediate calculations
+	  double nVars = (double) numGenes;;
+    double nCombs = (nVars * (nVars - 1.0)) / 2.0;
+    double correctedP = par::dcvar_fdr_value / (nCombs * numVariants);
+    // cout 
+    // 	<< nVars << "\t" 
+    // 	<< nCombs <<  "\t"
+    // 	<< numVariants << "\t"
+    // 	<< correctedP
+    // 	<< endl;
+    printf("FDR Corrected p-value: %g\n", correctedP);
+
+    // for all variants
+    for(unsigned int variantIdx=0; variantIdx < numVariants; ++variantIdx) {
+			string variantName = P.locus[variantIdx]->name;
+			// P.printLOG("Variant: " + variantName + "\n");
+			// get variant info as case-control phenotype based on variant model
+			// cout << "P.n: " << P.n << endl;
+			// cout << "sample size: " << P.sample.size() << endl;
+			for(int sampleIdx=0; sampleIdx < P.n; sampleIdx++) {
+				Individual* person = P.sample[sampleIdx];
+				// cout << "variantIdx: " << variantIdx << endl;
+				// cout << "sampleIdx: " << sampleIdx << endl;
+				// cout << "phenotype: " << person->phenotype << endl;
+				// cout << "aff: " << person->aff << endl;
+				// cout << "locus size: " << P.locus.size() << endl;
+				// cout << "SNP allele1 size: " << person->one.size() << endl;
+				// cout << "SNP allele2 size: " << person->two.size() << endl;
+			  bool i1 = person->one[variantIdx];
+				bool i2 = person->two[variantIdx];
+				// cout << "i1: "<< i1 << ", i2:  " << i2 << endl;
+				double thisPheno = -9;
+				bool thisAff = false;
+			  if(i1) {
+			    // 10
+			    if(!i2) {
+			      thisPheno = 1;
+						thisAff = true;
+			    } else {
+			      // 11
+			      thisPheno = 1;
+						thisAff = true;
+			    }
+			  } else {
+			    // 01 // het 
+			    if(i2) {
+			    	if(par::dcvar_var_model == "rec") {
+			    		thisPheno = 1;
+							thisAff = true;
+			    	}
+			    	else {
+			    		if(par::dcvar_var_model == "dom") {
+			    			thisPheno = 0;
+								thisAff = false;
+		    		}
+			    		// else "hom" missing pheno = -9
+			    	}
+			    }
+			    // 00
+			    else {
+			      thisPheno = 0; // hom
+ 						thisAff = false;
+ 					}
+			  }
+				// cout 
+				// 	<< "Variant index: " << variantIdx << "\t" 
+				// 	<< "Sample: " << sampleIdx << "\t" 
+				// 	<< "Phenotype: " << thisPheno << "\t" 
+				// 	<< "Affected: " << thisAff
+				// 	<< endl;
+				person->phenotype = thisPheno;
+				person->aff = thisAff;
+			}
+
+			// setup output file
+	    string dcvarFilename = variantName + ".dcVarTest.txt";
+	    P.printLOG("Writing results to [ " + dcvarFilename + " ]\n");
+	    ofstream dcvarFile;
+	    dcvarFile.open(dcvarFilename.c_str());
+	    if(dcvarFile.fail()) {
+	      error("Cannot open dcVar test results file for writing.");
+	    }
+	    dcvarFile.precision(6);
+	    dcvarFile.fixed;
+
+	    // run dcGAIN for this variant phenotype
+	    mat results(numGenes, numGenes);
+	    mat pvals(numGenes, numGenes);
+	    armaDcgain(results, pvals);
+
+	    // loop over p-values
+	    int goodFdrCount = 0;
+	    double minP = pvals(0, 0);
+	    double maxP = pvals(0, 0);
+	    for(int i=0; i < pvals.n_rows; ++i) {
+	      for(int j=0; j < pvals.n_cols; ++j) {
+	        string gene1 = P.nlistname[i];
+	        string gene2 = P.nlistname[j];
+	        double p = pvals(i, j);
+			    // printf("p-value [%g] < [%g] ?\n", p, correctedP);
+	        // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
+	        //  << correctedP << " Passed FDR test!" << endl;
+	        if(p < minP) minP = p;
+	        if(p > maxP) maxP = p;
+	        if(p <  correctedP) {
+	          ++goodFdrCount;
+	          // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
+	          //  << correctedP << " Passed FDR test!" << endl;
+				    //printf("p-value [%g] < [%g] PASSED!\n", p, correctedP);
+	          dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+	      	}
+	    	} // end pvals cols
+	    } // end pvals rows
+
+	    P.printLOG("Found [" + int2str(goodFdrCount) + "] FDR tested p-values, min/max: " + 
+	    	dbl2str(minP) + " / " + dbl2str(maxP) + "\n");
+	    dcvarFile.close();
+
+    } // END all variants loop
+
+    shutdown();
+	}
+
+	////////////////////////////////////////////
+	// dcGAIN analysis requested - bcw - 10/30/13
+	if(par::do_differential_coexpression) {
+		P.printLOG("Performing dcGAIN analysis\n");
     int numVars = P.nlistname.size();
     mat results(numVars, numVars);
     mat pvals(numVars, numVars);
 
-    // t-test for diagonal
-    int nAff = 0;
-    int nUnaff = 0;
-    for(int i=0; i < PP->sample.size(); i++) {
-      if(PP->sample[i]->aff) {
-        ++nAff;
-      }
-      else {
-        ++nUnaff;
-      }
-    }
-    double df = nAff + nUnaff - 2;
-		P.printLOG("Performing z-tests\n");
-    for(int i=0; i < numVars; ++i) {
-      // double t;
-      // tTest(i, t);
-      // double p = pT(t, df);
-      // results(i, i) = t;
-      double z;
-      zTest(i, z);
-      double p = 1.0;
-      results(i, i) = z;
-      if(par::do_regain_pvalue_threshold) {
-        if(p > par::regainPvalueThreshold) {
-          results(i, i) = 0;
-        }
-      }
-      pvals(i, i) = p;
-    }
-
-    double nVars = 0;
-    double nCombs = 0;
-    double nSnps = (double) par::dcgain_num_snps;
-    double correctedP = 1.0;
-   	if(par::do_dcgain_caleb) {
-	    nVars = (double) numVars;
-	    nCombs = (nVars * (nVars - 1.0)) / 2.0;
-	    nSnps = (double) par::dcgain_num_snps;
-	    // 0.05, is a magic number - Schoolhouse Rock!
-    	correctedP = 0.05 / (nCombs * nSnps);
-	    // cout 
-	    // 	<< nVars << "\t" 
-	    // 	<< nCombs <<  "\t"
-	    // 	<< nSnps << "\t"
-	    // 	<< correctedP
-	    // 	<< endl;
-	    printf("FDR Corrected p-value: %g\n", correctedP);
-    }
-
-    // z-test for off-diagonal elements
-    P.printLOG("Computing coexpression for CASES and CONTROLS.\n");
-    mat X;
-    mat Y;
-    if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
-      error("Cannot read numeric data into case-control matrices");
-    }
-    // compute covariances/correlations
-    mat covMatrixX;
-    mat corMatrixX;
-    if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
-      error("Could not compute coexpression matrix for cases");
-    }
-    mat covMatrixY;
-    mat corMatrixY;
-    if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
-      error("Could not compute coexpression matrix for controls");
-    }
-
-    // algorithm from R script z_test.R
-		P.printLOG("Performing Z-tests for interactions\n");
-    double n1 = nAff;
-    double n2 = nUnaff;
-    int goodFdrCount = 0;
-    double minP = 1.0;
-    double maxP = 0.0;
-    for(int i=0; i < numVars; ++i) {
-      for(int j=0; j < numVars; ++j) {
-        if(j <= i) {
-          continue;
-        }
-        double r_ij_1 = corMatrixX(i, j);
-        double r_ij_2 = corMatrixY(i, j);
-        double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
-        double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
-        double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
-        double p = 2 * normdist(-abs(Z_ij)); 
-        if(par::do_dcgain_caleb) {
-          string gene1 = P.nlistname[i];
-          string gene2 = P.nlistname[j];
-			    // printf("p-value [%g] < [%g] ?\n", p, correctedP);
-          // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
-          //  << correctedP << " Passed FDR test!" << endl;
-          if(p < minP) minP = p;
-          if(p > maxP) maxP = p;
-          if(p <  correctedP) {
-            ++goodFdrCount;
-            string gene1 = P.nlistname[i];
-            string gene2 = P.nlistname[j];
-            // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
-            //  << correctedP << " Passed FDR test!" << endl;
-				    printf("p-value [%g] < [%g] PASSED!\n", p, correctedP);
-            calebFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-          }
-        }
-        results(i, j) = Z_ij;
-        results(j, i) = Z_ij;
-        if(par::do_regain_pvalue_threshold) {
-          if(p > par::regainPvalueThreshold) {
-            results(i, j) = 0;
-            results(j, i) = 0;
-          }
-        }
-        pvals(i, j) = p;
-        pvals(j, i) = p;
-      }
-    }
-    
-    if(par::do_dcgain_caleb) {
-	    P.printLOG("Found [" + int2str(goodFdrCount) + "] FDR tested p-values, min/max: " + 
-	    	dbl2str(minP) + " / " + dbl2str(maxP) + "\n");
-      calebFile.close();
-    }
+    armaDcgain(results, pvals);
     
     // write results
     if(par::do_dcgain_abs) {

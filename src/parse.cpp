@@ -2806,11 +2806,21 @@ void setOptions(CArgs & a) {
   }
 
   // hack for Caleb's project - bcw - 2/5/15
-  if(a.find("--dcgain-caleb")) {
-    par::do_dcgain_caleb = true;
+  // changed to dcvar - bcw - 2/22/15
+  if(a.find("--dcvar")) {
+    par::do_dcvar = true;
   }
-  if(a.find("--dcgain-num-snps")) {
-    par::dcgain_num_snps = a.value_int("--dcgain-num-snps");
+  if(a.find("--dcvar-fdr-on")) {
+    par::do_dcvar_fdr = true;
+  }
+  if(a.find("--dcvar-fdr-off")) {
+    par::do_dcvar_fdr = false;
+  }
+  if(a.find("--dcvar-fdr-value")) {
+    par::dcvar_fdr_value = a.value_double("--dcvar-fdr-value");
+  }
+  if(a.find("--dcvar-var-model")) {
+    par::dcvar_var_model = a.value("--dcvar-var-model");
   }
 
   // differential modularity analysis - bcw - 7/31/14
@@ -4231,11 +4241,15 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --dcgain                  Perform a differential coexpression analysis\n"
             << "      --dcgain-abs              Take absolute value of dcgain matrix\n"
-            << "      --dcgain-caleb            Perform Caleb's differential coexpression analysis\n"
-            << "      --dcgain-num-snps         Number of SNPs for FDR calculation\n"
             << "\n"
             << "      --dmgain                  Perform a differential modularity analysis\n"
             << "      --dmgain-abs              Take absolute value of dmgain matrix\n"
+            << "\n"
+            << "      --dcvar                   Perform a differential coexpression variant analysis\n"
+            << "      --fdr-on                  Enable FDR filtering\n"
+            << "      --fdr-off                 Disable FDR filtering\n"
+            << "      --fdr-value {threshold}   P-value threshold\n"
+            << "      --var-model {dom|rec|hom} Allelic model\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"
@@ -4290,7 +4304,7 @@ void setOptions(CArgs & a) {
 
     shutdown();
   }
-#else
+#elif defined (EPIQTL)
     if(a.find("--help") || a.find("-h")) {
       cout
             << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
@@ -4300,6 +4314,17 @@ void setOptions(CArgs & a) {
             << "      --local-cis               Consider only SNPs within radius\n"
             << "      --radius                  Number of kilobases considered cis\n"
             << "      --full                    Consider all SNPs\n";
+      shutdown();
+    }
+#elif defined (DCVAR)
+    if(a.find("--help") || a.find("-h")) {
+      cout
+            << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
+            << "      --numeric-file {numeric file} Specify numeric attribute file\n"
+            << "      --fdr-on                  Enable FDR filtering\n"
+            << "      --fdr-off                 Disable FDR filtering\n"
+            << "      --fdr-value {threshold}   P-value threshold\n"
+            << "      --var-model {dom|rec|hom} Allelic model\n";
       shutdown();
     }
 #endif

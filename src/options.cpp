@@ -255,8 +255,12 @@ string par::numeric_extract_file = "";
 // differential coexpression analysis - bcw - 10/30/13
 bool par::do_differential_coexpression = false;
 bool par::do_dcgain_abs = false;
-bool par::do_dcgain_caleb = false;
-int par::dcgain_num_snps = 0;
+
+// differential coexpression variant analysis - bcw - 2/22/15
+bool par::do_dcvar = false;
+bool par::do_dcvar_fdr = false;
+double par::dcvar_fdr_value = 0.05;
+string par::dcvar_var_model = "dom";
 
 // differential modularity analysis - bcw - 7/31/14
 bool par::do_differential_modularity = false;

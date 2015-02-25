@@ -14,6 +14,7 @@
 
 #include "plink.h"
 #include "helper.h"
+#include "stats.h"
 
 #include "ArmadilloFuncs.h"
 
@@ -21,6 +22,92 @@ using namespace arma;
 using namespace std;
 
 extern Plink* PP;
+
+// differential coexpression
+bool armaDcgain(mat& results, mat& pvals) {
+  // t-test for diagonal
+  int nAff = 0;
+  int nUnaff = 0;
+  for(int i=0; i < PP->sample.size(); i++) {
+    if(PP->sample[i]->aff) {
+      ++nAff;
+    }
+    else {
+      ++nUnaff;
+    }
+  }
+  double df = nAff + nUnaff - 2;
+  PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
+  int numVars = PP->nlistname.size();
+  for(int i=0; i < numVars; ++i) {
+    // double t;
+    // tTest(i, t);
+    // double p = pT(t, df);
+    // results(i, i) = t;
+    double z;
+    zTest(i, z);
+    double p = 1.0;
+    results(i, i) = z;
+    if(par::do_regain_pvalue_threshold) {
+      if(p > par::regainPvalueThreshold) {
+        results(i, i) = 0;
+      }
+    }
+    pvals(i, i) = p;
+  }
+
+  // z-test for off-diagonal elements
+  PP->printLOG("Computing coexpression for CASES and CONTROLS.\n");
+  mat X;
+  mat Y;
+  if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
+    error("Cannot read numeric data into case-control matrices");
+  }
+  // compute covariances/correlations
+  mat covMatrixX;
+  mat corMatrixX;
+  if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
+    error("Could not compute coexpression matrix for cases");
+  }
+  mat covMatrixY;
+  mat corMatrixY;
+  if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
+    error("Could not compute coexpression matrix for controls");
+  }
+
+  // algorithm from R script z_test.R
+  PP->printLOG("Performing Z-tests for interactions\n");
+  double n1 = nAff;
+  double n2 = nUnaff;
+  int goodFdrCount = 0;
+  double minP = 1.0;
+  double maxP = 0.0;
+  for(int i=0; i < numVars; ++i) {
+    for(int j=0; j < numVars; ++j) {
+      if(j <= i) {
+        continue;
+      }
+      double r_ij_1 = corMatrixX(i, j);
+      double r_ij_2 = corMatrixY(i, j);
+      double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
+      double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
+      double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
+      double p = 2 * normdist(-abs(Z_ij)); 
+      results(i, j) = Z_ij;
+      results(j, i) = Z_ij;
+      if(par::do_regain_pvalue_threshold) {
+        if(p > par::regainPvalueThreshold) {
+          results(i, j) = 0;
+          results(j, i) = 0;
+        }
+      }
+      pvals(i, j) = p;
+      pvals(j, i) = p;
+    }
+  }
+
+  return true;
+}
 
 bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
 

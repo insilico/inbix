@@ -32,9 +32,12 @@ CXXFLAGS =
 # optimized mode
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
   -L/usr/local/lib
+# EPIQTL
+#CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
+#  -L/usr/local/lib -DEPIQTL
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib
+#  -L/usr/local/lib
 
 # Misc
 LIB_LAPACK = /usr/lib/liblapack.so
