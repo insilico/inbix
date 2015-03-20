@@ -39,6 +39,8 @@
 #include "idhelp.h"
 #include "zed.h"
 
+#include <omp.h>
+
 #include "regain.h"
 #include "InteractionNetwork.h"
 #include "CentralityRanker.h"
@@ -86,7 +88,7 @@ int main(int argc, char* argv[]) {
 	// Start logging, title
 	LOG.open(string(par::output_file_name + ".log").c_str());
 
-#ifndef EPIQTL
+#if !defined(EPIQTL) && !defined(DCVAR)
 	P.printLOG("\n"
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
@@ -1047,8 +1049,10 @@ int main(int argc, char* argv[]) {
 		    }
 
 		    // algorithm from R script z_test.R
-		    for(int i=0; i < M; ++i) {
-		      for(int j=0; j < M; ++j) {
+		    int i, j;
+#pragma omp parallel for schedule(dynamic, 1) private(i, j)
+  	    for(i=0; i < M; ++i) {
+		      for(j=0; j < M; ++j) {
 		        if(j <= i) {
 		          continue;
 		        }
@@ -1202,13 +1206,13 @@ int main(int argc, char* argv[]) {
       error("Variants file must specified at least one variant for this analysis!");
     }
 		// make sure we have genes
-		if(numGenes < 1) {
+		if(numGenes < 2) {
       error("Gene expression file must specified for this analysis!");
     }
 		P.printLOG(int2str(numVariants) + " variants, and " + int2str(numGenes) + " genes\n");
 
 		// insure doubles used in all intermediate calculations
-	  double nVars = (double) numGenes;;
+	  double nVars = (double) numGenes;
     double nCombs = (nVars * (nVars - 1.0)) / 2.0;
     double correctedP = par::dcvar_fdr_value / (nCombs * numVariants);
     // cout 
@@ -1220,7 +1224,8 @@ int main(int argc, char* argv[]) {
     printf("FDR Corrected p-value: %g\n", correctedP);
 
     // for all variants
-    for(unsigned int variantIdx=0; variantIdx < numVariants; ++variantIdx) {
+    unsigned int variantIdx;
+    for(variantIdx=0; variantIdx < numVariants; ++variantIdx) {
 			string variantName = P.locus[variantIdx]->name;
 			// P.printLOG("Variant: " + variantName + "\n");
 			// get variant info as case-control phenotype based on variant model
@@ -1238,11 +1243,13 @@ int main(int argc, char* argv[]) {
 			  bool i1 = person->one[variantIdx];
 				bool i2 = person->two[variantIdx];
 				// cout << "i1: "<< i1 << ", i2:  " << i2 << endl;
+				// see Caleb's email of 2/24/15 for phenotype assignment based on var model param
+				// and bit-wise genotype encoding
 				double thisPheno = -9;
 				bool thisAff = false;
 			  if(i1) {
-			    // 10
 			    if(!i2) {
+				    // 10 het
 			      thisPheno = 1;
 						thisAff = true;
 			    } else {
@@ -1261,7 +1268,7 @@ int main(int argc, char* argv[]) {
 			    		if(par::dcvar_var_model == "dom") {
 			    			thisPheno = 0;
 								thisAff = false;
-		    		}
+		    			}
 			    		// else "hom" missing pheno = -9
 			    	}
 			    }
@@ -1273,6 +1280,7 @@ int main(int argc, char* argv[]) {
 			  }
 				// cout 
 				// 	<< "Variant index: " << variantIdx << "\t" 
+				// 	<< "[ " << i1 << ", " << i2 << " ]" << "\t"
 				// 	<< "Sample: " << sampleIdx << "\t" 
 				// 	<< "Phenotype: " << thisPheno << "\t" 
 				// 	<< "Affected: " << thisAff
@@ -1283,8 +1291,8 @@ int main(int argc, char* argv[]) {
 
 			// setup output file
 	    string dcvarFilename = variantName + ".dcVarTest.txt";
-	    P.printLOG("Writing results to [ " + dcvarFilename + " ]\n");
 	    ofstream dcvarFile;
+	    P.printLOG("Writing results to [ " + dcvarFilename + " ]\n");
 	    dcvarFile.open(dcvarFilename.c_str());
 	    if(dcvarFile.fail()) {
 	      error("Cannot open dcVar test results file for writing.");
@@ -1296,6 +1304,11 @@ int main(int argc, char* argv[]) {
 	    mat results(numGenes, numGenes);
 	    mat pvals(numGenes, numGenes);
 	    armaDcgain(results, pvals);
+		  // DEBUG
+		  // cout << "results" << endl << results.submat(0,0,4,4) << endl;
+  		// cout << "pvals" << endl << pvals.submat(0,0,4,4) << endl;
+		  // armaWriteMatrix(results, "DEBUG.dcgain", PP->nlistname);
+		  // armaWriteMatrix(pvals, "DEBUG.pvals", PP->nlistname);
 
 	    // loop over p-values
 	    int goodFdrCount = 0;
@@ -1303,6 +1316,7 @@ int main(int argc, char* argv[]) {
 	    double maxP = pvals(0, 0);
 	    for(int i=0; i < pvals.n_rows; ++i) {
 	      for(int j=0; j < pvals.n_cols; ++j) {
+	      	if(j <= i) { continue; }
 	        string gene1 = P.nlistname[i];
 	        string gene2 = P.nlistname[j];
 	        double p = pvals(i, j);
@@ -1332,6 +1346,7 @@ int main(int argc, char* argv[]) {
 
 	////////////////////////////////////////////
 	// dcGAIN analysis requested - bcw - 10/30/13
+	// moved algorithm to armaDcgain function - bcw - 3/12/15
 	if(par::do_differential_coexpression) {
 		P.printLOG("Performing dcGAIN analysis\n");
     int numVars = P.nlistname.size();

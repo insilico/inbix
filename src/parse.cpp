@@ -4156,7 +4156,7 @@ void setOptions(CArgs & a) {
 
   /////////////////////////////////////////////
   //  Help -- display all options
-#ifndef EPIQTL
+#if !defined(EPIQTL) && !defined(DCVAR)
   if(a.find("--help") || a.find("-h")) {
 
     cout << "\n"

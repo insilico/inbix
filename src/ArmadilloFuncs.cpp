@@ -38,6 +38,7 @@ bool armaDcgain(mat& results, mat& pvals) {
   }
   double df = nAff + nUnaff - 2;
   PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
+  PP->printLOG("WARNING: all main p-values are set to 1.\n");
   int numVars = PP->nlistname.size();
   for(int i=0; i < numVars; ++i) {
     // double t;
@@ -63,6 +64,10 @@ bool armaDcgain(mat& results, mat& pvals) {
   if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
     error("Cannot read numeric data into case-control matrices");
   }
+  // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
+  // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
+  // cout << "X" << endl << X.submat(0,0,4,4) << endl;
+  // cout << "Y" << endl << Y.submat(0,0,4,4) << endl;
   // compute covariances/correlations
   mat covMatrixX;
   mat corMatrixX;
@@ -74,6 +79,11 @@ bool armaDcgain(mat& results, mat& pvals) {
   if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
     error("Could not compute coexpression matrix for controls");
   }
+
+  // DEBUG
+  // cout << corMatrixX.n_rows << " x " << corMatrixX.n_cols << endl;
+  // cout << "cor(X)" << endl << corMatrixX.submat(0,0,4,4) << endl;
+  // cout << "cor(Y)" << endl << corMatrixY.submat(0,0,4,4) << endl;
 
   // algorithm from R script z_test.R
   PP->printLOG("Performing Z-tests for interactions\n");
@@ -93,6 +103,9 @@ bool armaDcgain(mat& results, mat& pvals) {
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
       double p = 2 * normdist(-abs(Z_ij)); 
+      // if(i == 0 && j < 10) {
+      //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
+      // }
       results(i, j) = Z_ij;
       results(j, i) = Z_ij;
       if(par::do_regain_pvalue_threshold) {
@@ -319,6 +332,7 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
   			++uIdx;
   		}
 		}
+    //printf("sample: %3d  fid: %s iid: %s\n", i, PP->sample[i]->fid.c_str(), PP->sample[i]->iid.c_str());
 	}
 
 	return true;
