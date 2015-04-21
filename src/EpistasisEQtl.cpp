@@ -188,13 +188,11 @@ bool EpistasisEQtl::Run() {
 
       // Obtain estimates and statistics
       vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+      double mainEffectValue = betaMainEffectCoefs[tp];
       // p-values don't include intercept term
       vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-      double mainEffectPval = betaMainEffectCoefPvals[tp - 1];
-
-      // always use first coefficient after intercept as main effect term
-      double mainEffectValue = betaMainEffectCoefs[tp];
       double mainEffectPValue = betaMainEffectCoefPvals[tp-1];
+
       EQTL 
         << thisSnpName << "\t"
         << thisTranscript << "\t"
@@ -233,7 +231,7 @@ bool EpistasisEQtl::Run() {
     
     if(par::epiqtl_interaction_full) {
       PP->printLOG("epiQTL linear regression loop: SNP x SNP\n");
-#pragma omp parallel for schedule(dynamic, 10) 
+#pragma omp parallel for
       for(int ii=0; ii < nAllSnps; ++ii) {
         if(ii && (ii % 1000 == 0)) {
           cout << ii << "/" << nAllSnps << endl;
@@ -265,6 +263,8 @@ bool EpistasisEQtl::Run() {
           }
           interactionModel->testParameter = tp; // interaction
           interactionModel->fitLM();
+#pragma omp critical
+{          
           vector_t betaInteractionCoefs = interactionModel->getCoefs();
           double interactionValue = 
             betaInteractionCoefs[betaInteractionCoefs.size() - 1];
@@ -273,22 +273,14 @@ bool EpistasisEQtl::Run() {
             betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
           resultsMatrixBetas[ii][jj] = interactionValue;
           resultsMatrixPvals[ii][jj] = interactionPval;
-//          cout 
-//            << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-//            << "\t" << snpAIndex << "\t" << snpAName
-//            << "\t" << snpBIndex << "\t" << snpBName 
-//            << "\t" << interactionValue << "\t" << interactionPval
-//            << "\t" << betaInteractionCoefs[3]
-//            << "\t" << betaInteractionCoefPVals[2]
-//            << endl;
-//          exit(1);
+}
           delete interactionModel;
         }
       }
     } else {
       PP->printLOG("epiQTL linear regression loop: SNP x cis/trans (" + 
         int2str(nInnerLoop) + ")\n");
-#pragma omp parallel for schedule(dynamic, 10) 
+#pragma omp parallel for
       for(int ii=0; ii < nAllSnps; ++ii) {
         if(ii && (ii % 1000 == 0)) {
           cout << ii << "/" << nAllSnps << endl;
@@ -320,14 +312,29 @@ bool EpistasisEQtl::Run() {
           }
           interactionModel->testParameter = tp; // interaction
           interactionModel->fitLM();
+#pragma omp critical
+{          
           vector_t betaInteractionCoefs = interactionModel->getCoefs();
           double interactionValue = 
             betaInteractionCoefs[betaInteractionCoefs.size() - 1];
           vector_t betaInteractionCoefPVals = interactionModel->getPVals();
           double interactionPval =
             betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+           // if((interactionPval < 0) || (interactionPval > 1)) {
+           //   cout 
+           //    << "!!!!! DANGER !!!!!\t"
+           //     << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+           //     << "\t" << snpAIndex << "\t" << snpAName
+           //     << "\t" << snpBIndex << "\t" << snpBName 
+           //     << "\t" << interactionValue << "\t" << interactionPval
+           //     << "\t" << betaInteractionCoefs[3]
+           //     << "\t" << betaInteractionCoefPVals[2]
+           //     << endl;
+           //    exit(1);
+           //  }
           resultsMatrixBetas[ii][jj] = interactionValue;
           resultsMatrixPvals[ii][jj] = interactionPval;
+}
           delete interactionModel;
         }
       }
