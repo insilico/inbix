@@ -179,4 +179,4 @@ install:
 	cp inbix /usr/local/bin
 
 dist:
-	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*
+	zip inbix_src.zip $(SRC) $(HDR) Makefile* COPYING.txt README.*
