@@ -744,9 +744,23 @@ int main(int argc, char* argv[]) {
       error("Cannot read coordinates file: " + par::epiqtl_coord_file);
     }
 
-    // run the analysis
+    // set parameters
     epiqtl->SetLocalCis(par::epiqtl_local_cis);
     epiqtl->SetRadius(par::epiqtl_radius);
+    // added 4/21/15
+	  if(par::do_epiqtl_tf) {
+	    epiqtl->SetTF(par::do_epiqtl_tf);
+	    epiqtl->SetTFRadius(par::epiqtl_tf_radius);
+	    if(par::epiqtl_tf_coord_file != "") {
+		    // read transcription factor coordinate information from file
+				P.printLOG("Reading transcript coordinates from [" + par::epiqtl_tf_coord_file + "]\n");
+		    if(!epiqtl->ReadTranscriptCoordinates(par::epiqtl_tf_coord_file)) {
+		      error("Cannot read coordinates file: " + par::epiqtl_tf_coord_file);
+		    }
+	    }
+    }
+
+    // run the analysis
   	P.SNP2Ind();
     if(!epiqtl->Run()) {
       error("epiQTL analysis failed");

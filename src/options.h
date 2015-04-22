@@ -440,6 +440,10 @@ public:
   static bool epiqtl_local_cis;
   static int epiqtl_radius;
   static bool epiqtl_interaction_full;
+  // added for epiqtl support - bcw - 4/21/15
+  static bool do_epiqtl_tf;
+  static int epiqtl_tf_radius;
+  static string epiqtl_tf_coord_file;
 
   static bool no_show_covar;
   static bool dump_covar;

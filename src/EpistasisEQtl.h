@@ -16,6 +16,9 @@
 typedef std::map<std::string, std::vector<int> > CoordinateTable;
 typedef std::map<std::string, std::vector<int> >::const_iterator CoordinateTableCIt;
 
+typedef std::map<std::string, std::pair<int, int> > TransciptFactorTable;
+typedef std::map<std::string, std::pair<int, int> >::const_iterator TranscriptFactorTableCIt;
+
 enum COORD_FIELDS {
   COORD_CHROM, COORD_BP_START, COORD_BP_END
 };
@@ -25,17 +28,28 @@ public:
   EpistasisEQtl();
   virtual ~EpistasisEQtl();
   bool ReadTranscriptCoordinates(std::string coordinatesFile);
+  bool ReadTranscriptFactorCoordinates(std::string coordinatesFile);
   bool SetRadius(int newRadius);
   int GetRadius() { return radius; }
   bool SetLocalCis(bool localCisFlag);
   bool GetLocalCis() { return localCis; }
   bool Run();
+  // added 4/21/15
+  bool SetTFRadius(int newRadius);
+  int GetTFRadius() { return tfRadius; }
+  bool SetTF(bool tfFlag);
+  bool GetTF() { return tfMode; }
 private:
   bool GetSnpsForTranscript(std::string transcript, 
     std::vector<int>& snpIndices);
+  bool LoadDefaultTranscriptionFactorLUT();
   int radius;
   bool localCis;
   CoordinateTable coordinates;
+  // added 4/21/15
+  bool tfMode;
+  int tfRadius;
+  TransciptFactorTable transcriptFactorLUT;
 };
 
 #endif	/* EPISTASISEQTL_H */

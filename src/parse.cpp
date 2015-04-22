@@ -3046,6 +3046,18 @@ void setOptions(CArgs & a) {
     par::do_epiqtl = true;
     par::epiqtl_interaction_full = true;
   }
+  // added for epiqtl support - bcw - 4/21/15
+  if(a.find("--TF")) {
+    par::do_epiqtl_tf = true;
+  }
+  if(a.find("--TF-radius")) {
+    par::do_epiqtl_tf = true;
+    par::epiqtl_tf_radius = a.value_int("--TF-radius");
+  }
+  if(a.find("--TF-file")) {
+    par::do_epiqtl_tf = true;
+    par::epiqtl_tf_coord_file = a.value("--TF-file");
+  }
   
   ////////////////////////
   // Reference allele file
@@ -4307,13 +4319,16 @@ void setOptions(CArgs & a) {
 #elif defined (EPIQTL)
     if(a.find("--help") || a.find("-h")) {
       cout
-            << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
-            << "      --covar {covarfile}       Specify covariate file           \n"
-            << "      --transcript-matrix       Transcript matrix file\n"
-            << "      --coordinates             Transcript coordinates file\n"
-            << "      --local-cis               Consider only SNPs within radius\n"
-            << "      --radius                  Number of kilobases considered cis\n"
-            << "      --full                    Consider all SNPs\n";
+            << "      --bfile {fileroot}             Specify .bed, .fam and .map \n"
+            << "      --covar {covarfile}            Specify covariate file           \n"
+            << "      --transcript-matrix {filename} Transcript matrix file\n"
+            << "      --coordinates {filename}       Transcript coordinates file\n"
+            << "      --local-cis                    Consider only SNPs within radius\n"
+            << "      --radius {value}               Number of kilobases considered cis\n"
+            << "      --TF                           Select SNPs in range of transcription factor\n"
+            << "      --TF-radius {value}            Number of kilobases considered within TF radius\n"
+            << "      --TF-file {filename}           Transcription factor coordinate file\n"
+            << "      --full                         Consider all SNPs\n";
       shutdown();
     }
 #elif defined (DCVAR)

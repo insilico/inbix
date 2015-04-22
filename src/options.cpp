@@ -345,6 +345,10 @@ string par::epiqtl_coord_file = "";
 bool par::epiqtl_local_cis = false;
 int par::epiqtl_radius = 1000;
 bool par::epiqtl_interaction_full = false;
+// added for epiqtl support - bcw - 4/21/15
+bool par::do_epiqtl_tf = false;
+int par::epiqtl_tf_radius = 0;
+string par::epiqtl_tf_coord_file = "";
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;
