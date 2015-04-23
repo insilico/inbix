@@ -30,7 +30,7 @@ CXX_WIN = g++.exe
 CXXFLAGS = 
 # optimized mode
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib
+  -L/usr/local/lib  -std=c++11
 # EPIQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DEPIQTL
