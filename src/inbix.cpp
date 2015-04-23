@@ -717,7 +717,7 @@ int main(int argc, char* argv[]) {
 		if(P.locus[l]->allele1 == "")
 			P.locus[l]->allele1 = "0";
 	}
-  
+
 	// perform epistatic eQTL analysis
   if(par::do_epiqtl) {
 		P.printLOG("Performing epiQTL analysis\n");

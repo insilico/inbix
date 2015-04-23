@@ -16,8 +16,8 @@
 typedef std::map<std::string, std::vector<int> > CoordinateTable;
 typedef std::map<std::string, std::vector<int> >::const_iterator CoordinateTableCIt;
 
-typedef std::map<std::string, std::pair<int, int> > TransciptFactorTable;
-typedef std::map<std::string, std::pair<int, int> >::const_iterator TranscriptFactorTableCIt;
+typedef std::map<std::string, std::vector<int> > TransciptFactorTable;
+typedef std::map<std::string, std::vector<int> >::const_iterator TranscriptFactorTableCIt;
 
 enum COORD_FIELDS {
   COORD_CHROM, COORD_BP_START, COORD_BP_END
@@ -33,14 +33,17 @@ public:
   int GetRadius() { return radius; }
   bool SetLocalCis(bool localCisFlag);
   bool GetLocalCis() { return localCis; }
-  bool Run();
+  bool Run(bool debug=false);
   // added 4/21/15
   bool SetTFRadius(int newRadius);
   int GetTFRadius() { return tfRadius; }
   bool SetTF(bool tfFlag);
   bool GetTF() { return tfMode; }
+  bool GetTFInfo(std::string tf, std::vector<int>& tfInfo);
 private:
   bool GetSnpsForTranscript(std::string transcript, 
+    std::vector<int>& snpIndices);
+  bool GetSnpsForTF(std::string transcript, 
     std::vector<int>& snpIndices);
   bool LoadDefaultTranscriptionFactorLUT();
   int radius;
