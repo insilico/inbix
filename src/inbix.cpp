@@ -753,16 +753,16 @@ int main(int argc, char* argv[]) {
 	    epiqtl->SetTFRadius(par::epiqtl_tf_radius);
 	    if(par::epiqtl_tf_coord_file != "") {
 		    // read transcription factor coordinate information from file
-				P.printLOG("Reading transcript coordinates from [" + par::epiqtl_tf_coord_file + "]\n");
-		    if(!epiqtl->ReadTranscriptCoordinates(par::epiqtl_tf_coord_file)) {
-		      error("Cannot read coordinates file: " + par::epiqtl_tf_coord_file);
+				P.printLOG("Reading TF coordinates from [" + par::epiqtl_tf_coord_file + "]\n");
+		    if(!epiqtl->ReadTranscriptFactorCoordinates(par::epiqtl_tf_coord_file)) {
+		      error("Cannot read TF coordinates file: " + par::epiqtl_tf_coord_file);
 		    }
 	    }
     }
 
     // run the analysis
   	P.SNP2Ind();
-    if(!epiqtl->Run()) {
+    if(!epiqtl->Run(par::verbose)) {
       error("epiQTL analysis failed");
     }
 

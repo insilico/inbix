@@ -4297,6 +4297,9 @@ void setOptions(CArgs & a) {
             << "      --coordinates             Transcript coordinates file\n"
             << "      --local-cis               Consider only SNPs within radius\n"
             << "      --radius                  Number of kilobases considered cis\n"
+            << "      --TF                      Select SNPs in range of 1 or more transcription factors\n"
+            << "      --TF-radius {value}       Number of kilobases considered within TF radius\n"
+            << "      --TF-file {filename}      Select coordinates file different from default\n"
             << "      --full                    Consider all SNPs\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
@@ -4325,9 +4328,9 @@ void setOptions(CArgs & a) {
             << "      --coordinates {filename}       Transcript coordinates file\n"
             << "      --local-cis                    Consider only SNPs within radius\n"
             << "      --radius {value}               Number of kilobases considered cis\n"
-            << "      --TF                           Select SNPs in range of transcription factor\n"
+            << "      --TF                           Select SNPs in range of 1 or more transcription factors\n"
             << "      --TF-radius {value}            Number of kilobases considered within TF radius\n"
-            << "      --TF-file {filename}           Transcription factor coordinate file\n"
+            << "      --TF-file {filename}           Select coordinates file different from default\n"
             << "      --full                         Consider all SNPs\n";
       shutdown();
     }

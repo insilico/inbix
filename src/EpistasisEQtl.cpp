@@ -7,8 +7,10 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <vector>
+#include <set>
 #include <fstream>
 #include "plink.h"
 #include "model.h"
@@ -67,7 +69,27 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
     }
 
     string gene = tokens[tokens.size()-1];
-    for(int i=0; i < tokens.size()-1; ++i) {
+
+    // handle special cases of chromosome that are not integers
+    int chrom = -1;
+    bool chromAssigned = false;
+    if(tokens[0] == "X") { chrom = 23; chromAssigned = true; }
+    if(tokens[0] == "Y") { chrom = 24; chromAssigned = true; }
+    if(tokens[0] == "XY") { chrom = 25; chromAssigned = true; }
+    if(tokens[0] == "MT") { chrom = 26; chromAssigned = true; }
+    if(!chromAssigned) {
+      int t = 0;
+      if(!from_string<int>(t, tokens[0], std::dec)) {
+        cerr << "Error parsing chromosome to integer on line " << rows << endl;
+        cerr << "token: " << tokens[0] << endl;
+        return false;
+      }
+      chrom = t;
+      chromAssigned = true;
+    }
+    coordinates[gene].push_back(chrom);
+
+    for(int i=1; i < tokens.size()-1; ++i) {
       int t = 0;
       if(!from_string<int>(t, tokens[i], std::dec)) {
         cerr << "Error parsing transcript info to integer on line " << rows << endl;
@@ -103,7 +125,7 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
     string sline = nline;
     if(sline == "") continue;
 
-    // read line from text file into a vector of tokens
+    // read lines from a text file into a vector of string tokens
     string buf;
     stringstream ss(sline);
     vector<string> tokens;
@@ -117,8 +139,30 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
       return false;
     }
 
+    // gene name in the last column
     string gene = tokens[tokens.size()-1];
-    for(int i=0; i < tokens.size()-1; ++i) {
+
+    // handle special cases of chromosome that are not integers
+    int chrom = -1;
+    bool chromAssigned = false;
+    if(tokens[0] == "X") { chrom = 23; chromAssigned = true; }
+    if(tokens[0] == "Y") { chrom = 24; chromAssigned = true; }
+    if(tokens[0] == "XY") { chrom = 25; chromAssigned = true; }
+    if(tokens[0] == "MT") { chrom = 26; chromAssigned = true; }
+    if(!chromAssigned) {
+      int t = 0;
+      if(!from_string<int>(t, tokens[0], std::dec)) {
+        cerr << "Error parsing chromosome to integer on line " << rows << endl;
+        cerr << "token: " << tokens[0] << endl;
+        return false;
+      }
+      chrom = t;
+      chromAssigned = true;
+    }
+    transcriptFactorLUT[gene].push_back(chrom);
+
+    // start and end bp
+    for(int i=1; i < tokens.size()-1; ++i) {
       int t = 0;
       if(!from_string<int>(t, tokens[i], std::dec)) {
         cerr << "Error parsing transcript info to integer on line " << rows << endl;
@@ -153,7 +197,7 @@ bool EpistasisEQtl::SetLocalCis(bool localCisFlag) {
 
 
 bool EpistasisEQtl::SetTFRadius(int newRadius) {
-  if(newRadius < 1) {
+  if(newRadius < 0) {
     cerr << "Error setting TF radius to: " << newRadius << endl;
     return false;
   }
@@ -205,29 +249,94 @@ bool EpistasisEQtl::Run(bool debug) {
     PP->printLOG("epiQTL local cis mode with radius: " + 
       int2str(int(radius / 1000)) + " kilobases\n");
   }
+  if(tfMode) {
+    PP->printLOG("epiQTL TF mode with radius: " + 
+      int2str(int(tfRadius / 1000)) + " kilobases\n");
+  }
   if(par::epiqtl_interaction_full) {
     PP->printLOG("epiQTL FULL epistatic interaction mode\n");
   } else {
-    PP->printLOG("epiQTL cis-cis/cis-trans interaction mode\n");
+    if(tfMode) {
+      PP->printLOG("epiQTL TF/cis-trans interaction mode\n");  
+    } else {
+      PP->printLOG("epiQTL cis-cis/cis-trans interaction mode\n");  
+    }
   }
   
   string testnumbersFilename = par::output_file_name + ".testnumbers.txt";
   PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
   std::ofstream TESTNUMBERS;
   TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
+
+  string loopInfoFilename = par::output_file_name + ".loopinfo.txt";
+  PP->printLOG("Writing loop information to [ " + loopInfoFilename + " ]\n");
+  std::ofstream LOOPINFO;
+  LOOPINFO.open(loopInfoFilename.c_str(), ios::out);
+
   string thisTranscript;
   int transcriptIndex = 0;
   for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
     
     thisTranscript = PP->nlistname[transcriptIndex];
+    cout << "-----------------------------------------------------------------------------" << endl;
     PP->printLOG("Transcript: " + thisTranscript + "\n");
-    if(debug) {
-      cout << "Transcript: " << thisTranscript << endl;
-    }
 
     // get transcript expression vector as phenotype
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
+    // determine SNPs being considered ----------------------------------------
+    int nAllSnps = PP->nl_all;
+    int nInnerLoop = -1;
+    vector<int> thisTranscriptSnpIndices;
+    if(par::epiqtl_interaction_full) {
+      nInnerLoop = nAllSnps;
+    } else {
+      GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
+      nInnerLoop = thisTranscriptSnpIndices.size();
+    }
+    int nOuterLoop = -1;
+    vector<int> thisTFSnpIndices;
+    if(par::do_epiqtl_tf) {
+      GetSnpsForTF(thisTranscript, thisTFSnpIndices);
+      nOuterLoop = thisTFSnpIndices.size();
+    } else {
+      nOuterLoop = nAllSnps;
+    }
+    if(debug) {
+      cout << "nInnerLoop (cis): " << nInnerLoop << endl;
+      cout << "nOuterLoop (TF) : " << nOuterLoop << endl;
+    }
+    if(!(nInnerLoop * nOuterLoop)) {
+      cerr << "WARNING: no interactions for: " << thisTranscript << endl;
+      continue; // to next transcript
+    }
+    set<int> loopSnps(thisTranscriptSnpIndices.begin(), thisTranscriptSnpIndices.end());
+    copy(thisTFSnpIndices.begin(), thisTFSnpIndices.end(), 
+      std::inserter(loopSnps, loopSnps.end() ));
+    // cout << "DEBUG loopSnps set size: " << loopSnps.size() << endl;
+
+    LOOPINFO 
+      << thisTranscript << "\t"
+      << nInnerLoop << "\t"
+      << nOuterLoop << "\t"
+      << endl;
+    
+    // cout << "cis snp indices: ";
+    // copy(thisTranscriptSnpIndices.begin(), 
+    //   thisTranscriptSnpIndices.end(), 
+    //   ostream_iterator<int>(cout, "\t"));
+    // cout << endl;
+    // cout << "TF snp indices: ";
+    // copy(thisTFSnpIndices.begin(), 
+    //   thisTFSnpIndices.end(), 
+    //   ostream_iterator<int>(cout, "\t"));
+    // cout << endl;
+    // cout << "Loop set snp indices: ";
+    // copy(loopSnps.begin(), 
+    //   loopSnps.end(), 
+    //   ostream_iterator<int>(cout, "\t"));
+    // cout << endl;
+
     // EQTL -------------------------------------------------------------------
     // fit main effect regression model for SNPs
     //cout << "Running main effects regression models" << endl;
@@ -236,8 +345,8 @@ bool EpistasisEQtl::Run(bool debug) {
     PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
     std::ofstream EQTL;
     EQTL.open(eqtlFilename.c_str(), ios::out);
-    int thisSnpIndex = 0;
-    for(thisSnpIndex=0; thisSnpIndex < PP->nl_all; ++thisSnpIndex) {
+    for(set<int>::const_iterator loopIt=loopSnps.begin(); loopIt != loopSnps.end(); ++loopIt) {
+      int thisSnpIndex = *loopIt;
       string thisSnpName = PP->locus[thisSnpIndex]->name;
       
       Model* mainEffectModel = new LinearModel(PP);
@@ -278,31 +387,6 @@ bool EpistasisEQtl::Run(bool debug) {
     EQTL.close();
     
     // EPIQTL -----------------------------------------------------------------
-    int nAllSnps = PP->nl_all;
-    int nInnerLoop = -1;
-    vector<int> thisTranscriptSnpIndices;
-    if(par::epiqtl_interaction_full) {
-      nInnerLoop = nAllSnps;
-    } else {
-      GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
-      nInnerLoop = thisTranscriptSnpIndices.size();
-    }
-    int nOuterLoop = -1;
-    vector<int> thisTFSnpIndices;
-    if(par::do_epiqtl_tf) {
-      GetSnpsForTF(thisTranscript, thisTFSnpIndices);
-      nOuterLoop = thisTFSnpIndices.size();
-    } else {
-      nOuterLoop = nAllSnps;
-    }
-    if(debug) {
-      cout << "nOuterLoop: " << nOuterLoop << endl;
-    }
-    if(nOuterLoop < 1) {
-      cerr << "No TF matches for: " << thisTranscript << endl;
-      continue; // to next transcript
-    }
-
     // allocate results matrices
     double** resultsMatrixBetas= new double*[nAllSnps];
     for(int a=0; a < nOuterLoop; ++a) {
@@ -368,12 +452,14 @@ bool EpistasisEQtl::Run(bool debug) {
         }
       }
     } else {
-      PP->printLOG("epiQTL linear regression loop: SNP x cis/trans (" + 
-        int2str(nInnerLoop) + ")\n");
-        if(par::do_epiqtl_tf) {
-          PP->printLOG("epiQTL linear regression TF loop: (" + 
-            int2str(nOuterLoop) + ")\n");
-        }
+      if(localCis) {
+        PP->printLOG("epiQTL linear regression loop: SNP x cis/trans (" + 
+          int2str(nInnerLoop) + ")\n");
+      }
+      if(tfMode) {
+        PP->printLOG("epiQTL linear regression loop TF: (" + 
+          int2str(nOuterLoop) + ")\n");
+      }
 #pragma omp parallel for
       for(int ii=0; ii < nOuterLoop; ++ii) {
         if(ii && (ii % 1000 == 0)) {
@@ -493,6 +579,7 @@ bool EpistasisEQtl::Run(bool debug) {
   } // END for each transcript loop
   
   TESTNUMBERS.close();
+  LOOPINFO.close();
   
   PP->printLOG("epiQTL analysis finished\n");
 
@@ -509,14 +596,14 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
   int lowerThreshold = bpStart - radius;
   int upperThreshold = bpEnd + radius;
   
-//  cout 
-//    << chromosome  << ", " 
-//    << radius  << ", " 
-//    << "(" << lowerThreshold << "), "
-//    << bpStart  << ", " 
-//    << bpEnd << ", "
-//    << "(" << upperThreshold << ")"
-//    << endl;
+ // cout 
+ //   << "GetSnpsForTranscript: chrom: " << chromosome  << ", radius: " 
+ //   << radius  << ", " 
+ //   << "(" << lowerThreshold << "), "
+ //   << bpStart  << ", " 
+ //   << bpEnd << ", "
+ //   << "(" << upperThreshold << ")"
+ //   << endl;
   
   // find SNPs matching criteria
   for(int j=0; j < PP->locus.size(); ++j) {
@@ -524,8 +611,8 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
     if(thisSnp->chr == chromosome) {
       if(localCis) {
         // on the same chromosome and within radius of transcript
-        if(thisSnp->bp >= lowerThreshold && 
-          thisSnp->bp <= upperThreshold) {
+        if((thisSnp->bp >= lowerThreshold) && 
+           (thisSnp->bp <= upperThreshold)) {
           snpIndices.push_back(j);
         }
       }
@@ -544,7 +631,7 @@ bool EpistasisEQtl::GetSnpsForTF(string tf, vector<int>& snpIndices) {
   // get transcript info
   vector<int> transcriptInfo;
   if(!GetTFInfo(tf, transcriptInfo)) {
-    cerr << "GetSnpsForTF: Cannot find transcription factor: " << tf << endl;
+    cerr << "GetSnpsForTF: Cannot find transcript in TF lookup table: " << tf << endl;
     return false;
   }
   int chromosome = transcriptInfo[COORD_CHROM];
@@ -552,23 +639,23 @@ bool EpistasisEQtl::GetSnpsForTF(string tf, vector<int>& snpIndices) {
   int bpEnd = transcriptInfo[COORD_BP_END];
   int lowerThreshold = bpStart - tfRadius;
   int upperThreshold = bpEnd + tfRadius;
-  
-//  cout 
-//    << chromosome  << ", " 
-//    << tfRadius  << ", " 
-//    << "(" << lowerThreshold << "), "
-//    << bpStart  << ", " 
-//    << bpEnd << ", "
-//    << "(" << upperThreshold << ")"
-//    << endl;
+
+  // cout 
+  //   << "GetSnpsForTF: chrom: " << chromosome  << ", radius: " 
+  //   << tfRadius  << ", " 
+  //   << "(" << lowerThreshold << "), "
+  //   << bpStart  << ", " 
+  //   << bpEnd << ", "
+  //   << "(" << upperThreshold << ")"
+  //   << endl;
   
   // find SNPs matching criteria
   for(int j=0; j < PP->locus.size(); ++j) {
     Locus* thisSnp = PP->locus[j];
     if(thisSnp->chr == chromosome) {
       // on the same chromosome and within radius of transcript
-      if(thisSnp->bp >= lowerThreshold && 
-        thisSnp->bp <= upperThreshold) {
+      if((thisSnp->bp >= lowerThreshold) && 
+         (thisSnp->bp <= upperThreshold)) {
         snpIndices.push_back(j);
       }
     }
@@ -592,6 +679,7 @@ bool EpistasisEQtl::GetTFInfo(string tf, vector<int>& tfInfo) {
 bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ADNP"] = {20, 49505454, 49547527};
   transcriptFactorLUT["AFF1"] = {4, 87856153, 88062206};
+  transcriptFactorLUT["AFF2"] = {23, 147582138, 148082193};
   transcriptFactorLUT["AFF3"] = {2, 100163715, 100759037};
   transcriptFactorLUT["AFF4"] = {5, 132211070, 132299354};
   transcriptFactorLUT["AHR"] = {7, 17338275, 17385775};
@@ -600,6 +688,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ALX1"] = {12, 85674035, 85695561};
   transcriptFactorLUT["ALX3"] = {1, 110602996, 110613322};
   transcriptFactorLUT["ALX4"] = {11, 44282277, 44331716};
+  transcriptFactorLUT["AR"] = {23, 66763873, 66950461};
   transcriptFactorLUT["ARGFX"] = {3, 121286777, 121309469};
   transcriptFactorLUT["ARID1A"] = {1, 27022521, 27108601};
   transcriptFactorLUT["ARID1B"] = {6, 157099063, 157531913};
@@ -615,6 +704,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ARNT2"] = {15, 80696691, 80890277};
   transcriptFactorLUT["ARNTL"] = {11, 13299273, 13408812};
   transcriptFactorLUT["ARNTL2"] = {12, 27485786, 27578746};
+  transcriptFactorLUT["ARX"] = {23, 25021812, 25034065};
   transcriptFactorLUT["ASCL1"] = {12, 103351451, 103354294};
   transcriptFactorLUT["ASCL2"] = {11, 2289727, 2292182};
   transcriptFactorLUT["ASCL3"] = {11, 8959118, 8964580};
@@ -663,6 +753,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["CDC5L"] = {6, 44355250, 44418161};
   transcriptFactorLUT["CDX1"] = {5, 149546343, 149564121};
   transcriptFactorLUT["CDX2"] = {13, 28536204, 28543505};
+  transcriptFactorLUT["CDX4"] = {23, 72667089, 72674421};
   transcriptFactorLUT["CEBPA"] = {19, 33790839, 33793470};
   transcriptFactorLUT["CEBPB"] = {20, 48807119, 48809227};
   transcriptFactorLUT["CEBPD"] = {8, 48649475, 48650726};
@@ -733,7 +824,9 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ELF1"] = {13, 41506054, 41556418};
   transcriptFactorLUT["ELF2"] = {4, 139978870, 140005568};
   transcriptFactorLUT["ELF3"] = {1, 201979689, 201986315};
+  transcriptFactorLUT["ELF4"] = {23, 129198894, 129244688};
   transcriptFactorLUT["ELF5"] = {11, 34500341, 34535347};
+  transcriptFactorLUT["ELK1"] = {23, 47494918, 47510003};
   transcriptFactorLUT["ELK3"] = {12, 96588159, 96663613};
   transcriptFactorLUT["ELK4"] = {1, 205588395, 205602000};
   transcriptFactorLUT["EMX1"] = {2, 73144603, 73162020};
@@ -748,6 +841,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ESRRA"] = {11, 64072999, 64084212};
   transcriptFactorLUT["ESRRB"] = {14, 76837689, 76968180};
   transcriptFactorLUT["ESRRG"] = {1, 216676587, 217113015};
+  transcriptFactorLUT["ESX1"] = {23, 103494718, 103499599};
   transcriptFactorLUT["ETS1"] = {11, 128328655, 128457453};
   transcriptFactorLUT["ETS2"] = {21, 40177754, 40196878};
   transcriptFactorLUT["ETV1"] = {7, 13930855, 14026139};
@@ -807,14 +901,18 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["FOXN4"] = {12, 109715782, 109747025};
   transcriptFactorLUT["FOXO1"] = {13, 41129800, 41240734};
   transcriptFactorLUT["FOXO3"] = {6, 108881025, 109005971};
+  transcriptFactorLUT["FOXO4"] = {23, 70315998, 70323384};
   transcriptFactorLUT["FOXO6"] = {1, 41827602, 41849263};
   transcriptFactorLUT["FOXP1"] = {3, 71247033, 71633140};
   transcriptFactorLUT["FOXP2"] = {7, 114055051, 114333827};
+  transcriptFactorLUT["FOXP3"] = {23, 49106896, 49121288};
   transcriptFactorLUT["FOXP4"] = {6, 41514163, 41570122};
   transcriptFactorLUT["FOXQ1"] = {6, 1312674, 1314993};
   transcriptFactorLUT["FOXR1"] = {11, 118842416, 118851995};
+  transcriptFactorLUT["FOXR2"] = {23, 55649832, 55652621};
   transcriptFactorLUT["FOXS1"] = {20, 30432102, 30433420};
   transcriptFactorLUT["GABPA"] = {21, 27107257, 27144771};
+  transcriptFactorLUT["GATA1"] = {23, 48644981, 48652717};
   transcriptFactorLUT["GATA2"] = {3, 128198264, 128212030};
   transcriptFactorLUT["GATA3"] = {10, 8096666, 8117164};
   transcriptFactorLUT["GATA4"] = {8, 11561716, 11617509};
@@ -853,6 +951,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["HAND1"] = {5, 153854531, 153857824};
   transcriptFactorLUT["HAND2"] = {4, 174447651, 174451378};
   transcriptFactorLUT["HBP1"] = {7, 106809405, 106842974};
+  transcriptFactorLUT["HDX"] = {23, 83572881, 83757487};
   transcriptFactorLUT["HELT"] = {4, 185939994, 185941958};
   transcriptFactorLUT["HES1"] = {3, 193853930, 193856401};
   transcriptFactorLUT["HES2"] = {1, 6475293, 6479979};
@@ -883,6 +982,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["HMGA2"] = {12, 66218239, 66346311};
   transcriptFactorLUT["HMGB1"] = {13, 31032878, 31040081};
   transcriptFactorLUT["HMGB2"] = {4, 174252526, 174255595};
+  transcriptFactorLUT["HMGB3"] = {23, 150151747, 150159248};
   transcriptFactorLUT["HMGXB3"] = {5, 149380168, 149432706};
   transcriptFactorLUT["HMGXB4"] = {22, 35653444, 35691800};
   transcriptFactorLUT["HMX1"] = {4, 8847801, 8873543};
@@ -935,6 +1035,10 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["HOXD9"] = {2, 176987412, 176989645};
   transcriptFactorLUT["HSF1"] = {8, 145515269, 145538385};
   transcriptFactorLUT["HSF4"] = {16, 67197287, 67203848};
+  transcriptFactorLUT["HSFX1"] = {23, 148674182, 148676974};
+  transcriptFactorLUT["HSFX2"] = {23, 148674171, 148676970};
+  transcriptFactorLUT["HSFY1"] = {24, 20708576, 20750849};
+  transcriptFactorLUT["HSFY2"] = {24, 20708556, 20750849};
   transcriptFactorLUT["ID1"] = {20, 30193085, 30194317};
   transcriptFactorLUT["ID2"] = {2, 8822112, 8824583};
   transcriptFactorLUT["ID3"] = {1, 23884420, 23886285};
@@ -971,6 +1075,8 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["JUND"] = {19, 18390503, 18392466};
   transcriptFactorLUT["KDM5A"] = {12, 389222, 498621};
   transcriptFactorLUT["KDM5B"] = {1, 202696531, 202777549};
+  transcriptFactorLUT["KDM5C"] = {23, 53220502, 53254604};
+  transcriptFactorLUT["KDM5D"] = {24, 21867300, 21906825};
   transcriptFactorLUT["KIAA2018"] = {3, 113367232, 113415493};
   transcriptFactorLUT["KLF1"] = {19, 12995236, 12998017};
   transcriptFactorLUT["KLF10"] = {8, 103661004, 103666192};
@@ -987,6 +1093,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["KLF5"] = {13, 73629113, 73651680};
   transcriptFactorLUT["KLF6"] = {10, 3818187, 3827473};
   transcriptFactorLUT["KLF7"] = {2, 207938861, 208031970};
+  transcriptFactorLUT["KLF8"] = {23, 56258869, 56314322};
   transcriptFactorLUT["KLF9"] = {9, 72999512, 73029573};
   transcriptFactorLUT["L3MBTL1"] = {20, 42143075, 42170535};
   transcriptFactorLUT["L3MBTL4"] = {18, 5954704, 6414910};
@@ -1023,6 +1130,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["MBD3"] = {19, 1576669, 1592760};
   transcriptFactorLUT["MBD4"] = {3, 129149786, 129159022};
   transcriptFactorLUT["MECOM"] = {3, 168801286, 168865522};
+  transcriptFactorLUT["MECP2"] = {23, 153295685, 153363188};
   transcriptFactorLUT["MEF2A"] = {15, 100106132, 100256629};
   transcriptFactorLUT["MEF2B"] = {19, 19256375, 19281098};
   transcriptFactorLUT["MEF2D"] = {1, 156433512, 156460391};
@@ -1120,6 +1228,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["NPAS2"] = {2, 101436612, 101613287};
   transcriptFactorLUT["NPAS3"] = {14, 33408458, 34273382};
   transcriptFactorLUT["NPAS4"] = {11, 66188474, 66194177};
+  transcriptFactorLUT["NR0B1"] = {23, 30322538, 30327495};
   transcriptFactorLUT["NR0B2"] = {1, 27237974, 27240567};
   transcriptFactorLUT["NR1D1"] = {17, 38249036, 38256978};
   transcriptFactorLUT["NR1D2"] = {3, 23987611, 24022109};
@@ -1200,6 +1309,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["POU3F1"] = {1, 38509522, 38512450};
   transcriptFactorLUT["POU3F2"] = {6, 99282579, 99286666};
   transcriptFactorLUT["POU3F3"] = {2, 105470525, 105475031};
+  transcriptFactorLUT["POU3F4"] = {23, 82763268, 82764775};
   transcriptFactorLUT["POU4F1"] = {13, 79173229, 79177695};
   transcriptFactorLUT["POU4F2"] = {4, 147560044, 147563623};
   transcriptFactorLUT["POU4F3"] = {5, 145718586, 145720083};
@@ -1254,6 +1364,9 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["RFX6"] = {6, 117198375, 117253326};
   transcriptFactorLUT["RFX7"] = {15, 56382730, 56535483};
   transcriptFactorLUT["RFX8"] = {2, 102013822, 102091165};
+  transcriptFactorLUT["RHOXF1"] = {23, 119243010, 119249847};
+  transcriptFactorLUT["RHOXF2"] = {23, 119206240, 119211707};
+  transcriptFactorLUT["RHOXF2B"] = {23, 119206228, 119211707};
   transcriptFactorLUT["RNF138"] = {18, 29672568, 29711524};
   transcriptFactorLUT["RORA"] = {15, 60780482, 60884707};
   transcriptFactorLUT["RORB"] = {9, 77112251, 77302117};
@@ -1274,6 +1387,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["SEBOX"] = {17, 26691289, 26692173};
   transcriptFactorLUT["SETDB1"] = {1, 150898814, 150917797};
   transcriptFactorLUT["SETDB2"] = {13, 50025687, 50069139};
+  transcriptFactorLUT["SHOX"] = {23, 585078, 607558};
   transcriptFactorLUT["SHOX2"] = {3, 157813799, 157823952};
   transcriptFactorLUT["SIM1"] = {6, 100836749, 100911551};
   transcriptFactorLUT["SIX1"] = {14, 61111416, 61116155};
@@ -1310,6 +1424,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["SOX18"] = {20, 62679078, 62680979};
   transcriptFactorLUT["SOX2"] = {3, 181429711, 181432223};
   transcriptFactorLUT["SOX21"] = {13, 95361878, 95364797};
+  transcriptFactorLUT["SOX3"] = {23, 139585151, 139587225};
   transcriptFactorLUT["SOX30"] = {5, 157052686, 157079428};
   transcriptFactorLUT["SOX4"] = {6, 21593971, 21598849};
   transcriptFactorLUT["SOX5"] = {12, 23685230, 24715383};
@@ -1338,6 +1453,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["SREBF1"] = {17, 17714662, 17740325};
   transcriptFactorLUT["SREBF2"] = {22, 42229082, 42303312};
   transcriptFactorLUT["SRF"] = {6, 43139032, 43149244};
+  transcriptFactorLUT["SRY"] = {24, 2654895, 2655782};
   transcriptFactorLUT["SSRP1"] = {11, 57093458, 57103351};
   transcriptFactorLUT["ST18"] = {8, 53023391, 53322439};
   transcriptFactorLUT["STAT1"] = {2, 191833761, 191878976};
@@ -1362,6 +1478,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["TBX2"] = {17, 59477256, 59486827};
   transcriptFactorLUT["TBX20"] = {7, 35242041, 35293711};
   transcriptFactorLUT["TBX21"] = {17, 45810609, 45823485};
+  transcriptFactorLUT["TBX22"] = {23, 79270254, 79287268};
   transcriptFactorLUT["TBX3"] = {12, 115108058, 115121969};
   transcriptFactorLUT["TBX4"] = {17, 59533806, 59561664};
   transcriptFactorLUT["TBX5"] = {12, 114791734, 114846247};
@@ -1394,10 +1511,14 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["TFCP2L1"] = {2, 121974163, 122042778};
   transcriptFactorLUT["TFDP1"] = {13, 114239055, 114295788};
   transcriptFactorLUT["TFDP2"] = {3, 141663269, 141719229};
+  transcriptFactorLUT["TFDP3"] = {23, 132350696, 132352376};
+  transcriptFactorLUT["TFE3"] = {23, 48886237, 48901043};
   transcriptFactorLUT["TFEB"] = {6, 41651715, 41703997};
   transcriptFactorLUT["TFEC"] = {7, 115575201, 115608367};
   transcriptFactorLUT["TGIF1"] = {18, 3453771, 3458406};
   transcriptFactorLUT["TGIF2"] = {20, 35202956, 35222355};
+  transcriptFactorLUT["TGIF2LX"] = {23, 89176939, 89177882};
+  transcriptFactorLUT["TGIF2LY"] = {24, 3447125, 3448082};
   transcriptFactorLUT["THAP1"] = {8, 42691816, 42698474};
   transcriptFactorLUT["THAP10"] = {15, 71173680, 71184772};
   transcriptFactorLUT["THAP11"] = {16, 67876212, 67878098};
@@ -1425,6 +1546,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["TRPS1"] = {8, 116420723, 116681255};
   transcriptFactorLUT["TSC22D1"] = {13, 45006278, 45150701};
   transcriptFactorLUT["TSC22D2"] = {3, 150126121, 150177905};
+  transcriptFactorLUT["TSC22D3"] = {23, 106956451, 106960291};
   transcriptFactorLUT["TSC22D4"] = {7, 100064141, 100076902};
   transcriptFactorLUT["TSHZ1"] = {18, 72922709, 73001905};
   transcriptFactorLUT["TSHZ3"] = {19, 31765850, 31840190};
@@ -1457,6 +1579,8 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["YBX1"] = {1, 43148065, 43168020};
   transcriptFactorLUT["YBX2"] = {17, 7191570, 7197876};
   transcriptFactorLUT["YY1"] = {14, 100705101, 100745371};
+  transcriptFactorLUT["YY2"] = {23, 21874104, 21876845};
+  transcriptFactorLUT["ZBED1"] = {23, 2404454, 2419008};
   transcriptFactorLUT["ZBED2"] = {3, 111311746, 111314182};
   transcriptFactorLUT["ZBED3"] = {5, 76372531, 76383030};
   transcriptFactorLUT["ZBED4"] = {22, 50247496, 50283726};
@@ -1473,6 +1597,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZBTB26"] = {9, 125680307, 125693830};
   transcriptFactorLUT["ZBTB3"] = {11, 62518434, 62521656};
   transcriptFactorLUT["ZBTB32"] = {19, 36203829, 36207940};
+  transcriptFactorLUT["ZBTB33"] = {23, 119384609, 119392251};
   transcriptFactorLUT["ZBTB34"] = {9, 129622943, 129648156};
   transcriptFactorLUT["ZBTB37"] = {1, 173837492, 173855774};
   transcriptFactorLUT["ZBTB38"] = {3, 141043054, 141168632};
@@ -1514,12 +1639,15 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZFP91"] = {11, 58346586, 58389023};
   transcriptFactorLUT["ZFPM1"] = {16, 88520013, 88601574};
   transcriptFactorLUT["ZFPM2"] = {8, 106331146, 106816767};
+  transcriptFactorLUT["ZFX"] = {23, 24167761, 24234372};
+  transcriptFactorLUT["ZFY"] = {24, 2803517, 2850547};
   transcriptFactorLUT["ZGLP1"] = {19, 10415478, 10420233};
   transcriptFactorLUT["ZHX1"] = {8, 124260689, 124286727};
   transcriptFactorLUT["ZHX2"] = {8, 123793900, 123986755};
   transcriptFactorLUT["ZHX3"] = {20, 39807088, 39928739};
   transcriptFactorLUT["ZIC1"] = {3, 147127180, 147134506};
   transcriptFactorLUT["ZIC2"] = {13, 100634025, 100639019};
+  transcriptFactorLUT["ZIC3"] = {23, 136648345, 136654259};
   transcriptFactorLUT["ZIC4"] = {3, 147103834, 147124596};
   transcriptFactorLUT["ZIC5"] = {13, 100615274, 100624178};
   transcriptFactorLUT["ZIK1"] = {19, 58095627, 58103758};
@@ -1557,6 +1685,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF148"] = {3, 124944512, 125094198};
   transcriptFactorLUT["ZNF154"] = {19, 58207642, 58220579};
   transcriptFactorLUT["ZNF155"] = {19, 44488321, 44502477};
+  transcriptFactorLUT["ZNF157"] = {23, 47229998, 47273098};
   transcriptFactorLUT["ZNF16"] = {8, 146155743, 146176274};
   transcriptFactorLUT["ZNF160"] = {19, 53569866, 53606687};
   transcriptFactorLUT["ZNF165"] = {6, 28048481, 28057340};
@@ -1568,6 +1697,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF18"] = {17, 11880755, 11900827};
   transcriptFactorLUT["ZNF180"] = {19, 44978644, 45004575};
   transcriptFactorLUT["ZNF181"] = {19, 35225479, 35233774};
+  transcriptFactorLUT["ZNF182"] = {23, 47834249, 47863377};
   transcriptFactorLUT["ZNF184"] = {6, 27418520, 27440897};
   transcriptFactorLUT["ZNF189"] = {9, 104161135, 104172942};
   transcriptFactorLUT["ZNF19"] = {16, 71507975, 71523254};
@@ -1620,6 +1750,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF268"] = {12, 133757994, 133783697};
   transcriptFactorLUT["ZNF273"] = {7, 64363619, 64391955};
   transcriptFactorLUT["ZNF274"] = {19, 58694355, 58724928};
+  transcriptFactorLUT["ZNF275"] = {23, 152599612, 152618384};
   transcriptFactorLUT["ZNF276"] = {16, 89787951, 89807332};
   transcriptFactorLUT["ZNF28"] = {19, 53300660, 53324922};
   transcriptFactorLUT["ZNF280D"] = {15, 56922373, 57026284};
@@ -1677,6 +1808,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF398"] = {7, 148844559, 148880118};
   transcriptFactorLUT["ZNF407"] = {18, 72342918, 72516583};
   transcriptFactorLUT["ZNF408"] = {11, 46722316, 46727466};
+  transcriptFactorLUT["ZNF41"] = {23, 47305560, 47342345};
   transcriptFactorLUT["ZNF410"] = {14, 74353317, 74398991};
   transcriptFactorLUT["ZNF415"] = {19, 53611131, 53636171};
   transcriptFactorLUT["ZNF416"] = {19, 58082933, 58090243};
@@ -1703,6 +1835,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF444"] = {19, 56652534, 56672262};
   transcriptFactorLUT["ZNF445"] = {3, 44481261, 44519162};
   transcriptFactorLUT["ZNF446"] = {19, 58987530, 58992601};
+  transcriptFactorLUT["ZNF449"] = {23, 134478695, 134497338};
   transcriptFactorLUT["ZNF45"] = {19, 44416775, 44439411};
   transcriptFactorLUT["ZNF451"] = {6, 56954827, 57035098};
   transcriptFactorLUT["ZNF454"] = {5, 178368193, 178393218};
@@ -1820,6 +1953,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF627"] = {19, 11708234, 11729974};
   transcriptFactorLUT["ZNF628"] = {19, 55987698, 55995854};
   transcriptFactorLUT["ZNF629"] = {16, 30789769, 30798523};
+  transcriptFactorLUT["ZNF630"] = {23, 47917566, 47930508};
   transcriptFactorLUT["ZNF639"] = {3, 179040778, 179053323};
   transcriptFactorLUT["ZNF641"] = {12, 48733792, 48744674};
   transcriptFactorLUT["ZNF644"] = {1, 91380856, 91487812};
@@ -1840,6 +1974,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF670"] = {1, 247197939, 247242115};
   transcriptFactorLUT["ZNF671"] = {19, 58231118, 58238995};
   transcriptFactorLUT["ZNF672"] = {1, 249132376, 249143716};
+  transcriptFactorLUT["ZNF674"] = {23, 46357159, 46404892};
   transcriptFactorLUT["ZNF675"] = {19, 23835707, 23870017};
   transcriptFactorLUT["ZNF676"] = {19, 22361902, 22379753};
   transcriptFactorLUT["ZNF677"] = {19, 53738637, 53758111};
@@ -1871,6 +2006,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF709"] = {19, 12571997, 12595632};
   transcriptFactorLUT["ZNF71"] = {19, 57106663, 57135544};
   transcriptFactorLUT["ZNF710"] = {15, 90544722, 90625432};
+  transcriptFactorLUT["ZNF711"] = {23, 84498996, 84528368};
   transcriptFactorLUT["ZNF713"] = {7, 55954969, 56009918};
   transcriptFactorLUT["ZNF714"] = {19, 21264952, 21307883};
   transcriptFactorLUT["ZNF716"] = {7, 57509882, 57533265};
@@ -1883,6 +2019,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF746"] = {7, 149169883, 149194898};
   transcriptFactorLUT["ZNF749"] = {19, 57946692, 57957191};
   transcriptFactorLUT["ZNF75A"] = {16, 3355405, 3368576};
+  transcriptFactorLUT["ZNF75D"] = {23, 134419718, 134478012};
   transcriptFactorLUT["ZNF76"] = {6, 35227490, 35263764};
   transcriptFactorLUT["ZNF763"] = {19, 12075868, 12091198};
   transcriptFactorLUT["ZNF764"] = {16, 30565084, 30569642};
@@ -1920,6 +2057,7 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZNF800"] = {7, 127010096, 127032778};
   transcriptFactorLUT["ZNF805"] = {19, 57752052, 57774106};
   transcriptFactorLUT["ZNF808"] = {19, 53030908, 53059303};
+  transcriptFactorLUT["ZNF81"] = {23, 47696300, 47781655};
   transcriptFactorLUT["ZNF813"] = {19, 53970988, 53997546};
   transcriptFactorLUT["ZNF814"] = {19, 58380746, 58400442};
   transcriptFactorLUT["ZNF816"] = {19, 53452631, 53466164};
@@ -1963,6 +2101,8 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZSCAN4"] = {19, 58180302, 58190520};
   transcriptFactorLUT["ZSCAN5A"] = {19, 56732678, 56739659};
   transcriptFactorLUT["ZSCAN5B"] = {19, 56701057, 56704421};
+  transcriptFactorLUT["ZXDA"] = {23, 57931863, 57937067};
+  transcriptFactorLUT["ZXDB"] = {23, 57618268, 57623910};
   transcriptFactorLUT["ZXDC"] = {3, 126177743, 126194762};
   transcriptFactorLUT["ZZZ3"] = {1, 78030189, 78148343};
   return true;
