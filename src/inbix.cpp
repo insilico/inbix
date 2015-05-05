@@ -762,7 +762,7 @@ int main(int argc, char* argv[]) {
 
     // run the analysis
   	P.SNP2Ind();
-    if(!epiqtl->Run(par::verbose)) {
+    if(!epiqtl->Run(true)) {
       error("epiQTL analysis failed");
     }
 

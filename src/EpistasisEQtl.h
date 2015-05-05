@@ -43,9 +43,9 @@ public:
 private:
   bool GetSnpsForTranscript(std::string transcript, 
     std::vector<int>& snpIndices);
-  bool GetSnpsForTF(std::string transcript, 
-    std::vector<int>& snpIndices);
+  bool GetSnpsForTFs(std::vector<int>& snpIndices, std::vector<std::string>& tfs);
   bool LoadDefaultTranscriptionFactorLUT();
+  bool IsSnpInTFs(int chr, int bp, std::string& tf);
   int radius;
   bool localCis;
   CoordinateTable coordinates;

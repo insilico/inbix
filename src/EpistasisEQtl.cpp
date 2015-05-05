@@ -273,6 +273,30 @@ bool EpistasisEQtl::Run(bool debug) {
   std::ofstream LOOPINFO;
   LOOPINFO.open(loopInfoFilename.c_str(), ios::out);
 
+  int nAllSnps = PP->nl_all;
+  int nOuterLoop = -1;
+  vector<int> thisTFSnpIndices;
+  vector<string> thisTFNames;
+  if(par::do_epiqtl_tf) {
+    GetSnpsForTFs(thisTFSnpIndices, thisTFNames);
+    nOuterLoop = thisTFSnpIndices.size();
+  } else {
+    nOuterLoop = nAllSnps;
+  }
+  if(debug) {
+    cout << "nOuterLoop (TFs) : " << nOuterLoop << endl;
+    // cout << "TF snp indices: ";
+    // copy(thisTFSnpIndices.begin(), 
+    //   thisTFSnpIndices.end(), 
+    //   ostream_iterator<int>(cout, "\t"));
+    // cout << endl;
+    // cout << "TFs: ";
+    // copy(thisTFNames.begin(), 
+    //   thisTFNames.end(), 
+    //   ostream_iterator<string>(cout, "\t"));
+    // cout << endl;
+  }
+
   string thisTranscript;
   int transcriptIndex = 0;
   for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
@@ -285,7 +309,6 @@ bool EpistasisEQtl::Run(bool debug) {
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
     // determine SNPs being considered ----------------------------------------
-    int nAllSnps = PP->nl_all;
     int nInnerLoop = -1;
     vector<int> thisTranscriptSnpIndices;
     if(par::epiqtl_interaction_full) {
@@ -294,17 +317,8 @@ bool EpistasisEQtl::Run(bool debug) {
       GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
       nInnerLoop = thisTranscriptSnpIndices.size();
     }
-    int nOuterLoop = -1;
-    vector<int> thisTFSnpIndices;
-    if(par::do_epiqtl_tf) {
-      GetSnpsForTF(thisTranscript, thisTFSnpIndices);
-      nOuterLoop = thisTFSnpIndices.size();
-    } else {
-      nOuterLoop = nAllSnps;
-    }
     if(debug) {
       cout << "nInnerLoop (cis): " << nInnerLoop << endl;
-      cout << "nOuterLoop (TF) : " << nOuterLoop << endl;
     }
     if(!(nInnerLoop * nOuterLoop)) {
       cerr << "WARNING: no interactions for: " << thisTranscript << endl;
@@ -324,11 +338,6 @@ bool EpistasisEQtl::Run(bool debug) {
     // cout << "cis snp indices: ";
     // copy(thisTranscriptSnpIndices.begin(), 
     //   thisTranscriptSnpIndices.end(), 
-    //   ostream_iterator<int>(cout, "\t"));
-    // cout << endl;
-    // cout << "TF snp indices: ";
-    // copy(thisTFSnpIndices.begin(), 
-    //   thisTFSnpIndices.end(), 
     //   ostream_iterator<int>(cout, "\t"));
     // cout << endl;
     // cout << "Loop set snp indices: ";
@@ -462,7 +471,7 @@ bool EpistasisEQtl::Run(bool debug) {
       }
 #pragma omp parallel for
       for(int ii=0; ii < nOuterLoop; ++ii) {
-        if(ii && (ii % 1000 == 0)) {
+        if(ii && (ii % 10000 == 0)) {
           cout << ii << "/" << nOuterLoop << endl;
         }
         int snpAIndex = -1;
@@ -549,13 +558,15 @@ bool EpistasisEQtl::Run(bool debug) {
     else {
       for(int kk=0; kk < nOuterLoop; ++kk) {
         for(int ll=0; ll < nInnerLoop; ++ll) {
-          int snpAIndex = kk;
+          int snpAIndex = thisTFSnpIndices[kk];
           string snpAName = PP->locus[snpAIndex]->name;
+          string snpTF = thisTFNames[kk];
           int snpBIndex = thisTranscriptSnpIndices[ll];
           string snpBName = PP->locus[snpBIndex]->name;
           EPIQTL_OUT
             << snpAName << "\t" << snpBName << "\t"
             << thisTranscript << "\t"
+            << snpTF << "\t"
             << resultsMatrixBetas[kk][ll] << "\t"
             << resultsMatrixPvals[kk][ll] << endl;
         }
@@ -626,42 +637,48 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
   return true;
 }
 
-bool EpistasisEQtl::GetSnpsForTF(string tf, vector<int>& snpIndices) {
+bool EpistasisEQtl::GetSnpsForTFs(vector<int>& snpIndices, vector<string>& tfs) {
 
-  // get transcript info
-  vector<int> transcriptInfo;
-  if(!GetTFInfo(tf, transcriptInfo)) {
-    cerr << "GetSnpsForTF: Cannot find transcript in TF lookup table: " << tf << endl;
-    return false;
-  }
-  int chromosome = transcriptInfo[COORD_CHROM];
-  int bpStart = transcriptInfo[COORD_BP_START];
-  int bpEnd = transcriptInfo[COORD_BP_END];
-  int lowerThreshold = bpStart - tfRadius;
-  int upperThreshold = bpEnd + tfRadius;
-
-  // cout 
-  //   << "GetSnpsForTF: chrom: " << chromosome  << ", radius: " 
-  //   << tfRadius  << ", " 
-  //   << "(" << lowerThreshold << "), "
-  //   << bpStart  << ", " 
-  //   << bpEnd << ", "
-  //   << "(" << upperThreshold << ")"
-  //   << endl;
-  
-  // find SNPs matching criteria
-  for(int j=0; j < PP->locus.size(); ++j) {
-    Locus* thisSnp = PP->locus[j];
-    if(thisSnp->chr == chromosome) {
-      // on the same chromosome and within radius of transcript
-      if((thisSnp->bp >= lowerThreshold) && 
-         (thisSnp->bp <= upperThreshold)) {
-        snpIndices.push_back(j);
-      }
+  int allSnps = PP->locus.size();
+  PP->printLOG("Searching transcription factors in " + int2str(allSnps) + " SNPs\n");
+  // for all SNPs
+  for(int thisSnpIndex=0; thisSnpIndex < allSnps; ++thisSnpIndex) {
+    if(thisSnpIndex && (thisSnpIndex % 100000 == 0)) {
+      cout << thisSnpIndex << "/" << allSnps << endl;
+    }
+    Locus* thisSnp = PP->locus[thisSnpIndex];
+    int chr = thisSnp->chr;
+    int bp = thisSnp->bp;
+    // is this bp in range of any transcription factors?
+    string tf;
+    if(IsSnpInTFs(chr, bp, tf)) {
+      snpIndices.push_back(thisSnpIndex);
+      tfs.push_back(tf);
     }
   }
 
   return true;
+}
+
+bool EpistasisEQtl::IsSnpInTFs(int chr, int bp, string& tf) {
+  // linear search through the transcription factor lookup table for SNP at
+  // chr/bp, returning the transcription factor if true, else return false
+  bool found = false;
+  TranscriptFactorTableCIt lutIt = transcriptFactorLUT.begin();
+  while((lutIt != transcriptFactorLUT.end()) && (!found)) {
+    string thisTF = (*lutIt).first;
+    int thisTfChr = transcriptFactorLUT[thisTF][COORD_CHROM];
+    int thisTfBpBeg = transcriptFactorLUT[thisTF][COORD_BP_START];
+    int thisTfBpEnd = transcriptFactorLUT[thisTF][COORD_BP_END];
+    int rangeStart = thisTfBpBeg - tfRadius;
+    int rangeEnd = thisTfBpEnd + tfRadius;
+    if((chr == thisTfChr) && ((bp >= rangeStart) &&  (bp <= rangeEnd))) {
+      tf = thisTF;
+      return true;
+    }
+    ++lutIt;
+  }
+  return false;
 }
 
 bool EpistasisEQtl::GetTFInfo(string tf, vector<int>& tfInfo) {
