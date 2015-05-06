@@ -32,8 +32,9 @@ CXX_WIN = g++.exe
 CXXFLAGS = 
 # optimized mode
 CXXFLAGS += -O3 -I. -I/usr/local/include -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib -I/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9/gcc/x86_64-apple-darwin13.4.0/4.9.2/include  -std=c++11 \
-	-L/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9
+  -I/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9/gcc/x86_64-apple-darwin13.4.0/4.9.2/include -std=c++11
+LDFLAGS =
+LDFLAGS = -L/usr/local/lib -L/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9
 # EPIQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DEPIQTL
@@ -67,6 +68,7 @@ ifeq ($(SYS),UNIX)
   LIB += /usr/lib/libblas/libblas.a
   LIB += /usr/lib/gcc/x86_64-linux-gnu/4.4/libgfortran.a
  else
+  LIB += -lgomp
   LIB += -larmadillo
   LIB += -llapack
   LIB += -lblas
@@ -165,7 +167,7 @@ OBJ = $(SRC:.cpp=.o)
 all : $(OUTPUT) 
 
 $(OUTPUT) :
-	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
+	$(CXX) $(LDFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
 
 $(OBJ) : $(HDR)
 

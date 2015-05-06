@@ -30,8 +30,9 @@ CXX_WIN = g++.exe
 # Any other compiler flags here ( -Wall, -g, etc)
 CXXFLAGS = 
 # optimized mode
-CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11 \
-  -L/usr/local/lib
+CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
+LDFLAGS = 
+LDFLAGS += -L/usr/local/lib
 # EPIQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DEPIQTL
@@ -65,6 +66,7 @@ ifeq ($(SYS),UNIX)
   LIB += /usr/lib/libblas/libblas.a
   LIB += /usr/lib/gcc/x86_64-linux-gnu/4.4/libgfortran.a
  else
+  LIB += -lgomp
   LIB += -larmadillo
   LIB += -llapack
   LIB += -lblas
@@ -159,7 +161,7 @@ OBJ = $(SRC:.cpp=.o)
 all : $(OUTPUT) 
 
 $(OUTPUT) :
-	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
+	$(CXX) $(LDFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
 
 $(OBJ) : $(HDR)
 

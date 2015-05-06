@@ -30,7 +30,9 @@ CXX_WIN = g++.exe
 CXXFLAGS = 
 # optimized mode
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -L/usr/local/lib  -std=c++11
+  -std=c++11
+LDFLAGS = 
+LDFLAGS += -L/usr/local/lib
 # EPIQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DEPIQTL
@@ -155,7 +157,7 @@ OBJ = $(SRC:.cpp=.o)
 all : $(OUTPUT) 
 
 $(OUTPUT) :
-	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
+	$(CXX) $(LDFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
 
 $(OBJ) : $(HDR)
 
