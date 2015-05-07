@@ -1,0 +1,76 @@
+# -----------------------------------------------------------------
+#   Makefile for inbix/epiqtl - In Silico Bioinformatics
+# ---------------------------------------------------------------------
+
+CXX = g++
+CXXFLAGS = -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
+  -DEPIQTL -std=c++11 -fopenmp -static -DUNIX
+LDFLAGS = -L/usr/local/lib -static-libstdc++ -static-libgcc -static
+OUTPUT = epiqtl
+
+# static libraries
+LIB += /usr/local/lib/libarmadillo.a
+LIB += /usr/lib/atlas-base/atlas/liblapack.a
+LIB += /usr/lib/atlas-base/atlas/libblas.a
+LIB += /usr/lib/gcc/x86_64-linux-gnu/4.6/libgfortran.a
+LIB += /usr/lib/x86_64-linux-gnu/libz.a
+LIB += /usr/lib/gcc/x86_64-linux-gnu/4.8/libgomp.a
+LIB += /usr/lib/x86_64-linux-gnu/libpthread.a
+LIB += /usr/lib/x86_64-linux-gnu/libdl.a
+
+SRC = inbix.cpp plink.cpp options.cpp input.cpp binput.cpp tinput.cpp \
+genome.cpp \
+helper.cpp stats.cpp filters.cpp locus.cpp multi.cpp crandom.cpp	\
+cluster.cpp mds.cpp output.cpp informative.cpp assoc.cpp epi.cpp	\
+prephap.cpp phase.cpp trio.cpp tdt.cpp sharing.cpp genepi.cpp sets.cpp	\
+perm.cpp mh.cpp genedrop.cpp gxe.cpp merge.cpp hotel.cpp multiple.cpp	\
+haploCC.cpp haploTDT.cpp poo.cpp webcheck.cpp qfam.cpp linear.cpp	\
+bmerge.cpp parse.cpp mishap.cpp legacy.cpp homozyg.cpp segment.cpp	\
+model.cpp logistic.cpp glm.cpp dcdflib.cpp elf.cpp dfam.cpp fisher.cpp	\
+linput.cpp sockets.cpp lookup.cpp proxy.cpp pdriver.cpp haploQTL.cpp	\
+haplohelper.cpp haplowindow.cpp genogroup.cpp nonfounderphasing.cpp	\
+clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp	\
+nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
+flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
+tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
+metaanal.cpp \
+ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp \
+EpistasisEQtl.cpp
+
+HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
+perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
+fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
+gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h                     \
+ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h \
+EpistasisEQtl.h
+
+CXXFLAGS += -DWITH_ZLIB
+HDR += zfstream.h
+SRC += zfstream.cpp
+
+OBJ = $(SRC:.cpp=.o)
+
+all : $(OUTPUT) 
+
+$(OUTPUT) :
+	$(CXX) $(LDFLAGS) -o $(OUTPUT) $(OBJ) $(LIB) 
+
+$(OBJ) : $(HDR)
+
+.cpp.o : 
+	$(CXX) $(CXXFLAGS) -c $*.cpp
+
+.SUFFIXES : .cpp .c .o $(SUFFIXES)
+
+$(OUTPUT) : $(OBJ)
+
+FORCE:
+
+clean:
+	rm -f *.o *~ $(OUTPUT)
+
+install:
+	cp $(OUTPUT) /usr/local/bin
+
+dist:
+	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*
