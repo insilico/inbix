@@ -3058,6 +3058,9 @@ void setOptions(CArgs & a) {
     par::do_epiqtl_tf = true;
     par::epiqtl_tf_coord_file = a.value("--TF-file");
   }
+  if(a.find("--epiqtl-pvalue")) {
+    par::epiqtl_pvalue = a.value_double("--epiqtl-pvalue");
+  }
   
   ////////////////////////
   // Reference allele file
@@ -4300,6 +4303,7 @@ void setOptions(CArgs & a) {
             << "      --TF                      Select SNPs in range of 1 or more transcription factors\n"
             << "      --TF-radius {value}       Number of kilobases considered within TF radius\n"
             << "      --TF-file {filename}      Select coordinates file different from default\n"
+            << "      --epiqtl-pvalue {threshold} P-value threshold\n"
             << "      --full                    Consider all SNPs\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
@@ -4331,6 +4335,7 @@ void setOptions(CArgs & a) {
             << "      --TF                           Select SNPs in range of 1 or more transcription factors\n"
             << "      --TF-radius {value}            Number of kilobases considered within TF radius\n"
             << "      --TF-file {filename}           Select coordinates file different from default\n"
+            << "      --epiqtl-pvalue {threshold}    P-value threshold\n"
             << "      --full                         Consider all SNPs\n";
       shutdown();
     }

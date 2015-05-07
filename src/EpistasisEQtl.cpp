@@ -540,24 +540,10 @@ bool EpistasisEQtl::Run(bool debug) {
     PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
     ofstream EPIQTL_OUT;
     EPIQTL_OUT.open(epiqtlFilename.c_str(), ios::out);
-    if(par::epiqtl_interaction_full) {
-      for(int kk=0; kk < nAllSnps; ++kk) {
-        for(int ll=kk+1; ll < nAllSnps; ++ll) {
-          int snpAIndex = kk;
-          string snpAName = PP->locus[snpAIndex]->name;
-          int snpBIndex = ll;
-          string snpBName = PP->locus[snpBIndex]->name;
-          EPIQTL_OUT
-            << snpAName << "\t" << snpBName << "\t"
-            << thisTranscript << "\t"
-            << resultsMatrixBetas[kk][ll] << "\t"
-            << resultsMatrixPvals[kk][ll] << endl;
-        }
-      }
-    }
-    else {
-      for(int kk=0; kk < nOuterLoop; ++kk) {
-        for(int ll=0; ll < nInnerLoop; ++ll) {
+    for(int kk=0; kk < nOuterLoop; ++kk) {
+      for(int ll=0; ll < nInnerLoop; ++ll) {
+        if((resultsMatrixPvals[kk][ll] > 0) && 
+          (resultsMatrixPvals[kk][ll] < par::epiqtl_pvalue)) {
           int snpAIndex = thisTFSnpIndices[kk];
           string snpAName = PP->locus[snpAIndex]->name;
           string snpTF = thisTFNames[kk];

@@ -349,6 +349,7 @@ bool par::epiqtl_interaction_full = false;
 bool par::do_epiqtl_tf = false;
 int par::epiqtl_tf_radius = 0;
 string par::epiqtl_tf_coord_file = "";
+double par::epiqtl_pvalue = 1.0;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

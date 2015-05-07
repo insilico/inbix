@@ -444,6 +444,7 @@ public:
   static bool do_epiqtl_tf;
   static int epiqtl_tf_radius;
   static string epiqtl_tf_coord_file;
+  static double epiqtl_pvalue;
 
   static bool no_show_covar;
   static bool dump_covar;
