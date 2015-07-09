@@ -1,10 +1,11 @@
 # -----------------------------------------------------------------
-#   Makefile for inbix/epiqtl - In Silico Bioinformatics
+# Makefile for static build of inbix/epiqtl on thor (Ubuntu 14.04)
+# Bill White - 5/6/15
 # ---------------------------------------------------------------------
 
 CXX = g++
 CXXFLAGS = -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-  -DEPIQTL -std=c++11 -fopenmp -static -DUNIX
+  -DEPIQTL -std=c++11 -fopenmp -static -DUNIX -DWITH_ZLIB
 LDFLAGS = -L/usr/local/lib -static-libstdc++ -static-libgcc -static
 OUTPUT = epiqtl
 
@@ -33,20 +34,16 @@ clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp	\
 nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
 flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
 tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
-metaanal.cpp \
+metaanal.cpp zfstream.cpp \
 ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp \
 EpistasisEQtl.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
 fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
-gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h                     \
+gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h zfstream.h \
 ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h \
 EpistasisEQtl.h
-
-CXXFLAGS += -DWITH_ZLIB
-HDR += zfstream.h
-SRC += zfstream.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
@@ -73,4 +70,4 @@ install:
 	cp $(OUTPUT) /usr/local/bin
 
 dist:
-	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*
+	zip $(OUTPUT)_src.zip $(SRC) $(HDR) Makefile* COPYING.txt README.*

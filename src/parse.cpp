@@ -2810,14 +2810,14 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar")) {
     par::do_dcvar = true;
   }
-  if(a.find("--dcvar-fdr-on")) {
-    par::do_dcvar_fdr = true;
+  if(a.find("--dcvar-pfilter")) {
+    par::do_dcvar_pfilter = true;
   }
-  if(a.find("--dcvar-fdr-off")) {
-    par::do_dcvar_fdr = false;
+  if(a.find("--dcvar-pfilter-value")) {
+    par::dcvar_pfilter_value = a.value_double("--dcvar-pfilter-value");
   }
-  if(a.find("--dcvar-fdr-value")) {
-    par::dcvar_fdr_value = a.value_double("--dcvar-fdr-value");
+  if(a.find("--dcvar-pfilter-type")) {
+    par::dcvar_pfilter_type = a.value("--dcvar-pfilter-type");
   }
   if(a.find("--dcvar-var-model")) {
     par::dcvar_var_model = a.value("--dcvar-var-model");
@@ -4260,11 +4260,11 @@ void setOptions(CArgs & a) {
             << "      --dmgain                  Perform a differential modularity analysis\n"
             << "      --dmgain-abs              Take absolute value of dmgain matrix\n"
             << "\n"
-            << "      --dcvar                   Perform a differential coexpression variant analysis\n"
-            << "      --fdr-on                  Enable FDR filtering\n"
-            << "      --fdr-off                 Disable FDR filtering\n"
-            << "      --fdr-value {threshold}   P-value threshold\n"
-            << "      --var-model {dom|rec|hom} Allelic model\n"
+            << "      --dcvar                          Perform a differential coexpression variant analysis\n"
+            << "      --dcvar-pfilter                  Enable p-value filtering\n"
+            << "      --dcvar-pfilter-value {value}    P-value filter value\n"
+            << "      --dcvar-pfilter-type {bon,fdrbh} P-value filter type Bonferroni or FDR BH\n"
+            << "      --var-model {dom|rec|hom}        Allelic model\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"
@@ -4342,12 +4342,12 @@ void setOptions(CArgs & a) {
 #elif defined (DCVAR)
     if(a.find("--help") || a.find("-h")) {
       cout
-            << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
-            << "      --numeric-file {numeric file} Specify numeric attribute file\n"
-            << "      --fdr-on                  Enable FDR filtering\n"
-            << "      --fdr-off                 Disable FDR filtering\n"
-            << "      --fdr-value {threshold}   P-value threshold\n"
-            << "      --var-model {dom|rec|hom} Allelic model\n";
+            << "      --bfile {fileroot}             Specify .bed, .fam and .map \n"
+            << "      --numeric-file {numeric file}  Specify numeric attribute file\n"
+            << "      --dcvar-pfilter                Enable p-value filtering\n"
+            << "      --dcvar-pfilter-value {value}  P-value filter value\n"
+            << "      --dcvar-pfilter-type {bon,fdr} P-value filter type Bonferroni or FDR (BH)\n"
+            << "      --var-model {dom|rec|hom}      Allelic model\n";
       shutdown();
     }
 #endif

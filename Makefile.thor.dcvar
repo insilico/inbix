@@ -35,7 +35,7 @@ CXXFLAGS =
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
   -DDCVAR  -std=c++11
 LDFLAGS =
-LDFLAGS = -L/usr/local/lib
+LDFLAGS = -L/usr/local/lib -static-libstdc++ -static-libgcc -static
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DDEBUG_CENTRALITY \
 #  -Wno-write-strings -L/usr/local/lib
@@ -64,6 +64,10 @@ ifeq ($(SYS),UNIX)
   LIB += /usr/lib/atlas-base/atlas/liblapack.a
   LIB += /usr/lib/atlas-base/atlas/libblas.a
   LIB += /usr/lib/gcc/x86_64-linux-gnu/4.6/libgfortran.a
+	LIB += /usr/lib/x86_64-linux-gnu/libz.a
+	LIB += /usr/lib/gcc/x86_64-linux-gnu/4.8/libgomp.a
+	LIB += /usr/lib/x86_64-linux-gnu/libpthread.a
+	LIB += /usr/lib/x86_64-linux-gnu/libdl.a
  else
   LIB += -larmadillo
  endif
@@ -177,4 +181,4 @@ install:
 	cp $(OUTPUT) /usr/local/bin
 
 dist:
-	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*
+	zip dcVar-1.0.zip $(SRC) $(HDR) Makefile COPYING.txt README.*

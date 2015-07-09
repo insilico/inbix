@@ -351,8 +351,9 @@ public:
   static bool do_dcgain_abs;
   // added for Caleb's study of eQTL SNPS - bcw - 2/22/15
   static bool do_dcvar;
-  static bool do_dcvar_fdr;
-  static double dcvar_fdr_value;
+  static bool do_dcvar_pfilter;
+  static double dcvar_pfilter_value;
+  static string dcvar_pfilter_type;
   static string dcvar_var_model;
   
   // differential modularity analysis - bcw - 7/31/14

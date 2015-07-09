@@ -258,8 +258,9 @@ bool par::do_dcgain_abs = false;
 
 // differential coexpression variant analysis - bcw - 2/22/15
 bool par::do_dcvar = false;
-bool par::do_dcvar_fdr = false;
-double par::dcvar_fdr_value = 0.05;
+bool par::do_dcvar_pfilter = false;
+double par::dcvar_pfilter_value = 0.05;
+string par::dcvar_pfilter_type = "bon";
 string par::dcvar_var_model = "dom";
 
 // differential modularity analysis - bcw - 7/31/14

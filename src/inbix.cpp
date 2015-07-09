@@ -57,6 +57,11 @@ string PREL;
 Plink * PP;
 map<string, int> Range::groupNames;
 
+bool pvalComparator(const matrixElement &l, const matrixElement &r) {
+  return l.first < r.first;
+}
+
+
 int main(int argc, char* argv[]) {
 	/////////////////////////
 	// Setup, display title
@@ -1225,18 +1230,6 @@ int main(int argc, char* argv[]) {
     }
 		P.printLOG(int2str(numVariants) + " variants, and " + int2str(numGenes) + " genes\n");
 
-		// insure doubles used in all intermediate calculations
-	  double nVars = (double) numGenes;
-    double nCombs = (nVars * (nVars - 1.0)) / 2.0;
-    double correctedP = par::dcvar_fdr_value / (nCombs * numVariants);
-    // cout 
-    // 	<< nVars << "\t" 
-    // 	<< nCombs <<  "\t"
-    // 	<< numVariants << "\t"
-    // 	<< correctedP
-    // 	<< endl;
-    printf("FDR Corrected p-value: %g\n", correctedP);
-
     // for all variants
     unsigned int variantIdx;
     for(variantIdx=0; variantIdx < numVariants; ++variantIdx) {
@@ -1303,17 +1296,6 @@ int main(int argc, char* argv[]) {
 				person->aff = thisAff;
 			}
 
-			// setup output file
-	    string dcvarFilename = variantName + ".dcVarTest.txt";
-	    ofstream dcvarFile;
-	    P.printLOG("Writing results to [ " + dcvarFilename + " ]\n");
-	    dcvarFile.open(dcvarFilename.c_str());
-	    if(dcvarFile.fail()) {
-	      error("Cannot open dcVar test results file for writing.");
-	    }
-	    dcvarFile.precision(6);
-	    dcvarFile.fixed;
-
 	    // run dcGAIN for this variant phenotype
 	    mat results(numGenes, numGenes);
 	    mat pvals(numGenes, numGenes);
@@ -1324,33 +1306,121 @@ int main(int argc, char* argv[]) {
 		  // armaWriteMatrix(results, "DEBUG.dcgain", PP->nlistname);
 		  // armaWriteMatrix(pvals, "DEBUG.pvals", PP->nlistname);
 
-	    // loop over p-values
-	    int goodFdrCount = 0;
-	    double minP = pvals(0, 0);
-	    double maxP = pvals(0, 0);
-	    for(int i=0; i < pvals.n_rows; ++i) {
-	      for(int j=0; j < pvals.n_cols; ++j) {
-	      	if(j <= i) { continue; }
-	        string gene1 = P.nlistname[i];
-	        string gene2 = P.nlistname[j];
-	        double p = pvals(i, j);
-			    // printf("p-value [%g] < [%g] ?\n", p, correctedP);
-	        // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
-	        //  << correctedP << " Passed FDR test!" << endl;
-	        if(p < minP) minP = p;
-	        if(p > maxP) maxP = p;
-	        if(p <  correctedP) {
-	          ++goodFdrCount;
-	          // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
-	          //  << correctedP << " Passed FDR test!" << endl;
-				    //printf("p-value [%g] < [%g] PASSED!\n", p, correctedP);
-	          dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-	      	}
-	    	} // end pvals cols
-	    } // end pvals rows
+      // save p-values that pass BH rejection threshold
+  		// setup output file
+      string dcvarFilename = variantName + ".dcVarTest.txt";
+      ofstream dcvarFile;
+      P.printLOG("Writing results to [ " + dcvarFilename + " ]\n");
+      dcvarFile.open(dcvarFilename.c_str());
+      if(dcvarFile.fail()) {
+        error("Cannot open dcVar test results file for writing.");
+      }
+      dcvarFile.precision(6);
+      dcvarFile.fixed;
 
-	    P.printLOG("Found [" + int2str(goodFdrCount) + "] FDR tested p-values, min/max: " + 
-	    	dbl2str(minP) + " / " + dbl2str(maxP) + "\n");
+	    if(par::do_dcvar_pfilter) {
+  		  double nVars = (double) numGenes;
+  	    double nCombs = (nVars * (nVars - 1.0)) / 2.0;
+		    double minP = 1.0;
+		    double maxP = 1.0;
+		    int goodPvalCount = 0;
+	    	if(par::dcvar_pfilter_type == "fdr") {
+			    // ------------------------------------------------------------------------
+			    P.printLOG("Filtering using Benjamini-Hochberg FDR threshold\n");
+			    // get all p-values
+			    vector<matrixElement> test_pvals;
+		 	    for(int i=0; i < pvals.n_rows; ++i) {
+			      for(int j=0; j < pvals.n_cols; ++j) {
+			      	if(j <= i) { continue; }
+			        test_pvals.push_back(make_pair(pvals(i, j), make_pair(i, j)));
+			      }
+			    }
+			    // sort them
+			    sort(test_pvals.begin(), test_pvals.end(), pvalComparator);
+			    // use rough FDR (RFDR) to estimate alpha based on input FDR
+			    int num_pvals = test_pvals.size();
+			    double m = (double) num_pvals * (double) numVariants;
+			    double alpha = 2 * m * par::dcvar_pfilter_value  / (m + 1);
+			    int threshold_index = -1;
+			    // BH method
+			    for(int i = 0; i < num_pvals; i++) {
+			      double l = (i + 1) * alpha / (double) num_pvals;
+			      // test whether current p-value < current l
+			      if(test_pvals[i].first < l) {
+			        threshold_index = i;
+			      } else {
+			        break;
+			      }
+			    }
+			    // BH threshold condition not met with any p-values, so break out of this iteration
+			    if(threshold_index == -1) {
+			      P.printLOG("No p-value meets BH threshold criteria, so nothing saved\n");
+			    } else {
+				    // BH rejection threshold
+				    double T = test_pvals[threshold_index].first;
+				    P.printLOG("BH rejection threshold T = " + dbl2str(T) + ", R = " +
+				      int2str(threshold_index) + "\n");
+				    goodPvalCount = threshold_index + 1;
+				    minP = test_pvals[0].first;
+				    maxP = test_pvals[test_pvals.size()-1].first;
+				    for(int i=0; i < threshold_index; i++) {
+				    	double p = test_pvals[i].first;
+				      pair<int, int> idx = test_pvals[i].second;
+			        string gene1 = P.nlistname[idx.first];
+			        string gene2 = P.nlistname[idx.second];
+			        dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+				    }
+					}
+				} else {
+			    P.printLOG("Filtering using Bonferroni threshold\n");
+	    		// insure doubles used in all intermediate calculations
+	        double correctedP = par::dcvar_pfilter_value / (nCombs * numVariants);
+	        // cout 
+	        // 	<< nVars << "\t" 
+	        // 	<< nCombs <<  "\t"
+	        // 	<< numVariants << "\t"
+	        // 	<< correctedP
+	        // 	<< endl;
+	        // printf("FDR Corrected p-value: %g\n", correctedP);
+			    minP = pvals(0, 0);
+			    maxP = pvals(0, 0);
+			    for(int i=0; i < pvals.n_rows; ++i) {
+			      for(int j=0; j < pvals.n_cols; ++j) {
+			      	if(j <= i) { continue; }
+			        string gene1 = P.nlistname[i];
+			        string gene2 = P.nlistname[j];
+			        double p = pvals(i, j);
+					    // printf("p-value [%g] < [%g] ?\n", p, correctedP);
+			        // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
+			        //  << correctedP << " Passed FDR test!" << endl;
+			        if(p < minP) minP = p;
+			        if(p > maxP) maxP = p;
+			        if(p <  correctedP) {
+			          ++goodPvalCount;
+			          // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
+			          //  << correctedP << " Passed FDR test!" << endl;
+						    //printf("p-value [%g] < [%g] PASSED!\n", p, correctedP);
+			          dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+			      	}
+			    	} // end pvals cols
+			    } // end pvals rows
+				}
+		    P.printLOG("Found [" + int2str(goodPvalCount) + "] tested p-values, min/max: " + 
+		    	dbl2str(minP) + " / " + dbl2str(maxP) + "\n");
+		  } else {
+		  	// no p-value filtering
+			  P.printLOG("Saving ALL p-values\n");
+				for(int i=0; i < pvals.n_rows; ++i) {
+				  for(int j=0; j < pvals.n_cols; ++j) {
+				  	if(j <= i) { continue; }
+				    string gene1 = P.nlistname[i];
+				    string gene2 = P.nlistname[j];
+				    double p = pvals(i, j);
+	          dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+				  }
+				}
+		  }
+	    
 	    dcvarFile.close();
 
     } // END all variants loop

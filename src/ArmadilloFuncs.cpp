@@ -38,7 +38,7 @@ bool armaDcgain(mat& results, mat& pvals) {
   }
   double df = nAff + nUnaff - 2;
   PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
-  PP->printLOG("WARNING: all main p-values are set to 1.\n");
+  PP->printLOG("WARNING: all main effect p-values are set to 1.\n");
   int numVars = PP->nlistname.size();
   for(int i=0; i < numVars; ++i) {
     // double t;
