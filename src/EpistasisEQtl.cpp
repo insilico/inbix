@@ -244,22 +244,22 @@ bool EpistasisEQtl::Run(bool debug) {
   }
   
   // for each transcript build main effect and epistasis regression models
-  PP->printLOG("epiQTL linear regression loop for all transcripts\n");
+  PP->printLOG("iQTL linear regression loop for all transcripts\n");
   if(localCis) {
-    PP->printLOG("epiQTL local cis mode with radius: " + 
+    PP->printLOG("iQTL local cis mode with radius: " + 
       int2str(int(radius / 1000)) + " kilobases\n");
   }
   if(tfMode) {
-    PP->printLOG("epiQTL TF mode with radius: " + 
+    PP->printLOG("iQTL TF mode with radius: " + 
       int2str(int(tfRadius / 1000)) + " kilobases\n");
   }
-  if(par::epiqtl_interaction_full) {
-    PP->printLOG("epiQTL FULL epistatic interaction mode\n");
+  if(par::iqtl_interaction_full) {
+    PP->printLOG("iQTL FULL epistatic interaction mode\n");
   } else {
     if(tfMode) {
-      PP->printLOG("epiQTL TF/cis-trans interaction mode\n");  
+      PP->printLOG("iQTL TF/cis-trans interaction mode\n");  
     } else {
-      PP->printLOG("epiQTL cis-cis/cis-trans interaction mode\n");  
+      PP->printLOG("iQTL cis-cis/cis-trans interaction mode\n");  
     }
   }
   
@@ -277,7 +277,7 @@ bool EpistasisEQtl::Run(bool debug) {
   int nOuterLoop = -1;
   vector<int> thisTFSnpIndices;
   vector<string> thisTFNames;
-  if(par::do_epiqtl_tf) {
+  if(par::do_iqtl_tf) {
     GetSnpsForTFs(thisTFSnpIndices, thisTFNames);
     nOuterLoop = thisTFSnpIndices.size();
   } else {
@@ -311,7 +311,7 @@ bool EpistasisEQtl::Run(bool debug) {
     // determine SNPs being considered ----------------------------------------
     int nInnerLoop = -1;
     vector<int> thisTranscriptSnpIndices;
-    if(par::epiqtl_interaction_full) {
+    if(par::iqtl_interaction_full) {
       nInnerLoop = nAllSnps;
     } else {
       GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
@@ -395,7 +395,7 @@ bool EpistasisEQtl::Run(bool debug) {
     }
     EQTL.close();
     
-    // EPIQTL -----------------------------------------------------------------
+    // IQTL -----------------------------------------------------------------
     // allocate results matrices
     double** resultsMatrixBetas= new double*[nAllSnps];
     for(int a=0; a < nOuterLoop; ++a) {
@@ -412,8 +412,8 @@ bool EpistasisEQtl::Run(bool debug) {
       }
     }
     
-    if(par::epiqtl_interaction_full) {
-      PP->printLOG("epiQTL linear regression loop: SNP x SNP\n");
+    if(par::iqtl_interaction_full) {
+      PP->printLOG("iQTL linear regression loop: SNP x SNP\n");
 #pragma omp parallel for
       for(int ii=0; ii < nAllSnps; ++ii) {
         if(ii && (ii % 1000 == 0)) {
@@ -462,11 +462,11 @@ bool EpistasisEQtl::Run(bool debug) {
       }
     } else {
       if(localCis) {
-        PP->printLOG("epiQTL linear regression loop: SNP x cis/trans (" + 
+        PP->printLOG("iQTL linear regression loop: SNP x cis/trans (" + 
           int2str(nInnerLoop) + ")\n");
       }
       if(tfMode) {
-        PP->printLOG("epiQTL linear regression loop TF: (" + 
+        PP->printLOG("iQTL linear regression loop TF: (" + 
           int2str(nOuterLoop) + ")\n");
       }
 #pragma omp parallel for
@@ -475,7 +475,7 @@ bool EpistasisEQtl::Run(bool debug) {
           cout << ii << "/" << nOuterLoop << endl;
         }
         int snpAIndex = -1;
-        if(par::do_epiqtl_tf) {
+        if(par::do_iqtl_tf) {
           snpAIndex = thisTFSnpIndices[ii];
         } else {
           snpAIndex = ii;
@@ -535,21 +535,21 @@ bool EpistasisEQtl::Run(bool debug) {
     }
 
     // write regression results
-    string epiqtlFilename = par::output_file_name + "." + 
-      thisTranscript + ".epiqtl.txt";
-    PP->printLOG("Writing epiQTL results to [ " + epiqtlFilename + " ]\n");
-    ofstream EPIQTL_OUT;
-    EPIQTL_OUT.open(epiqtlFilename.c_str(), ios::out);
+    string iqtlFilename = par::output_file_name + "." + 
+      thisTranscript + ".iqtl.txt";
+    PP->printLOG("Writing iQTL results to [ " + iqtlFilename + " ]\n");
+    ofstream IQTL_OUT;
+    IQTL_OUT.open(iqtlFilename.c_str(), ios::out);
     for(int kk=0; kk < nOuterLoop; ++kk) {
       for(int ll=0; ll < nInnerLoop; ++ll) {
         if((resultsMatrixPvals[kk][ll] > 0) && 
-          (resultsMatrixPvals[kk][ll] < par::epiqtl_pvalue)) {
+          (resultsMatrixPvals[kk][ll] < par::iqtl_pvalue)) {
           int snpAIndex = thisTFSnpIndices[kk];
           string snpAName = PP->locus[snpAIndex]->name;
           string snpTF = thisTFNames[kk];
           int snpBIndex = thisTranscriptSnpIndices[ll];
           string snpBName = PP->locus[snpBIndex]->name;
-          EPIQTL_OUT
+          IQTL_OUT
             << snpAName << "\t" << snpBName << "\t"
             << thisTranscript << "\t"
             << snpTF << "\t"
@@ -558,7 +558,7 @@ bool EpistasisEQtl::Run(bool debug) {
         }
       }
     }
-    EPIQTL_OUT.close();
+    IQTL_OUT.close();
 
     // release dynamically allocated memory
     for(int a=0; a < nOuterLoop; ++a) {
@@ -578,7 +578,7 @@ bool EpistasisEQtl::Run(bool debug) {
   TESTNUMBERS.close();
   LOOPINFO.close();
   
-  PP->printLOG("epiQTL analysis finished\n");
+  PP->printLOG("iQTL analysis finished\n");
 
   return true;
 }

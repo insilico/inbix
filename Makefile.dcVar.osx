@@ -36,9 +36,9 @@ CXXFLAGS += -O3 -I. -I/usr/local/include -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen 
   -I/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9/gcc/x86_64-apple-darwin13.4.0/4.9.2/include \
 LDFLAGS =
 LDFLAGS = -L/usr/local/lib -L/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9
-# EPIQTL
+# IQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-#  -L/usr/local/lib -DEPIQTL
+#  -L/usr/local/lib -DIQTL
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib

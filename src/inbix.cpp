@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
 	// Start logging, title
 	LOG.open(string(par::output_file_name + ".log").c_str());
 
-#if !defined(EPIQTL) && !defined(DCVAR)
+#if !defined(IQTL) && !defined(DCVAR)
 	P.printLOG("\n"
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
@@ -724,55 +724,55 @@ int main(int argc, char* argv[]) {
 	}
 
 	// perform epistatic eQTL analysis
-  if(par::do_epiqtl) {
-		P.printLOG("Performing epiQTL analysis\n");
+  if(par::do_iqtl) {
+		P.printLOG("Performing iQTL analysis\n");
 
-    if(par::epiqtl_expression_file == "") {
+    if(par::iqtl_expression_file == "") {
       error("Transcript expression file is required. Use --transcript-matrix");
     }
-    if(par::epiqtl_coord_file == "") {
+    if(par::iqtl_coord_file == "") {
       error("Transcript coordinate file is required. Use --coordinates");
     }
     
     // read the expression data as a numeric file in PLINK format
-		P.printLOG("Reading transcripts from [" + par::epiqtl_expression_file + "]\n");
-    par::numeric_filename = par::epiqtl_expression_file;
+		P.printLOG("Reading transcripts from [" + par::iqtl_expression_file + "]\n");
+    par::numeric_filename = par::iqtl_expression_file;
 		if(!P.readNumericFile()) {
-			error("Cannot read eQTL expression file: " + par::epiqtl_expression_file);
+			error("Cannot read eQTL expression file: " + par::iqtl_expression_file);
 		}
     
-    EpistasisEQtl* epiqtl = new EpistasisEQtl();
+    EpistasisEQtl* iqtl = new EpistasisEQtl();
     
     // read transcript coordinate information from file
-		P.printLOG("Reading transcript coordinates from [" + par::epiqtl_coord_file + "]\n");
-    if(!epiqtl->ReadTranscriptCoordinates(par::epiqtl_coord_file)) {
-      error("Cannot read coordinates file: " + par::epiqtl_coord_file);
+		P.printLOG("Reading transcript coordinates from [" + par::iqtl_coord_file + "]\n");
+    if(!iqtl->ReadTranscriptCoordinates(par::iqtl_coord_file)) {
+      error("Cannot read coordinates file: " + par::iqtl_coord_file);
     }
 
     // set parameters
-    epiqtl->SetLocalCis(par::epiqtl_local_cis);
-    epiqtl->SetRadius(par::epiqtl_radius);
+    iqtl->SetLocalCis(par::iqtl_local_cis);
+    iqtl->SetRadius(par::iqtl_radius);
     // added 4/21/15
-	  if(par::do_epiqtl_tf) {
-	    epiqtl->SetTF(par::do_epiqtl_tf);
-	    epiqtl->SetTFRadius(par::epiqtl_tf_radius);
-	    if(par::epiqtl_tf_coord_file != "") {
+	  if(par::do_iqtl_tf) {
+	    iqtl->SetTF(par::do_iqtl_tf);
+	    iqtl->SetTFRadius(par::iqtl_tf_radius);
+	    if(par::iqtl_tf_coord_file != "") {
 		    // read transcription factor coordinate information from file
-				P.printLOG("Reading TF coordinates from [" + par::epiqtl_tf_coord_file + "]\n");
-		    if(!epiqtl->ReadTranscriptFactorCoordinates(par::epiqtl_tf_coord_file)) {
-		      error("Cannot read TF coordinates file: " + par::epiqtl_tf_coord_file);
+				P.printLOG("Reading TF coordinates from [" + par::iqtl_tf_coord_file + "]\n");
+		    if(!iqtl->ReadTranscriptFactorCoordinates(par::iqtl_tf_coord_file)) {
+		      error("Cannot read TF coordinates file: " + par::iqtl_tf_coord_file);
 		    }
 	    }
     }
 
     // run the analysis
   	P.SNP2Ind();
-    if(!epiqtl->Run(true)) {
-      error("epiQTL analysis failed");
+    if(!iqtl->Run(true)) {
+      error("iQTL analysis failed");
     }
 
     // clean up and exit gracefully
-    delete epiqtl;
+    delete iqtl;
     shutdown();
   }
   

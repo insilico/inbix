@@ -3022,44 +3022,44 @@ void setOptions(CArgs & a) {
     par::exportDelimiter = a.value("--export-delimiter");
   }
   
-  // added for epiqtl support - bcw - 10/3/13
-  if(a.find("--epiqtl")) {
-    par::do_epiqtl = true;
+  // added for iqtl support - bcw - 10/3/13
+  if(a.find("--iqtl")) {
+    par::do_iqtl = true;
   }
   if(a.find("--transcript-matrix")) {
-    par::do_epiqtl = true;
-    par::epiqtl_expression_file = a.value("--transcript-matrix");
+    par::do_iqtl = true;
+    par::iqtl_expression_file = a.value("--transcript-matrix");
   }
   if(a.find("--coordinates")) {
-    par::do_epiqtl = true;
-    par::epiqtl_coord_file = a.value("--coordinates");
+    par::do_iqtl = true;
+    par::iqtl_coord_file = a.value("--coordinates");
   }
   if(a.find("--local-cis")) {
-    par::do_epiqtl = true;
-    par::epiqtl_local_cis = true;
+    par::do_iqtl = true;
+    par::iqtl_local_cis = true;
   }
   if(a.find("--radius")) {
-    par::do_epiqtl = true;
-    par::epiqtl_radius = a.value_int("--radius");
+    par::do_iqtl = true;
+    par::iqtl_radius = a.value_int("--radius");
   }
   if(a.find("--full")) {
-    par::do_epiqtl = true;
-    par::epiqtl_interaction_full = true;
+    par::do_iqtl = true;
+    par::iqtl_interaction_full = true;
   }
-  // added for epiqtl support - bcw - 4/21/15
+  // added for iqtl support - bcw - 4/21/15
   if(a.find("--TF")) {
-    par::do_epiqtl_tf = true;
+    par::do_iqtl_tf = true;
   }
   if(a.find("--TF-radius")) {
-    par::do_epiqtl_tf = true;
-    par::epiqtl_tf_radius = a.value_int("--TF-radius");
+    par::do_iqtl_tf = true;
+    par::iqtl_tf_radius = a.value_int("--TF-radius");
   }
   if(a.find("--TF-file")) {
-    par::do_epiqtl_tf = true;
-    par::epiqtl_tf_coord_file = a.value("--TF-file");
+    par::do_iqtl_tf = true;
+    par::iqtl_tf_coord_file = a.value("--TF-file");
   }
-  if(a.find("--epiqtl-pvalue")) {
-    par::epiqtl_pvalue = a.value_double("--epiqtl-pvalue");
+  if(a.find("--iqtl-pvalue")) {
+    par::iqtl_pvalue = a.value_double("--iqtl-pvalue");
   }
   
   ////////////////////////
@@ -4171,7 +4171,7 @@ void setOptions(CArgs & a) {
 
   /////////////////////////////////////////////
   //  Help -- display all options
-#if !defined(EPIQTL) && !defined(DCVAR)
+#if !defined(IQTL) && !defined(DCVAR)
   if(a.find("--help") || a.find("-h")) {
 
     cout << "\n"
@@ -4295,7 +4295,7 @@ void setOptions(CArgs & a) {
             << "      --export-delimited        Write data to delimited format\n"
             << "      --export-delimiter {delimiter} Export delimiter\n"
             << "\n"
-            << "      --epiqtl                  Perform epistasis eQTL analysis\n"
+            << "      --iqtl                  Perform epistasis eQTL analysis\n"
             << "      --transcript-matrix       Transcript matrix file\n"
             << "      --coordinates             Transcript coordinates file\n"
             << "      --local-cis               Consider only SNPs within radius\n"
@@ -4303,7 +4303,7 @@ void setOptions(CArgs & a) {
             << "      --TF                      Select SNPs in range of 1 or more transcription factors\n"
             << "      --TF-radius {value}       Number of kilobases considered within TF radius\n"
             << "      --TF-file {filename}      Select coordinates file different from default\n"
-            << "      --epiqtl-pvalue {threshold} P-value threshold\n"
+            << "      --iqtl-pvalue {threshold} P-value threshold\n"
             << "      --full                    Consider all SNPs\n"
             << "\n"
             << "      --perm                    Apaptive permutations       \n"
@@ -4323,7 +4323,7 @@ void setOptions(CArgs & a) {
 
     shutdown();
   }
-#elif defined (EPIQTL)
+#elif defined (IQTL)
     if(a.find("--help") || a.find("-h")) {
       cout
             << "      --bfile {fileroot}             Specify .bed, .fam and .map \n"
@@ -4335,7 +4335,7 @@ void setOptions(CArgs & a) {
             << "      --TF                           Select SNPs in range of 1 or more transcription factors\n"
             << "      --TF-radius {value}            Number of kilobases considered within TF radius\n"
             << "      --TF-file {filename}           Select coordinates file different from default\n"
-            << "      --epiqtl-pvalue {threshold}    P-value threshold\n"
+            << "      --iqtl-pvalue {threshold}    P-value threshold\n"
             << "      --full                         Consider all SNPs\n";
       shutdown();
     }

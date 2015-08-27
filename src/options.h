@@ -434,18 +434,18 @@ public:
   static bool exportDelimited;
   static string exportDelimiter;
 
-  // added for epiqtl support - bcw - 10/3/13
-  static bool do_epiqtl;
-  static string epiqtl_expression_file;
-  static string epiqtl_coord_file;
-  static bool epiqtl_local_cis;
-  static int epiqtl_radius;
-  static bool epiqtl_interaction_full;
-  // added for epiqtl support - bcw - 4/21/15
-  static bool do_epiqtl_tf;
-  static int epiqtl_tf_radius;
-  static string epiqtl_tf_coord_file;
-  static double epiqtl_pvalue;
+  // added for iqtl support - bcw - 10/3/13
+  static bool do_iqtl;
+  static string iqtl_expression_file;
+  static string iqtl_coord_file;
+  static bool iqtl_local_cis;
+  static int iqtl_radius;
+  static bool iqtl_interaction_full;
+  // added for iqtl support - bcw - 4/21/15
+  static bool do_iqtl_tf;
+  static int iqtl_tf_radius;
+  static string iqtl_tf_coord_file;
+  static double iqtl_pvalue;
 
   static bool no_show_covar;
   static bool dump_covar;
