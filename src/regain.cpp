@@ -738,15 +738,23 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
             << "] on coefficient for interaction variables ["
             << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
-          interactionValue = 0;
+          // interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
           interactionValue = 0;
           ++infCount;
+          stringstream ss;
+          ss << "Regression test statistic is +/-infinity on coefficient "
+            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+          warnings.push_back(ss.str());
         }
         if(std::isnan(interactionValue)) {
           interactionValue = 0;
           ++nanCount;
+          stringstream ss;
+          ss << "Regression test statistic is not a number NaN on coefficient "
+            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+          warnings.push_back(ss.str());
         }
       } else {
         interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
