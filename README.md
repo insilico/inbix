@@ -14,7 +14,7 @@ Center for Human Genetic Research (CHGR), Massachusetts General Hospital (MGH),
 and the Broad Institute of Harvard & MIT, with the support of others.
 
 For more details, visit the inbix
-[website](http://insilico.utulsa.edu/inbix/)
+[website](http://insilico.utulsa.edu/index.php/inbix-in-silico-research-groups-bioinformatics-toolbox-for-network-and-machine-learning-analysis/)
 
 ### Dependencies ###
 * The libz/zlib compression library is required, but this is installed by default
