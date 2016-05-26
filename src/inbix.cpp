@@ -71,9 +71,9 @@ int main(int argc, char* argv[]) {
 
 	set_new_handler(NoMem);
 
-	PVERSION = "0.03"; // 4 chars
+	PVERSION = "0.04"; // 4 chars
 	PREL = " "; // space or p (full, or prelease) 
-	PDATE = "2015       "; // 11 chars
+	PDATE = "2016       "; // 11 chars
 
 	//////////////////
 	// The major class
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
 					"|----------------------------------------------------------|\n"
-					"|  (C) 2015 Bill White, GNU General Public License, v2     |\n"
+					"|  (C) 2016 Bill White, GNU General Public License, v2     |\n"
 					"@----------------------------------------------------------@\n"
 					"\n");
 #endif

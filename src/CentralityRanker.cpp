@@ -268,12 +268,18 @@ bool CentralityRanker::ReadGainFile(string gainFilename, bool isUpperTriangular)
 			// cout << "row: " << row << ", col: " << col << endl;
 			double t;
 			if(!from_string<double>(t, token, std::dec)) {
-				error("Parsing REGAIN line " + line);
+				cerr << "ERROR: parsing line " << row << " col " << col
+						<< " of (re)Gain file, token [" << token << "]" << endl;
+				return false;
+				//error("Parsing REGAIN line\n" + line);
 			}
 			G(row, col) = t;
 			if((row != col) && isUpperTriangular) {
 				if(!from_string<double>(t, token, std::dec)) {
-					error("Parsing REGAIN line " + line);
+					cerr << "ERROR: parsing line " << row << " col " << col
+							<< " of (re)Gain file, token [" << token << "]" << endl;
+					return false;
+					//error("Parsing REGAIN line\n" + line);
 				}
 				G(col, row) = t;
 			}

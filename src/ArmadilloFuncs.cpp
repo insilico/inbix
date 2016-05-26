@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <cmath>
 
 #include <armadillo>
 
@@ -101,8 +102,11 @@ bool armaDcgain(mat& results, mat& pvals) {
       double r_ij_2 = corMatrixY(i, j);
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
-      double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1/(n1 - 3) + 1 / (n2 - 3)));
+      double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       double p = 2 * normdist(-abs(Z_ij)); 
+      if(std::isinf(Z_ij)) {
+        cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
+      }
       // if(i == 0 && j < 10) {
       //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
       // }
@@ -199,7 +203,7 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
     } else {
       if(tokens.size() != (cols + 2)) {
         matrixFile.close();
-        cerr << "Line:\n" + sline + "\n";
+        cerr << "Row " << (rows + 1) << ":\n" + sline + "\n";
         return false;
       }
     }
