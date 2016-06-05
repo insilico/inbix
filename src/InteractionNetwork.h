@@ -62,8 +62,8 @@ public:
 	// recursive indirect paths modularity - bcw - 5/31/16
 	bool ripM(unsigned int pStartMergeOrder, 
 		        unsigned int pMaxMergeOrder,
-		        unsigned int pMaxModuleSize, 
-		        unsigned int pMinModuleSize);
+		        unsigned int pMinModuleSize, 
+		        unsigned int pMaxModuleSize);
 	bool Homophily(HomophilyResult& results);
 	double ComputeQ();
 	bool SetModulesFromFile(std::string modulesFilename);

@@ -664,8 +664,8 @@ bool InteractionNetwork::ReadBrainCorr1DFile(string corr1dFilename) {
 
 bool InteractionNetwork::ripM(unsigned int pStartMergeOrder,
 	                            unsigned int pMaxMergeOrder,
-	                            unsigned int pMaxModuleSize, 
-	                            unsigned int pMinModuleSize) {
+	                            unsigned int pMinModuleSize, 
+	                            unsigned int pMaxModuleSize) {
 	// converted from R - bcw - June 2016
 	startMergeOrder = pStartMergeOrder;
 	maxMergeOrder = pMaxMergeOrder;
@@ -712,6 +712,8 @@ bool InteractionNetwork::RecursiveIndirectPathsModularity(mat& thisAdj,
 	rowvec k = sum(A, 0);
 	double m = 0.5 * sum(k);
 
+	inbixEnv->printLOG("RIPM: Running Newman modularity on module size: " + 
+		                 int2str(thisModuleIdx.size()) + "\n");
 	ModularityResult modResult;
 	if(!this->GetNewmanModules(A, thisModuleIdx, modResult)) {
 		// BASIS: cannot do anything with this module, so return from 
@@ -725,7 +727,12 @@ bool InteractionNetwork::RecursiveIndirectPathsModularity(mat& thisAdj,
 	double Q = modResult.first;
 	unsigned int numModules = modResult.second.size();
 	inbixEnv->printLOG("Total modularity Q = " + dbl2str(Q) + "\n");
-	inbixEnv->printLOG("There are " + int2str(numModules) + " modules" + "\n");
+	inbixEnv->printLOG("rip-M found " + int2str(numModules) + " modules" + "\n");
+	for(unsigned int i=0; i < numModules; ++i) {
+		inbixEnv->printLOG("RIPM: Module: " + int2str(i) + 
+			                 " size: " + int2str(modResult.second[i].size()) + "\n");
+	}
+
 	if(numModules > 1) {
 		// look at the modules list to see if they need merging or further splitting
 		ModuleList smallModules;
@@ -803,6 +810,7 @@ bool InteractionNetwork::GetNewmanModules(mat& thisAdj,
 	processStack.push(firstModule);
 
 	// iterate until stack is empty
+	Q = 0;
 	unsigned int iteration = 0;
 	while(!processStack.empty()) {
 		++iteration;
@@ -901,11 +909,12 @@ bool InteractionNetwork::MergeSmallModules(mat& thisAdj,
 			// SUCCESS!
 		  inbixEnv->printLOG("RIPM: Merge successful!\n");	
 			// map modules indices back to passed matrix indices
+		  inbixEnv->printLOG("RIPM: Mapping return indices back to caller\n");	
 			results.clear();
 			results.resize(tryResults.second.size());
 			for(unsigned int i=0; i < tryResults.second.size(); ++i) {
 				ModuleIndices thisModule = tryResults.second[i];
-				for(unsigned int j=0; j <- thisModule.size(); ++j) {
+				for(unsigned int j=0; j < thisModule.size(); ++j) {
 					unsigned int mappedNode = origIdxMap[thisModule[j]];
 					results[i].push_back(mappedNode);
 				}
@@ -950,11 +959,12 @@ ModularityResult InteractionNetwork::ModularityLeadingEigenvector() {
 	mat A = connMatrix;
 	degrees = sum(A, 0);
 	numEdges = 0.5 * sum(degrees);
+	colvec nodeDegrees = degrees.t();
 
 	// real symmetric modularity matrix B
 	mat B;
 	B.resize(numNodes, numNodes);
-	B = A - degrees * degrees.t() / (2.0 * numEdges);
+	B = A - nodeDegrees * nodeDegrees.t() / (2.0 * numEdges);
   
 	// ------------------------- I T E R A T I O N ------------------------------
 	stack<vector<unsigned int> > processStack;
