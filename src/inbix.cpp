@@ -61,7 +61,6 @@ bool pvalComparator(const matrixElement &l, const matrixElement &r) {
   return l.first < r.first;
 }
 
-
 int main(int argc, char* argv[]) {
 	/////////////////////////
 	// Setup, display title
@@ -1195,8 +1194,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		// compute modularity
-		pair<double, vector<vector<unsigned int> > > modules =
-						network->ModularityLeadingEigenvector();
+		ModularityResult modules = network->ModularityLeadingEigenvector();
 		P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
 		P.printLOG("There are " + int2str(modules.second.size()) +
 						" modules" + "\n");
@@ -1206,6 +1204,77 @@ int main(int argc, char* argv[]) {
 		}
 		// save modules
 		network->SaveModules(par::output_file_name + ".modules");
+
+		// clean up and shut down
+		delete network;
+		shutdown();
+	}
+
+	////////////////////////////////////////////////
+	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
+	if(par::do_ripm) {
+		P.printLOG("\nPerforming rip-M analysis\n");
+		InteractionNetwork* network = 0;
+		// check for input file type, and construct a new network
+		if(par::sifNetwork) {
+			P.printLOG("Reading network from SIF file [" + par::sifFile + "]\n");
+			network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
+		}
+		if(par::afniNetwork) {
+			P.printLOG("Reading network from corr.1D file [" + par::afni1dFile + "]\n");
+			network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
+		}
+		if(par::do_regain_post) {
+			P.printLOG("Reading network from reGAIN file [" + par::regainFile + "]\n");
+			network = new InteractionNetwork(par::regainFile, REGAIN_FILE, false, &P);
+		}
+		if(!network) {
+			error("Network construction for modularity analysis failed for the "
+							"given inbix options");
+		}
+		P.printLOG("--- Network loaded\n");
+
+		// preprocessing transformations
+		if(par::modFisherTransform) {
+			P.printLOG("Transforming adjacency matrix connectivity using "
+				"Fisher correlation transform\n");
+			network->ApplyFisherTransform();
+			P.printLOG("--- Fisher transformed\n");
+			network->PrintSummary();
+		}
+		
+		if(par::thresholdType == "hard") {
+			P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " +
+							dbl2str(par::modConnectivityThreshold) + "\n");
+			network->SetConnectivityThresholding(par::thresholdValue);
+			network->SetConnectivityThreshold(par::thresholdValue);
+		} else {
+			if(par::thresholdType == "soft") {
+				P.printLOG("Transforming adjacency matrix connectivity using "
+					"power with exponent " + dbl2str(par::modPowerTransformExponent) + "\n");
+				network->ApplyPowerTransform(par::modPowerTransformExponent);
+				P.printLOG("--- Power transformed\n");
+				network->PrintSummary();
+			}
+		}
+		if(par::useWeighted) {
+			P.printLOG("Using weighted edges\n");
+			network->SetBinaryThresholding(false);
+		} else {
+			P.printLOG("Using binary edges thresholding to 1 if edge > threshold, else 0\n");
+			network->SetBinaryThresholding(true);
+		}
+
+		// compute modularity recursively and merge small modules with rip-M
+		unsigned int recursionLevel = 0;
+		bool initMatrix = true;
+		network->ripM(par::startMergeOrder, par::maxMergeOrder,
+		              par::minModuleSize, par::maxModuleSize);
+		// if(par::modComputeHomophily) {
+		// 	network->ShowHomophily();
+		// }
+		// save modules
+		network->SaveModules(par::output_file_name + ".ripm.modules");
 
 		// clean up and shut down
 		delete network;

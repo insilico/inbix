@@ -416,6 +416,17 @@ public:
   static string afni1dFile;
   static bool afniNetwork;
 
+  // added for recursive indirect path modularity support - bcw - 5/31/16
+  static bool do_ripm;
+  static string thresholdType;
+  static double thresholdValue;
+  static int startMergeOrder;
+  static int maxMergeOrder;
+  static int maxModuleSize;
+  static int minModuleSize;
+  static bool useAbs;
+  static bool useWeighted;
+
   // added for ranking support - bcw - 5/16/13
   static bool do_ranking;
   static string ranker_method;

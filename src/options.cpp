@@ -322,6 +322,17 @@ bool par::sifToGain = false;
 string par::afni1dFile = "";
 bool par::afniNetwork = false;
 
+// added for recursive indirect path modularity support - bcw - 5/31/16
+bool par::do_ripm = false;
+string par::thresholdType = "hard";
+double par::thresholdValue = 0.8;
+int par::startMergeOrder = 2;
+int par::maxMergeOrder = 4;
+int par::maxModuleSize = 200;
+int par::minModuleSize = 30;
+bool par::useAbs = true;
+bool par::useWeighted = false;
+
 // added for ranking support - bcw - 5/16/13
 bool par::do_ranking = false;
 string par::ranker_method = "";

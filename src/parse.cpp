@@ -2975,6 +2975,35 @@ void setOptions(CArgs & a) {
     par::afni1dFile = a.value("--afni-1d-file");
   }
 
+  // added for recursive indirect path modularity support - bcw - 5/31/16
+  if(a.find("--ripm")) {
+    par::do_ripm = true;
+  }
+  if(a.find("--ripm-threshold-type")) {
+    par::thresholdType = a.value("--ripm-threshold-type");
+  }
+  if(a.find("--ripm-threshold-value")) {
+    par::thresholdValue = a.value_double("--ripm-threshold-value");
+  }
+  if(a.find("--ripm-start-merge-order")) {
+    par::startMergeOrder = a.value_int("--ripm-start-merge-order");
+  }
+  if(a.find("--ripm-max-merge-order")) {
+    par::maxMergeOrder = a.value_int("--ripm-max-merge-order");
+  }
+  if(a.find("--ripm-min-mod-size")) {
+    par::minModuleSize = a.value_int("--ripm-min-mod-size");
+  }
+  if(a.find("--ripm-max-mod-size")) {
+    par::maxModuleSize = a.value_int("--ripm-max-mod-size");
+  }
+  if(a.find("--ripm-abs")) {
+    par::useAbs = true;
+  }
+  if(a.find("--ripm-weighted")) {
+    par::useWeighted = true;
+  }
+
   // added for ranker support - bcw - 5/16/13
   if(a.find("--rank-by")) {
     par::do_ranking = true;
@@ -4280,6 +4309,16 @@ void setOptions(CArgs & a) {
             << "      --sif-file {SIF file}     Read network from a SIF file\n"
             << "      --sif-to-regain           Convert SIF network to reGAIN\n"
             << "      --afni-1d-file {1D file}  Read network from AFNI 1D file\n"
+            << "\n"
+            << "      --ripm                    Perform a network recursive indirect paths modularity analysis\n"
+            << "      --ripm-threshold-type     Threshold type (hard|soft)\n"
+            << "      --ripm-threshold-value    Threshold value\n"
+            << "      --ripm-start-merge-order  Starting merge order for small modules\n"
+            << "      --ripm-max-merge-order    Maximum merge order for small modules\n"
+            << "      --ripm-min-mod-size       Minimum module size\n"
+            << "      --ripm-max-mod-size       Maximum module size\n"
+            << "      --ripm-abs                Take absolute value of input before threshold\n"
+            << "      --ripm-weighted           Keep weighted edges versus make binary\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
