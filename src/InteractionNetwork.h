@@ -18,7 +18,8 @@
 const double DEFAULT_CONNECTIVITY_THRESHOLD = 0;
 const double MODULARITY_THRESHOLD = 0; 
 
-typedef std::vector<unsigned int> ModuleIndices;
+typedef unsigned int Indices;
+typedef std::vector<Indices> ModuleIndices;
 typedef std::vector<ModuleIndices> ModuleList;
 typedef std::pair<double, ModuleList> ModularityResult;
 typedef std::pair<double, std::vector<double> > HomophilyResult;
@@ -55,6 +56,7 @@ public:
 	void PrintAdjacencyMatrix();
 	void PrintConnectivityMatrix();
 	void PrintSummary();
+	void PrintModulesSummary();
 	bool WriteToFile(std::string outfile, MatrixFileType fileType=CSV_FILE);
 
 	// community/modularity methods
@@ -64,10 +66,13 @@ public:
 		        unsigned int pMaxMergeOrder,
 		        unsigned int pMinModuleSize, 
 		        unsigned int pMaxModuleSize);
+  ModuleList GetModules();
 	bool Homophily(HomophilyResult& results);
 	double ComputeQ();
 	bool SetModulesFromFile(std::string modulesFilename);
 	void ShowModules();
+	void ShowModuleSizes();
+	void ShowModuleIndices();
 	void SaveModules(std::string saveFilename);
   void ShowHomophily();
 
@@ -84,6 +89,8 @@ public:
 	bool ApplyFisherTransform();
   // deconvolution - 10/22/13
   bool Deconvolve(arma::mat& nd, double alpha=1, double beta=0.9, int control=0);
+  // debugging mode for algorithm development
+  void SetDebugMode(bool debugFlag=true);
 private:
 	// data readers
 	bool ReadCsvFile(std::string matrixFilename);
@@ -98,22 +105,25 @@ private:
 	bool WriteDelimitedFile(std::string outFilename, std::string fileType);
 	bool WriteSifFile(std::string outFilename);
 
+	// logging
+	void DebugMessage(std::string msg);
+
 	// modularity support methods
 	std::pair<double, arma::vec> ModularityBestSplit(arma::mat& B, double m);
 	vector<unsigned int> FlattenModules();
 
 	// rip-M support methods
-	bool RecursiveIndirectPathsModularity(arma::mat& thisAdj, 
-		                                    ModuleIndices thisModuleIdx, 
-		                                    ModuleList& results);
-	bool GetNewmanModules(arma::mat& thisAdj, 
-		                    ModuleIndices thisModuleIdx, 
+	ModuleList RecursiveIndirectPathsModularity(ModuleIndices thisModuleIdx);
+	bool GetNewmanModules(ModuleIndices thisModuleIdx, 
 		                    ModularityResult& results);
-	bool MergeSmallModules(arma::mat& thisAdj, 
-		                     ModuleList& smallModules,
+	bool MergeSmallModules(ModuleList smallModules,
 		                     ModuleList& results);
 	bool SumMatrixPowerSeries(arma::mat& A, unsigned int maxPower, arma::mat& B);
 	bool CheckMergeResults(ModularityResult results);
+
+	// modules
+  bool CheckIndices(ModuleIndices toCheck);
+  bool AddModule(ModuleIndices newModule);
 
 	// graph/network filename
 	std::string networkFile;
@@ -152,6 +162,7 @@ private:
 	ModuleList modules;
   
   Plink* inbixEnv;
+  bool debugMode;
 };
 
 #endif

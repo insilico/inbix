@@ -8,6 +8,7 @@
  */
 
 #include <cstdio>
+#include <cassert>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -75,6 +76,7 @@ InteractionNetwork::InteractionNetwork(string matrixFileParam,
 	maxModuleSize = 10;
 	minModuleSize = 200;
 	connMatrix = adjMatrix;
+	debugMode = false;
 }
 
 InteractionNetwork::InteractionNetwork(double** variablesMatrix,
@@ -107,6 +109,7 @@ InteractionNetwork::InteractionNetwork(double** variablesMatrix,
 	maxModuleSize = 10;
 	minModuleSize = 200;
 	connMatrix = adjMatrix;
+	debugMode = false;
 }
 
 InteractionNetwork::~InteractionNetwork()
@@ -301,6 +304,12 @@ bool InteractionNetwork::WriteSifFile(string outFilename)
 	outputFileHandle.close();
 
 	return true;
+}
+
+void InteractionNetwork::DebugMessage(string msg) {
+	if(debugMode) {
+		inbixEnv->printLOG("DEBUG: " + msg + "\n");	
+	}
 }
 
 bool InteractionNetwork::Merge(InteractionNetwork& toMerge,
@@ -687,158 +696,183 @@ bool InteractionNetwork::ripM(unsigned int pStartMergeOrder,
 	PrepareConnectivityMatrix();	
 
 	inbixEnv->printLOG("RIPM: Calling recursive rip-M algorithm\n");
+	
+	ModuleList results = RecursiveIndirectPathsModularity(firstModule);
+
 	modules.clear();
-	ModuleList results;
-	bool success = this->RecursiveIndirectPathsModularity(connMatrix, firstModule, results);
-
-	if(success) {
-		inbixEnv->printLOG("RIPM: Found " + int2str(results.size()) + " modules\n");
-		for(unsigned int i=0; i < results.size(); ++i) {
-			inbixEnv->printLOG("RIPM: Module: " + int2str(i) + 
-				                 " size: " + int2str(results[i].size()) + "\n");
-		}
-		modules = results;
-	} else {
-		inbixEnv->printLOG("RIPM: Failed!\n");
-	}
-
-	return success;
-}
-
-bool InteractionNetwork::RecursiveIndirectPathsModularity(mat& thisAdj, 
-	                                                        ModuleIndices thisModuleIdx, 
-	                                                        ModuleList& results) {
-	mat A = thisAdj(conv_to<uvec>::from(thisModuleIdx), conv_to<uvec>::from(thisModuleIdx));
-	rowvec k = sum(A, 0);
-	double m = 0.5 * sum(k);
-
-	inbixEnv->printLOG("RIPM: Running Newman modularity on module size: " + 
-		                 int2str(thisModuleIdx.size()) + "\n");
-	ModularityResult modResult;
-	if(!this->GetNewmanModules(A, thisModuleIdx, modResult)) {
-		// BASIS: cannot do anything with this module, so return from 
-		// this level of recursion
-		inbixEnv->printLOG("RIPM: WARNING: Cannot split this module, saving as is\n");
-		inbixEnv->printLOG("RIPM: Exiting recursive rip-M algorithm\n");
-		results.push_back(thisModuleIdx);
-		return true;
-	}
-	// else look at the partition of modules
-	double Q = modResult.first;
-	unsigned int numModules = modResult.second.size();
-	inbixEnv->printLOG("Total modularity Q = " + dbl2str(Q) + "\n");
-	inbixEnv->printLOG("rip-M found " + int2str(numModules) + " modules" + "\n");
-	for(unsigned int i=0; i < numModules; ++i) {
+	inbixEnv->printLOG("RIPM: Found " + int2str(results.size()) + " modules\n");
+	for(unsigned int i=0; i < results.size(); ++i) {
 		inbixEnv->printLOG("RIPM: Module: " + int2str(i) + 
-			                 " size: " + int2str(modResult.second[i].size()) + "\n");
+			                 " size: " + int2str(results[i].size()) + "\n");
+		modules.push_back(results[i]);
 	}
-
-	if(numModules > 1) {
-		// look at the modules list to see if they need merging or further splitting
-		ModuleList smallModules;
-		for(unsigned int i=0; i < numModules; ++i) {
-			ModuleIndices thisModule = modResult.second[i];
-			if(thisModule.size() > maxModuleSize) {
-				// RECURSION
-				inbixEnv->printLOG("RIPM: Recursing into rip-M algorithm module size:" + 
-					                 int2str(thisModule.size()) + "\n");
-				this->RecursiveIndirectPathsModularity(A, thisModule, results);
-			} else {
-				if(thisModule.size() < maxModuleSize) {
-					// collect all modules less than max module size for merge attempt
-					inbixEnv->printLOG("RIPM: Collecting small module size: " + 
-					                 int2str(thisModule.size()) + "\n");
-					smallModules.push_back(thisModule);
-				} 
-			}
-		}
-		if(smallModules.size()) {
-			// MERGE: attempt to merge small modules list as a matrix of its own
-			inbixEnv->printLOG("RIPM: Merging small module matrix size: " + 
-					               int2str(smallModules.size()) + "\n");
-			ModuleList smallModuleResults;
-			if(this->MergeSmallModules(A, smallModules, smallModuleResults)) {
-				for(unsigned int i=0; i < smallModuleResults.size(); ++i) {
-					results.push_back(smallModuleResults[i]);
-				}
-			} else {
-				results = smallModules;
-			}
-		}
-	} else {
-		// only one module, return it
-		results.push_back(thisModuleIdx);
-	}
-
-	modules = results;
 
 	return true;
 }
 
-bool InteractionNetwork::GetNewmanModules(mat& thisAdj, 
-	                                        ModuleIndices thisModuleIdx,
+ModuleList InteractionNetwork::RecursiveIndirectPathsModularity(ModuleIndices thisModuleIdx) {
+	inbixEnv->printLOG("\n\nRIPM: Running Newman modularity on module size: " + 
+		                 int2str(thisModuleIdx.size()) + "\n");
+	ModuleList thisInvocationResults;
+
+	ModularityResult modResult;
+	bool modSuccess = this->GetNewmanModules(thisModuleIdx, modResult);
+	// if(!modSuccess) {
+	// 	thisInvocationResults.push_back(thisModuleIdx);
+	// 	return thisInvocationResults;
+	// } 
+	// else look at the partition of modules; there should be at least 2!
+	unsigned int numModules = modResult.second.size();
+	double Q = modResult.first;
+	inbixEnv->printLOG("Total modularity Q = " + dbl2str(Q) + "\n");
+	inbixEnv->printLOG("Newman modularity found " + int2str(numModules) + " modules" + "\n");
+	for(unsigned int i=0; i < numModules; ++i) {
+		inbixEnv->printLOG("RIPM: Module: " + int2str(i) + 
+			                 " size: " + int2str(modResult.second[i].size()) + "\n");
+	}
+	if(Q == 0) {
+		// BASIS: cannot do anything with this module, so return from 
+		// this level of recursion
+		inbixEnv->printLOG("RIPM: Q=0, Cannot split this module, saving as is\n");
+		inbixEnv->printLOG("RIPM: Exiting recursive rip-M algorithm\n");
+		DebugMessage("Returning existing module after GetNewmanModules failed");
+		thisInvocationResults.push_back(thisModuleIdx);
+		return thisInvocationResults;
+	}
+
+	// look at the modules list to see if they need merging or further splitting
+	ModuleList smallModules;
+	for(unsigned int i=0; i < numModules; ++i) {
+		ModuleIndices thisModule = modResult.second[i];
+		if(thisModule.size() > maxModuleSize) {
+			// RECURSION
+			inbixEnv->printLOG("RIPM: Recursing into rip-M algorithm module size: " + 
+				                 int2str(thisModule.size()) + "\n");
+			// 'results' is by reference and gets populated recursivesly here
+			ModuleList subLists = this->RecursiveIndirectPathsModularity(thisModule);
+			for(Indices i=0; i < subLists.size(); ++i) {
+				thisInvocationResults.push_back(subLists[i]);
+			}
+		} else {
+			if(thisModule.size() < maxModuleSize) {
+				// collect all modules less than max module size for merge attempt
+				inbixEnv->printLOG("RIPM: Collecting small module size: " + 
+				                 int2str(thisModule.size()) + "\n");
+				smallModules.push_back(thisModule);
+			} 
+		}
+	}
+
+	if(smallModules.size() > 1) {
+		// MERGE: attempt to merge small modules list as a matrix of its own
+		inbixEnv->printLOG("RIPM: Merging small module matrix size: " + 
+				               int2str(smallModules.size()) + "\n");
+		ModuleList smallModuleResults;
+		if(this->MergeSmallModules(smallModules, smallModuleResults)) {
+			DebugMessage("Returning optimized small modules\n");
+			for(Indices i=0; i < smallModuleResults.size(); ++i) {
+				thisInvocationResults.push_back(smallModuleResults[i]);
+			}
+		} else {
+			DebugMessage("Returning unoptimized separate small modules as modules: " \
+				+ int2str(smallModules.size()) + "\n");
+			for(unsigned int i=0; i < smallModules.size(); ++i) {
+				thisInvocationResults.push_back(smallModules[i]);	
+			}
+		}
+	} else {
+		if(smallModules.size() == 1) {
+			thisInvocationResults.push_back(smallModules[0]);
+		}
+	}
+
+	return thisInvocationResults;
+}
+
+bool InteractionNetwork::GetNewmanModules(ModuleIndices thisModuleIdx,
 	                                        ModularityResult& results) {
-	mat A = thisAdj(conv_to<uvec>::from(thisModuleIdx), conv_to<uvec>::from(thisModuleIdx));
-	double n = thisModuleIdx.size();
+	// cout << "GetNewmanModules this module indices: ";
+	// for(Indices i=0; i < thisModuleIdx.size(); ++i) {
+	// 	cout << i << " ";
+	// }
+	// cout << endl;
+	unsigned int n = thisModuleIdx.size();
+	inbixEnv->printLOG("RIPM: GetNewmanModules, module size: " + int2str(n) + "\n");
 	if(n < 2) {
-		cerr << "ERROR: GetNewmanModules: Cannot split module of size < 2: " << n << endl;
+		results.first = 0;
+		results.second.push_back(thisModuleIdx);
+		// inbixEnv->printLOG("RIPM: WARNING GetNewmanModules: Cannot split module of size < 2: " +int2str(n) + "\n");
 		return false;
 	}
+
+	mat A = connMatrix(conv_to<uvec>::from(thisModuleIdx), 
+		                 conv_to<uvec>::from(thisModuleIdx));
 	rowvec k = sum(A, 0);
 	double m = 0.5 * sum(k);
+	colvec nodeDegrees = k.t();
+	//inbixEnv->printLOG("RIPM: GetNewmanModules, m: " + int2str(m) + "\n");
 
 	// real symmetric modularity matrix B
+	//inbixEnv->printLOG("RIPM: GetNewmanModules, Computing B matrix\n");
 	mat B;
 	B.resize(n, n);
-	colvec nodeDegrees = k.t();
-//  mat kcp = nodeDegrees * nodeDegrees.t();
-//  cout << "kcp:" << endl;
-//  cout << kcp << endl;
 	B = A - nodeDegrees * nodeDegrees.t() / (2.0 * m);
-//  cout << "initial B:" << endl;
-//  cout << B << endl;
   
 	// ------------------------- I T E R A T I O N ------------------------------
-
-	stack<vector<unsigned int> > processStack;
-
+	//inbixEnv->printLOG("RIPM: GetNewmanModules, Preparing stack with first module\n");
+	// iterate until stack is empty
+	stack<ModuleIndices> processStack;
 	// the starting module is the entire network
 	ModuleIndices firstModule;
-	for(unsigned int i=0; i < n; ++i) {
+	for(Indices i=0; i < n; ++i) {
 		firstModule.push_back(i);
 	}
 	processStack.push(firstModule);
-
-	// iterate until stack is empty
-	Q = 0;
+	double Q = 0;
 	unsigned int iteration = 0;
 	while(!processStack.empty()) {
 		++iteration;
+		//inbixEnv->printLOG("RIPM: GetNewmanModules, Iteration: " + int2str(iteration) + "\n");
 
-		vector<unsigned int> thisModule = processStack.top();
+		//inbixEnv->printLOG("RIPM: POP\n");
+		ModuleIndices thisModule = processStack.top();
 		processStack.pop();
 		unsigned int newDim = thisModule.size();
+		if(newDim == 1) {
+			inbixEnv->printLOG("RIPM: GetNewmanModules, WARNING: SINGLETON detected, saving and continuing\n");
+			ModuleIndices singleton;
+			inbixEnv->printLOG("RIPM: Singleton value: " + int2str(thisModule[0]) + \
+				" maps to " + int2str(thisModuleIdx[thisModule[0]]) + "\n");
+			singleton.push_back(thisModuleIdx[thisModule[0]]);
+			results.second.push_back(singleton);
+			continue;
+		}
 
 		// get the submatrix Bg defined by the indices of this module (Eqn 6)
+		//inbixEnv->printLOG("RIPM: GetNewmanModules, Computing Bg submatrix dim: " + int2str(newDim) + "\n");
 		mat Bg(newDim, newDim);
-		for(unsigned int l1=0; l1 < newDim; ++l1) {
-			for(unsigned int l2=0; l2 < newDim; ++l2) {
+		for(Indices l1=0; l1 < newDim; ++l1) {
+			for(Indices l2=0; l2 < newDim; ++l2) {
+				// if(newDim < 1000) cout << thisModule[l1] <<  ", " << thisModule[l2] << endl;
 				Bg(l1, l2) = B(thisModule[l1], thisModule[l2]);
 			}
 		}
 
 		// adjust the diagonal
+		//inbixEnv->printLOG("RIPM: GetNewmanModules, Setting Bg diagonal\n");
 		rowvec rowsums = arma::sum(Bg, 0);
-		for(unsigned int i=0; i < rowsums.size(); ++i) {
+		for(Indices i=0; i < rowsums.size(); ++i) {
 			Bg(i, i) = Bg(i, i) - rowsums(i);
 		}
 
 		// call the community finding/modularity function
+		//inbixEnv->printLOG("RIPM: GetNewmanModules, Eigenvector best split\n");
 		pair<double, vec> sub_modules = ModularityBestSplit(Bg, m);
 		double deltaQ = sub_modules.first;
 		vec s = sub_modules.second;
 
 		// find the split indices
+		//inbixEnv->printLOG("RIPM: GetNewmanModules, Get split indices\n");
 		vector<unsigned int> s1;
 		vector<unsigned int> s2;
 		for(unsigned int mi=0; mi < s.size(); ++mi) {
@@ -852,16 +886,27 @@ bool InteractionNetwork::GetNewmanModules(mat& thisAdj,
 
 		// have we hit any stopping criteria?
 		if((s1.size() == 0) || (s2.size() == 0)) {
-			results.second.push_back(thisModule);
+			ModuleIndices mappedIdx;
+			for(Indices i=0; i < thisModule.size(); ++i) {
+				mappedIdx.push_back(thisModuleIdx[thisModule[i]]);	
+			}
+			results.second.push_back(mappedIdx);
 			if(iteration == 1) {
 				Q = deltaQ;
 			}
 		}
 		else {
 			if(deltaQ <= MODULARITY_THRESHOLD) {
-				results.second.push_back(thisModule);
+				// map this split back to original indices
+				ModuleIndices mappedIdx;
+				for(Indices i=0; i < thisModule.size(); ++i) {
+					mappedIdx.push_back(thisModuleIdx[thisModule[i]]);	
+				}
+				//inbixEnv->printLOG("RIPM: GetNewmanModules, Saving indices\n");
+				results.second.push_back(mappedIdx);
 			} else {
 				// add the splits to the processing stack and recurse
+				//inbixEnv->printLOG("RIPM: GetNewmanModules, Recursing\n");
 				processStack.push(s1);
 				processStack.push(s2);
 				// accumulate global Q
@@ -875,53 +920,81 @@ bool InteractionNetwork::GetNewmanModules(mat& thisAdj,
 	return true;
 }
 
-bool InteractionNetwork::MergeSmallModules(mat& thisAdj, 
-	                                         ModuleList& smallModules,
+bool InteractionNetwork::MergeSmallModules(ModuleList smallModules,
 	                                         ModuleList& results) {
-	// keep a map of the orignal matrix indices for results list
-  inbixEnv->printLOG("RIPM: Mapping indices for return\n");	
-  ModuleIndices optIdx;
-	unsigned int newIdx = 0;
-	map<unsigned int, unsigned int> origIdxMap;
+	ModuleIndices allSmallModIdx;
 	for(unsigned int i=0; i < smallModules.size(); ++i) {
 		ModuleIndices thisSmallMod = smallModules[i];
 		for(unsigned int j=0; j < thisSmallMod.size(); ++j) {
 			unsigned int thisMatrixIdx = thisSmallMod[j];
-			optIdx.push_back(thisMatrixIdx);
-			origIdxMap[newIdx] = thisMatrixIdx;
-			++newIdx;
+			allSmallModIdx.push_back(thisMatrixIdx);
 		}
 	}
-	mat A = thisAdj(conv_to<uvec>::from(optIdx), conv_to<uvec>::from(optIdx));
-
-	// try different power series matrices for indirect paths
+	mat A = connMatrix(conv_to<uvec>::from(allSmallModIdx), 
+                     conv_to<uvec>::from(allSmallModIdx));
+  ModuleIndices mergeModuleIdx;
+  for(Indices i=0; i <= allSmallModIdx.size(); ++i) {
+    mergeModuleIdx.push_back(i);
+  }
+          
+	// try Newman modularity on different power series matrices for indirect paths
 	bool found = false;
 	unsigned int thisMergeOrder = startMergeOrder;
+	unsigned int bestOrder = startMergeOrder;
+	unsigned int bestSize = A.n_cols;
+	vector<ModuleList> allModLists;
 	while(!found && (thisMergeOrder <= maxMergeOrder)) {
 	  inbixEnv->printLOG("RIPM: Merge order: " + int2str(thisMergeOrder) + "\n");	
 		mat tryMatrix;
 		this->SumMatrixPowerSeries(A, thisMergeOrder, tryMatrix);
 		ModularityResult tryResults;
-		if(!this->GetNewmanModules(tryMatrix, optIdx, tryResults)) {
-			return false;
+		if(!this->GetNewmanModules(allSmallModIdx, tryResults)) {
+			inbixEnv->printLOG("RIPM: Merge order: " + int2str(thisMergeOrder) + " FAILED\n");	
+			allModLists.push_back(tryResults.second);
+  		++thisMergeOrder;	
+			continue;
 		}
 		if(CheckMergeResults(tryResults)) {
-			// SUCCESS!
-		  inbixEnv->printLOG("RIPM: Merge successful!\n");	
+			// SUCCESS! all Goldilocks modules, so save all
+		  inbixEnv->printLOG("RIPM: Merge successful with all Goldilocks modules!\n");	
 			// map modules indices back to passed matrix indices
 		  inbixEnv->printLOG("RIPM: Mapping return indices back to caller\n");	
-			results.clear();
-			results.resize(tryResults.second.size());
 			for(unsigned int i=0; i < tryResults.second.size(); ++i) {
 				ModuleIndices thisModule = tryResults.second[i];
-				for(unsigned int j=0; j < thisModule.size(); ++j) {
-					unsigned int mappedNode = origIdxMap[thisModule[j]];
-					results[i].push_back(mappedNode);
-				}
+//				ModuleIndices mappedModule;
+//				for(unsigned int j=0; j < thisModule.size(); ++j) {
+//					mappedModule.push_back(allSmallModIdx[thisModule[j]]);
+//				}
+				results.push_back(thisModule);
 			}
 			found = true;
+		} else {
+			// merge success but not all 'goldilocks' size
+		  inbixEnv->printLOG("RIPM: Merge successful but not all Goldilocks modules\n");	
+			if(tryResults.second.size() < bestSize) {
+				bestSize = tryResults.second.size();
+				bestOrder = thisMergeOrder;
+			} 
+			allModLists.push_back(tryResults.second);
 		}
 		++thisMergeOrder;	
+	}
+
+	if(!found) {
+		// return best module partition found - smallest
+		Indices bestResultIdx = bestOrder - startMergeOrder;
+		ModuleList bestResults = allModLists[bestResultIdx];
+		inbixEnv->printLOG("RIPM: Merge not successful, saving best\n");	
+		inbixEnv->printLOG("RIPM: Best result index: " + int2str(bestResultIdx) + "\n");	
+		for(Indices i=0; i < bestResults.size(); ++i) {
+			ModuleIndices thisModule = bestResults[i];
+//			ModuleIndices mappedModule;
+//			for(Indices j=0; j < thisModule.size(); ++j) {
+//				Indices mappedNode = allSmallModIdx[thisModule[j]];
+//				mappedModule.push_back(mappedNode);
+//			}
+			results.push_back(thisModule);
+		}
 	}
 
 	return found;
@@ -1191,6 +1264,7 @@ bool InteractionNetwork::SetModulesFromFile(string modulesFilename) {
 
 	return true;
 }
+
 void InteractionNetwork::ShowModules() {
 	inbixEnv->printLOG("Modules:\n");
 	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
@@ -1203,16 +1277,35 @@ void InteractionNetwork::ShowModules() {
 	}
 }
 
+void InteractionNetwork::ShowModuleIndices() {
+	inbixEnv->printLOG("Modules:\n");
+	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
+		inbixEnv->printLOG("Nodes in module " + int2str(moduleIdx+1) + ":\n");
+		for(unsigned int memberIdx=0; memberIdx < modules[moduleIdx].size();
+				++memberIdx) {
+			inbixEnv->printLOG(int2str(moduleIdx) + ", " + int2str(memberIdx) + " => " + int2str(modules[moduleIdx][memberIdx]) + "\n");
+		}
+    inbixEnv->printLOG("\n");
+	}
+}
+
+void InteractionNetwork::ShowModuleSizes() {
+	inbixEnv->printLOG(int2str(modules.size()) + " Modules:\n");
+	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
+		inbixEnv->printLOG("Nodes in module " + int2str(moduleIdx+1) + ": " + 
+			                 int2str(modules[moduleIdx].size()) + "\n");
+	}
+}
+
 void InteractionNetwork::SaveModules(string saveFilename) {
 	ofstream outputFileHandle(saveFilename.c_str());
   if(outputFileHandle.fail()) {
     error("Could not open network modules file for saving: " + saveFilename + "\n");
   }
   inbixEnv->printLOG("Saving network modules to [" + saveFilename + "]\n");
-	for(unsigned int moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
-		for(unsigned int memberIdx=0; memberIdx < modules[moduleIdx].size();
-				++memberIdx) {
-			unsigned int nodeIndex = modules[moduleIdx][memberIdx];
+	for(Indices moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
+		for(Indices memberIdx=0; memberIdx < modules[moduleIdx].size();	++memberIdx) {
+			Indices nodeIndex = modules[moduleIdx][memberIdx];
 			outputFileHandle << nodeNames[nodeIndex] << "\t" << (moduleIdx + 1) << endl;
 		}
 	}
@@ -1383,4 +1476,35 @@ bool InteractionNetwork::Deconvolve(mat& nd, double alpha, double beta, int cont
   //cout << "Deconvolved matrix:" << endl << nd << endl;
   
   return true;
+}
+
+void InteractionNetwork::SetDebugMode(bool debugFlag) {
+	debugMode = debugFlag;
+}
+
+bool InteractionNetwork::CheckIndices(ModuleIndices toCheck) {
+	bool success = true;
+	for(Indices i=0; !success && (i < toCheck.size()); ++i) {
+		if((toCheck[i] < 0) || (toCheck[i] >= numNodes)) {
+			inbixEnv->printLOG("CheckIndices FAILED at index: " + int2str(i) + ", value: " + int2str(toCheck[i]) + "\n");
+			success = false;
+		} 
+	}
+	return success;
+}
+
+bool InteractionNetwork::AddModule(ModuleIndices newModule) {
+	bool success = true;
+	if(this->CheckIndices(newModule)) {
+		modules.push_back(newModule);
+	} else {
+		inbixEnv->printLOG("AddModule failed\n");
+		success = false;
+	}
+
+	return success;
+}
+
+ModuleList InteractionNetwork::GetModules() {
+	return modules;
 }

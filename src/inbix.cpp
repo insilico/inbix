@@ -1198,7 +1198,7 @@ int main(int argc, char* argv[]) {
 		P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
 		P.printLOG("There are " + int2str(modules.second.size()) +
 						" modules" + "\n");
-		network->ShowModules();
+		network->ShowModuleSizes();
 		if(par::modComputeHomophily) {
 			network->ShowHomophily();
 		}
@@ -1266,14 +1266,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		// compute modularity recursively and merge small modules with rip-M
-		unsigned int recursionLevel = 0;
-		bool initMatrix = true;
+		network->SetDebugMode(par::verbose);
 		network->ripM(par::startMergeOrder, par::maxMergeOrder,
 		              par::minModuleSize, par::maxModuleSize);
-		// if(par::modComputeHomophily) {
-		// 	network->ShowHomophily();
-		// }
-		// save modules
+
+		// save modules to tab delimited file
+		if(par::verbose) network->ShowModuleIndices();
 		network->SaveModules(par::output_file_name + ".ripm.modules");
 
 		// clean up and shut down
