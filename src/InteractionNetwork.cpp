@@ -240,19 +240,20 @@ void InteractionNetwork::PrintSummary()
   inbixEnv->printLOG("Maximum: " + dbl2str(connMatrix.max()) + "\n");
 }
 
-bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
+bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType,
+                                     NetworkMatrixType matrixType)
 {
 	bool success = false;
   
 	switch(fileType) {
 	case CSV_FILE:
-		success = WriteDelimitedFile(outFile, ",");
+		success = WriteDelimitedFile(outFile, ",", matrixType);
 		break;
 	case REGAIN_FILE:
-		success = WriteDelimitedFile(outFile, "\t");
+		success = WriteDelimitedFile(outFile, "\t", matrixType);
 		break;
 	case SIF_FILE:
-		success = WriteSifFile(outFile);
+		success = WriteSifFile(outFile, matrixType);
 		break;
 	default:
 		cerr << "InteractionNetwork::WriteToFile: "
@@ -262,7 +263,9 @@ bool InteractionNetwork::WriteToFile(string outFile, MatrixFileType fileType)
 	return success;
 }
 
-bool InteractionNetwork::WriteDelimitedFile(string outFilename, string delimiter)
+bool InteractionNetwork::WriteDelimitedFile(string outFilename, 
+                                            string delimiter,
+                                            NetworkMatrixType matrixType)
 {
 	ofstream outputFileHandle(outFilename.c_str());
 	for(unsigned int i=0; i < nodeNames.size(); ++i) {
@@ -273,35 +276,68 @@ bool InteractionNetwork::WriteDelimitedFile(string outFilename, string delimiter
 			outputFileHandle << nodeNames[i];
 		}
 	}
-	outputFileHandle << endl << setiosflags(ios::fixed) << setprecision(8);
-	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
-		for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
-			if(j) {
-				outputFileHandle << delimiter << adjMatrix(i , j);
-			}
-			else {
-				outputFileHandle << adjMatrix(i , j);
-			}
-		}
-		outputFileHandle << endl;
-	}
+  if((matrixType == NET_MATRIX_ADJ) || (matrixType == NET_MATRIX_BOTH)) {
+    outputFileHandle << endl << setiosflags(ios::fixed) << setprecision(8);
+    for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+      for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
+        if(j) {
+          outputFileHandle << delimiter << adjMatrix(i , j);
+        }
+        else {
+          outputFileHandle << adjMatrix(i , j);
+        }
+      }
+      outputFileHandle << endl;
+    }
+  }
+  
+  if((matrixType == NET_MATRIX_CON) || (matrixType == NET_MATRIX_BOTH)) {
+    outputFileHandle << endl << setiosflags(ios::fixed) << setprecision(8);
+    for(unsigned int i=0; i < connMatrix.n_cols; ++i) {
+      for(unsigned int j=0; j < connMatrix.n_cols; ++j) {
+        if(j) {
+          outputFileHandle << delimiter << connMatrix(i , j);
+        }
+        else {
+          outputFileHandle << connMatrix(i , j);
+        }
+      }
+      outputFileHandle << endl;
+    }
+  }
 	outputFileHandle.close();
 
 	return true;
 }
 
-bool InteractionNetwork::WriteSifFile(string outFilename)
+bool InteractionNetwork::WriteSifFile(string outFilename, 
+                                      NetworkMatrixType matrixType)
 {
 	ofstream outputFileHandle(outFilename.c_str());
-	for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
-		for(unsigned int j=i+1; j < adjMatrix.n_cols; ++j) {
-			if(adjMatrix(i , j)) {
-				outputFileHandle
-					<< nodeNames[i] << "\t" << adjMatrix(i , j) << nodeNames[j] << endl;
-			}
-		}
-	}
-	outputFileHandle.close();
+
+  if((matrixType == NET_MATRIX_ADJ) || (matrixType == NET_MATRIX_BOTH)) {
+    for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
+      for(unsigned int j=i+1; j < adjMatrix.n_cols; ++j) {
+        if(adjMatrix(i , j)) {
+          outputFileHandle
+            << nodeNames[i] << "\t" << adjMatrix(i , j) << nodeNames[j] << endl;
+        }
+      }
+    }
+  }
+
+  if((matrixType == NET_MATRIX_CON) || (matrixType == NET_MATRIX_BOTH)) {
+    for(unsigned int i=0; i < connMatrix.n_cols; ++i) {
+      for(unsigned int j=i+1; j < connMatrix.n_cols; ++j) {
+        if(adjMatrix(i , j)) {
+          outputFileHandle
+            << nodeNames[i] << "\t" << connMatrix(i , j) << nodeNames[j] << endl;
+        }
+      }
+    }
+  }
+	
+  outputFileHandle.close();
 
 	return true;
 }
@@ -686,7 +722,7 @@ bool InteractionNetwork::ripM(unsigned int pStartMergeOrder,
 	inbixEnv->printLOG("RIPM: Min module size:   " + int2str(minModuleSize) + "\n");
 	inbixEnv->printLOG("RIPM: Max module size:   " + int2str(maxModuleSize) + "\n");
 
-	inbixEnv->printLOG("RIPM: Creating initial module list\n");
+	inbixEnv->printLOG("RIPM: Creating initial module\n");
 	ModuleIndices firstModule;
 	for(unsigned int i=0; i < (unsigned int) numNodes; ++i) {
 		firstModule.push_back(i);
@@ -797,7 +833,7 @@ bool InteractionNetwork::GetNewmanModules(ModuleIndices thisModuleIdx,
 	// }
 	// cout << endl;
 	unsigned int n = thisModuleIdx.size();
-	inbixEnv->printLOG("RIPM: GetNewmanModules, module size: " + int2str(n) + "\n");
+	if(par::verbose) inbixEnv->printLOG("RIPM: GetNewmanModules, module size: " + int2str(n) + "\n");
 	if(n < 2) {
 		results.first = 0;
 		results.second.push_back(thisModuleIdx);
@@ -839,9 +875,9 @@ bool InteractionNetwork::GetNewmanModules(ModuleIndices thisModuleIdx,
 		processStack.pop();
 		unsigned int newDim = thisModule.size();
 		if(newDim == 1) {
-			inbixEnv->printLOG("RIPM: GetNewmanModules, WARNING: SINGLETON detected, saving and continuing\n");
+			if(par::verbose) inbixEnv->printLOG("RIPM: GetNewmanModules, WARNING: SINGLETON detected, saving and continuing\n");
 			ModuleIndices singleton;
-			inbixEnv->printLOG("RIPM: Singleton value: " + int2str(thisModule[0]) + \
+			if(par::verbose) inbixEnv->printLOG("RIPM: Singleton value: " + int2str(thisModule[0]) + \
 				" maps to " + int2str(thisModuleIdx[thisModule[0]]) + "\n");
 			singleton.push_back(thisModuleIdx[thisModule[0]]);
 			results.second.push_back(singleton);
@@ -957,14 +993,8 @@ bool InteractionNetwork::MergeSmallModules(ModuleList smallModules,
 		if(CheckMergeResults(tryResults)) {
 			// SUCCESS! all Goldilocks modules, so save all
 		  inbixEnv->printLOG("RIPM: Merge successful with all Goldilocks modules!\n");	
-			// map modules indices back to passed matrix indices
-		  inbixEnv->printLOG("RIPM: Mapping return indices back to caller\n");	
 			for(unsigned int i=0; i < tryResults.second.size(); ++i) {
 				ModuleIndices thisModule = tryResults.second[i];
-//				ModuleIndices mappedModule;
-//				for(unsigned int j=0; j < thisModule.size(); ++j) {
-//					mappedModule.push_back(allSmallModIdx[thisModule[j]]);
-//				}
 				results.push_back(thisModule);
 			}
 			found = true;
@@ -988,11 +1018,6 @@ bool InteractionNetwork::MergeSmallModules(ModuleList smallModules,
 		inbixEnv->printLOG("RIPM: Best result index: " + int2str(bestResultIdx) + "\n");	
 		for(Indices i=0; i < bestResults.size(); ++i) {
 			ModuleIndices thisModule = bestResults[i];
-//			ModuleIndices mappedModule;
-//			for(Indices j=0; j < thisModule.size(); ++j) {
-//				Indices mappedNode = allSmallModIdx[thisModule[j]];
-//				mappedModule.push_back(mappedNode);
-//			}
 			results.push_back(thisModule);
 		}
 	}

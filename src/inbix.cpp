@@ -1274,6 +1274,15 @@ int main(int argc, char* argv[]) {
 		if(par::verbose) network->ShowModuleIndices();
 		network->SaveModules(par::output_file_name + ".ripm.modules");
 
+    // save adjacency matrix for R analysis
+		network->WriteToFile(par::output_file_name + ".adjacency.tab", 
+                         REGAIN_FILE, 
+                         NET_MATRIX_ADJ);
+    // save connectivity matrix for R analysis
+		network->WriteToFile(par::output_file_name + ".connectivity.tab", 
+                         REGAIN_FILE, 
+                         NET_MATRIX_CON);
+
 		// clean up and shut down
 		delete network;
 		shutdown();

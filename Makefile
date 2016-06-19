@@ -30,14 +30,14 @@ CXX_WIN = g++.exe
 # Any other compiler flags here ( -Wall, -g, etc)
 CXXFLAGS = 
 # optimized mode
-# CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
+CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 LDFLAGS = 
 LDFLAGS += -L/usr/local/lib
 # IQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DIQTL
 # debug mode
-CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
+#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 
 # Misc
 LIB_LAPACK = /usr/lib/liblapack.so

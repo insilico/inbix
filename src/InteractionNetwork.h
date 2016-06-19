@@ -32,14 +32,21 @@ enum MatrixFileType {
 	SIF_FILE
 };
 
+enum NetworkMatrixType {
+  NET_MATRIX_INVALID,
+	NET_MATRIX_ADJ,
+	NET_MATRIX_CON,
+	NET_MATRIX_BOTH
+};
+
 class InteractionNetwork {
 public:
 	// construct using a file representing the variable interactions matrix
 	InteractionNetwork(std::string matrixFileParam, MatrixFileType fileType,
-			bool isUpperTriangular, Plink* pp);
+                     bool isUpperTriangular, Plink* pp);
 	// matrix constructor for calling as a library method
 	InteractionNetwork(double** variablesMatrix, unsigned int dim,
-			std::vector<std::string>& variableNames, Plink* pp);
+                     std::vector<std::string>& variableNames, Plink* pp);
 	virtual ~InteractionNetwork();
 
   // set edge threshold
@@ -57,7 +64,8 @@ public:
 	void PrintConnectivityMatrix();
 	void PrintSummary();
 	void PrintModulesSummary();
-	bool WriteToFile(std::string outfile, MatrixFileType fileType=CSV_FILE);
+	bool WriteToFile(std::string outfile, MatrixFileType fileType=CSV_FILE,
+                   NetworkMatrixType matrixType=NET_MATRIX_BOTH);
 
 	// community/modularity methods
 	ModularityResult	ModularityLeadingEigenvector();
@@ -102,8 +110,10 @@ private:
   bool PrepareConnectivityMatrix();
   
 	// matrix writers
-	bool WriteDelimitedFile(std::string outFilename, std::string fileType);
-	bool WriteSifFile(std::string outFilename);
+	bool WriteDelimitedFile(std::string outFilename, std::string fileType,
+                          NetworkMatrixType matrixType=NET_MATRIX_BOTH);
+	bool WriteSifFile(std::string outFilename,
+                    NetworkMatrixType matrixType=NET_MATRIX_BOTH);
 
 	// logging
 	void DebugMessage(std::string msg);

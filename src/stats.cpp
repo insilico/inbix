@@ -1872,17 +1872,60 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
       }
     }
     
-    snpResult = fitModel(mainEffectModel);
+    // Build design matrix
+    mainEffectModel->buildDesignMatrix();
+
+    // Fit linear model
+    int tp = 1; 
+    mainEffectModel->testParameter = tp; // single variable main effect
+    mainEffectModel->fitLM();
+    
+    // Obtain estimates and statistics
+    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+    // p-values don't include intercept term
+    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+    double mainEffectValueP = betaMainEffectCoefPvals[tp - 1];
+    vector_t mainEffectModelSE = mainEffectModel->getSE();
+
+    // always use first coefficient after intercept as main effect term
+    double mainEffectValueB = betaMainEffectCoefs[tp];
+    // t- or z-statistic
+    double mainEffectValueS = 
+      betaMainEffectCoefs[tp] /
+      mainEffectModelSE[tp];
+
+    double rankValue = 0;
+    switch(rankType) {
+      case REGRESSION_RANK_STAT:
+        rankValue = mainEffectValueS;
+        sortDescending = true;
+        break;
+      case REGRESSION_RANK_BETA:
+        rankValue = mainEffectValueB;
+        sortDescending = true;
+        break;
+      case REGRESSION_RANK_PVAL:
+        // rankValue = -log10(mainEffectValueP);
+        rankValue = mainEffectValueP;
+        break;
+    }
+
 #pragma omp critical
 {
     ranks.push_back(make_pair(snpResult.first, PP->locus[i]->name));
+
+    results.vars.push_back(PP->locus[i]->name);
+    results.coefs.push_back(mainEffectValueB);
+    results.pvals.push_back(mainEffectValueP);
+    results.stats.push_back(mainEffectValueS);
+
     delete mainEffectModel;
 }
   }
 
   // model numerics
-  Model *mainEffectModel;
   for(int i=0; i < PP->nlistname.size(); ++i) {
+    Model *mainEffectModel;
     if(par::bt) {
       mainEffectModel = new LogisticModel(PP);
     } else {
@@ -1927,7 +1970,7 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     double rankValue = 0;
     switch(rankType) {
       case REGRESSION_RANK_STAT:
-        rankValue = abs(mainEffectValueS);
+        rankValue = mainEffectValueS;
         sortDescending = true;
         break;
       case REGRESSION_RANK_BETA:
