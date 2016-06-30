@@ -1849,10 +1849,14 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
 
   // should the sorted results be reversed, i.e., by p-value
   bool sortDescending = false;
+  double mainEffectValueP = 1.0;
+  double mainEffectValueB = 0.0;
+  double mainEffectValueS = 0.0;
+  double rankValue = 0;
   
   // model SNPs
-#pragma omp parallel for
   for(int i=0; i < PP->nl_all; ++i) {
+    string coefLabel = PP->locus[i]->name;
     Model *mainEffectModel;
     if(par::bt) {
       mainEffectModel = new LogisticModel(PP);
@@ -1862,7 +1866,8 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
   	mainEffectModel->setMissing();
     pair<double, double> snpResult;
     mainEffectModel->addAdditiveSNP(i);
-    mainEffectModel->label.push_back(PP->locus[i]->name);
+    mainEffectModel->label.push_back(coefLabel);
+
     // add covariates if specified
     if(par::covar_file) {
       for(int i = 0; i < par::clist_number; i++) {
@@ -1880,21 +1885,27 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     mainEffectModel->testParameter = tp; // single variable main effect
     mainEffectModel->fitLM();
     
-    // Obtain estimates and statistics
-    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
-    // p-values don't include intercept term
-    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-    double mainEffectValueP = betaMainEffectCoefPvals[tp - 1];
-    vector_t mainEffectModelSE = mainEffectModel->getSE();
+    mainEffectValueP = 1.0;
+    mainEffectValueB = 0.0;
+    mainEffectValueS = 0.0;
+    rankValue = 0;
+    if(!mainEffectModel->isValid()) {
+      string failMsg = "WARNING: Invalid main effect regression fit for variable [" +
+        coefLabel + "]";
+      PP->printLOG(failMsg + "\n");
+    } else {
+      // Obtain estimates and statistics
+      vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+      // p-values don't include intercept term
+      vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+      mainEffectValueP = betaMainEffectCoefPvals[tp - 1];
+      vector_t mainEffectModelSE = mainEffectModel->getSE();
+      // always use first coefficient after intercept as main effect term
+      mainEffectValueB = betaMainEffectCoefs[tp];
+      // t- or z-statistic
+      mainEffectValueS = betaMainEffectCoefs[tp] / mainEffectModelSE[tp];
+    }
 
-    // always use first coefficient after intercept as main effect term
-    double mainEffectValueB = betaMainEffectCoefs[tp];
-    // t- or z-statistic
-    double mainEffectValueS = 
-      betaMainEffectCoefs[tp] /
-      mainEffectModelSE[tp];
-
-    double rankValue = 0;
     switch(rankType) {
       case REGRESSION_RANK_STAT:
         rankValue = mainEffectValueS;
@@ -1910,21 +1921,19 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
         break;
     }
 
-#pragma omp critical
-{
-    ranks.push_back(make_pair(snpResult.first, PP->locus[i]->name));
+    ranks.push_back(make_pair(rankValue, coefLabel));
 
-    results.vars.push_back(PP->locus[i]->name);
+    results.vars.push_back(coefLabel);
     results.coefs.push_back(mainEffectValueB);
     results.pvals.push_back(mainEffectValueP);
     results.stats.push_back(mainEffectValueS);
 
     delete mainEffectModel;
-}
   }
 
   // model numerics
   for(int i=0; i < PP->nlistname.size(); ++i) {
+    string coefLabel = PP->nlistname[i];
     Model *mainEffectModel;
     if(par::bt) {
       mainEffectModel = new LogisticModel(PP);
@@ -1934,7 +1943,7 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
   	mainEffectModel->setMissing();
     pair<double, double> numResult;
     mainEffectModel->addNumeric(i);
-    mainEffectModel->label.push_back(PP->nlistname[i]);
+    mainEffectModel->label.push_back(coefLabel);
 
     // add covariates if specified
     if(par::covar_file) {
@@ -1953,21 +1962,28 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
     mainEffectModel->testParameter = tp; // single variable main effect
     mainEffectModel->fitLM();
 
-    // Obtain estimates and statistics
-    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
-    // p-values don't include intercept term
-    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-    double mainEffectValueP = betaMainEffectCoefPvals[tp - 1];
-    vector_t mainEffectModelSE = mainEffectModel->getSE();
+    mainEffectValueP = 1.0;
+    mainEffectValueB = 0.0;
+    mainEffectValueS = 0.0;
+    rankValue = 0;
+    if(!mainEffectModel->isValid()) {
+      string failMsg = "WARNING: Invalid main effect regression fit for variable [" +
+        coefLabel + "]";
+      PP->printLOG(failMsg + "\n");
+    } else {
+      // Obtain estimates and statistics
+      vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+      // p-values don't include intercept term
+      vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+      mainEffectValueP = betaMainEffectCoefPvals[tp - 1];
+      vector_t mainEffectModelSE = mainEffectModel->getSE();
 
-    // always use first coefficient after intercept as main effect term
-    double mainEffectValueB = betaMainEffectCoefs[tp];
-		// t- or z-statistic
-    double mainEffectValueS = 
-			betaMainEffectCoefs[tp] /
-      mainEffectModelSE[tp];
+      // always use first coefficient after intercept as main effect term
+      mainEffectValueB = betaMainEffectCoefs[tp];
+  		// t- or z-statistic
+      mainEffectValueS = betaMainEffectCoefs[tp] / mainEffectModelSE[tp];
+    }
 
-    double rankValue = 0;
     switch(rankType) {
       case REGRESSION_RANK_STAT:
         rankValue = mainEffectValueS;
@@ -1983,9 +1999,9 @@ bool rankByRegression(RegressionRankType rankType, rankedlist_t& ranks,
         break;
     }
 
-    ranks.push_back(make_pair(rankValue, PP->nlistname[i]));
+    ranks.push_back(make_pair(rankValue, coefLabel));
 
-		results.vars.push_back(PP->nlistname[i]);
+		results.vars.push_back(coefLabel);
 		results.coefs.push_back(mainEffectValueB);
 		results.pvals.push_back(mainEffectValueP);
 		results.stats.push_back(mainEffectValueS);
