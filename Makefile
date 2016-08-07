@@ -28,11 +28,9 @@ CXX_UNIX = g++
 CXX_WIN = g++.exe
 
 # Any other compiler flags here ( -Wall, -g, etc)
-CXXFLAGS = 
 # optimized mode
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
-LDFLAGS = 
-LDFLAGS += -L/usr/local/lib
+LDFLAGS += -L/usr/local/lib -lgsl -lboost_program_options
 # IQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DIQTL
@@ -104,30 +102,35 @@ endif
 CXXFLAGS += -fopenmp
 
 SRC = inbix.cpp plink.cpp options.cpp input.cpp binput.cpp tinput.cpp \
-genome.cpp \
-helper.cpp stats.cpp filters.cpp locus.cpp multi.cpp crandom.cpp	\
-cluster.cpp mds.cpp output.cpp informative.cpp assoc.cpp epi.cpp	\
+genome.cpp helper.cpp stats.cpp filters.cpp locus.cpp multi.cpp crandom.cpp \
+cluster.cpp mds.cpp output.cpp informative.cpp assoc.cpp epi.cpp  \
 prephap.cpp phase.cpp trio.cpp tdt.cpp sharing.cpp genepi.cpp sets.cpp	\
-perm.cpp mh.cpp genedrop.cpp gxe.cpp merge.cpp hotel.cpp multiple.cpp	\
-haploCC.cpp haploTDT.cpp poo.cpp webcheck.cpp qfam.cpp linear.cpp	\
-bmerge.cpp parse.cpp mishap.cpp legacy.cpp homozyg.cpp segment.cpp	\
+perm.cpp mh.cpp genedrop.cpp gxe.cpp merge.cpp hotel.cpp multiple.cpp \
+haploCC.cpp haploTDT.cpp poo.cpp webcheck.cpp qfam.cpp linear.cpp \
+bmerge.cpp parse.cpp mishap.cpp legacy.cpp homozyg.cpp segment.cpp  \
 model.cpp logistic.cpp glm.cpp dcdflib.cpp elf.cpp dfam.cpp fisher.cpp	\
-linput.cpp sockets.cpp lookup.cpp proxy.cpp pdriver.cpp haploQTL.cpp	\
-haplohelper.cpp haplowindow.cpp genogroup.cpp nonfounderphasing.cpp	\
-clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp	\
-nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp	\
+linput.cpp sockets.cpp lookup.cpp proxy.cpp pdriver.cpp haploQTL.cpp  \
+haplohelper.cpp haplowindow.cpp genogroup.cpp nonfounderphasing.cpp \
+clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp  \
+nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp  \
 flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
-tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp	\
-metaanal.cpp \
-ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp CentralityRanker.cpp \
-EpistasisEQtl.cpp
+tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp  \
+metaanal.cpp ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp \
+CentralityRanker.cpp EpistasisEQtl.cpp Dataset.cpp AttributeRanker.cpp	\
+DistanceMetrics.cpp PlinkInternalsDataset.cpp RReliefF.cpp ReliefF.cpp	\
+ReliefFSeq.cpp SNReliefF.cpp DatasetInstance.cpp Insilico.cpp DgeData.cpp  \
+BirdseedData.cpp ChiSquared.cpp Statistics.cpp \
+PlinkInternalsDatasetInstance.cpp
 
-HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h	\
-perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h		\
-fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h	\
-gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h                     \
+HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h \
+perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h	\
+fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h \
+gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h \
 ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h \
-EpistasisEQtl.h
+EpistasisEQtl.h Dataset.h AttributeRanker.h DistanceMetrics.h \
+PlinkInternalsDataset.h RReliefF.h ReliefF.h ReliefFSeq.h SNReliefF.h  \
+DatasetInstance.h Insilico.h BestN.h DgeData.h BirdseedData.h \
+ChiSquared.h Statistics.h PlinkInternalsDatasetInstance.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS

@@ -4320,6 +4320,8 @@ void setOptions(CArgs & a) {
             << "      --ripm-abs                Take absolute value of input before threshold\n"
             << "      --ripm-weighted           Keep weighted edges versus make binary\n"
             << "\n"
+            << "      --relieff                 Perform a Relief-F variable ranking algorithm\n"
+            << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
             << "      --rank-save-data {file name} Save ranker results to new data file\n"

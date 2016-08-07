@@ -322,6 +322,9 @@ bool par::sifToGain = false;
 string par::afni1dFile = "";
 bool par::afniNetwork = false;
 
+// added for Relief-F support - bcw - 8/6/16
+bool par::do_relieff = false;
+
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;
 string par::thresholdType = "hard";

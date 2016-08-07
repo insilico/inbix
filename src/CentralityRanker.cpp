@@ -22,7 +22,7 @@
 #include "CentralityRanker.h"
 
 using namespace std;
-using namespace Insilico;
+using namespace insilico;
 using namespace arma;
 
 // Plink object

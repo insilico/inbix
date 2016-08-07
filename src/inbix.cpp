@@ -1212,6 +1212,13 @@ int main(int argc, char* argv[]) {
 
 	////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
+	if(par::do_relieff) {
+		P.printLOG("\nPerforming Relief-F analysis\n");
+		shutdown();
+  }
+  
+    ////////////////////////////////////////////////
+	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_ripm) {
 		P.printLOG("\nPerforming rip-M analysis\n");
 		InteractionNetwork* network = 0;

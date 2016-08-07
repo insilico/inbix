@@ -30,7 +30,7 @@
 #include "InteractionNetwork.h"
 
 using namespace std;
-using namespace Insilico;
+using namespace insilico;
 using namespace arma;
 
 InteractionNetwork::InteractionNetwork(string matrixFileParam,

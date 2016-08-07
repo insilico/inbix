@@ -416,6 +416,9 @@ public:
   static string afni1dFile;
   static bool afniNetwork;
 
+  // added for Relief-F support - bcw - 8/6/16
+  static bool do_relieff;
+
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;
   static string thresholdType;
