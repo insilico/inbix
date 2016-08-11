@@ -324,6 +324,36 @@ bool par::afniNetwork = false;
 
 // added for Relief-F support - bcw - 8/6/16
 bool par::do_relieff = false;
+bool par::do_write_best_k = false;
+bool par::do_write_each_k_scores = false;
+bool par::do_normalize_scores = false;
+string par::distanceMatrixFilename = "";
+string par::gainMatrixFilename = "";
+string par::titvFilename = "";
+string par::algorithmMode = "relieff";
+string par::algorithmSeqMode = "snr";
+string par::algorithmSnrMode = "snr";
+string par::algorithmTstatMode = "pval";
+double par::algorithmSeqS0 = 0.05;
+unsigned int par::reliefNumTarget = 0;
+unsigned int par::reliefIterNumToRemove = 0;
+unsigned int par::reliefIterPercentToRemove = 0;
+unsigned int par::k = 10;
+unsigned int par::koptBegin = 1;
+unsigned int par::koptEnd = 1;
+unsigned int par::koptStep = 1;
+unsigned int par::m = 0;
+string par::snpMetric = "gm";
+string par::snpMetricNN = "gm";
+string par::snpMetricWeights = "gm";
+string par::numMetric = "manhattan";
+string par::weightByDistanceMethod = "equal";
+double par::weightByDistanceSigma = 2.0;
+string par::reliefMode = "relieff";
+string par::reliefSeqAlgorithmMode = "snr";
+double par::reliefSeqAlgorithmS0 = 0.05;
+string par::reliefSeqSnrMode = "snr";
+string par::reliefSeqTstatMode = "pval";
 
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;

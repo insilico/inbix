@@ -28,11 +28,12 @@
 #include <string>
 #include <fstream>
 
+#include "plink.h"
+
 #include "ReliefF.h"
 #include "Dataset.h"
 #include "DatasetInstance.h"
 #include "Insilico.h"
-#include <boost/program_options.hpp>
 
 /// a pair of vectors for hit and miss statistics for each instance
 typedef std::vector<std::pair<double, double> > InstanceAttributeStats;
@@ -47,28 +48,10 @@ typedef std::vector<InstanceHitMissStats> NeighborStats;
 typedef std::vector<InstanceHitMissStats>::iterator NeighborStatsIt;
 typedef std::vector<InstanceHitMissStats>::const_iterator NeighborStatsCIt;
 
-namespace po = boost::program_options;
-
 class SNReliefF : public ReliefF
 {
 public:
-  /*************************************************************************//**
-   * Construct an SNReliefF algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   ****************************************************************************/
-  SNReliefF(Dataset* ds);
-  /*************************************************************************//**
-   * Construct an SNReliefF algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   * \param [in] vm reference to a Boost map of command line options
-   ****************************************************************************/
-  SNReliefF(Dataset* ds, po::variables_map& vm);
-  /*************************************************************************//**
-   * Construct an SNReliefF algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   * \param [in] configMap reference to a ConfigMap (map<string, string>)
-   ****************************************************************************/
-  SNReliefF(Dataset* ds, ConfigMap& configMap);
+  SNReliefF(Dataset* ds, Plink* plinkPtr);
   bool ComputeAttributeScores();
   /// Precompute nearest neighbor gene statistics for all instances.
   bool PreComputeNeighborGeneStats();

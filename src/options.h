@@ -418,7 +418,37 @@ public:
 
   // added for Relief-F support - bcw - 8/6/16
   static bool do_relieff;
-
+  static bool do_write_best_k;
+  static bool do_write_each_k_scores;
+  static bool do_normalize_scores;
+	static string distanceMatrixFilename;
+	static string gainMatrixFilename;
+	static string titvFilename;
+	static string algorithmMode;
+  static string algorithmSeqMode;
+  static string algorithmSnrMode;
+  static string algorithmTstatMode;
+  static double algorithmSeqS0;
+	static unsigned int k;
+  static unsigned int koptBegin;
+  static unsigned int koptEnd;
+  static unsigned int koptStep;
+	static unsigned int m;
+	static string snpMetric;
+	static string snpMetricNN;
+	static string snpMetricWeights;
+	static string numMetric;
+	static string weightByDistanceMethod;
+	static double weightByDistanceSigma;
+	static string reliefMode;
+	static string reliefSeqAlgorithmMode;
+	static double reliefSeqAlgorithmS0;
+	static string reliefSeqSnrMode;
+	static string reliefSeqTstatMode;
+  static unsigned int reliefNumTarget;
+	static unsigned int reliefIterNumToRemove;
+	static unsigned int reliefIterPercentToRemove;
+  
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;
   static string thresholdType;

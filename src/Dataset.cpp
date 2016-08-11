@@ -374,12 +374,13 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 		vector<AttributeLevel> sampleValues = birdseedData->GetSubjectGenotypes(
 				instanceIndex);
 		DatasetInstance* dsi = new DatasetInstance(this);
-		dsi->attributes.resize(numAttributes);
+		vector<AttributeLevel> thisSnps(numAttributes);
 		for (int snpIndex = 0; snpIndex < numAttributes; ++snpIndex) {
 			AttributeLevel thisSnp = sampleValues[snpIndex];
 			// attributeLevelsSeen[snpIndex].insert(thisSnpString);
-			dsi->attributes[snpIndex] = thisSnp;
+			thisSnps[snpIndex] = thisSnp;
 		}
+    dsi->LoadInstanceFromVector(thisSnps);
 		instances.push_back(dsi);
 
 		string ID = sampleNames[instanceIndex] + sampleNames[instanceIndex];
@@ -1306,7 +1307,7 @@ double Dataset::GetMeanForNumeric(unsigned int numericIdx) {
 	double sum = 0.0;
 	vector<unsigned int> instanceIndicies = MaskGetInstanceIndices();
 	for (unsigned int i = 0; i < instanceIndicies.size(); ++i) {
-		sum += instances[instanceIndicies[i]]->numerics[numericIdx];
+		sum += instances[instanceIndicies[i]]->GetNumeric(numericIdx);
 	}
 
 	return (sum / ((double) instanceIndicies.size()));
@@ -1360,119 +1361,6 @@ unsigned int Dataset::GetNumericIndexFromName(string numericName) {
 		}
 	}
 	return INVALID_INDEX;
-}
-
-bool Dataset::TransformNumericsNormalize() {
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
-	for (; nit != numericsMask.end(); ++nit) {
-		string thisNumName = nit->first;
-		unsigned int thisNumIndex = nit->second;
-		double thisColSum = numericsSums[thisNumIndex];
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			DatasetInstance* dsi = instances[it->second];
-			double thisVal = dsi->GetNumeric(thisNumIndex);
-			if (thisVal != MISSING_NUMERIC_VALUE) {
-				dsi->numerics[thisNumIndex] = thisVal / thisColSum;
-			}
-		}
-	}
-	return true;
-}
-
-bool Dataset::TransformNumericsZScore() {
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
-	for (; nit != numericsMask.end(); ++nit) {
-		string thisNumName = nit->first;
-		unsigned int thisNumIndex = nit->second;
-		vector<NumericLevel> colValues;
-		GetNumericValues(thisNumIndex, colValues);
-		vector<NumericLevel> zValues;
-		ZTransform(colValues, zValues);
-		vector<NumericLevel>::const_iterator zIt = zValues.begin();
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end();
-				++it, ++zIt) {
-			DatasetInstance* dsi = instances[it->second];
-			dsi->numerics[thisNumIndex] = *zIt;
-		}
-	}
-	return true;
-}
-
-bool Dataset::TransformNumericsStandardize() {
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
-	for (; nit != numericsMask.end(); ++nit) {
-		string thisNumName = nit->first;
-		unsigned int thisNumIndex = nit->second;
-		double thisColSum = numericsSums[thisNumIndex];
-		double thisColAvg = thisColSum / ((double) NumInstances());
-		pair<double, double> thisColMinMax = numericsMinMax[thisNumIndex];
-		double thisColRange = thisColMinMax.second - thisColMinMax.first;
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			DatasetInstance* dsi = instances[it->second];
-			double thisVal = dsi->GetNumeric(thisNumIndex);
-			if (thisVal != MISSING_NUMERIC_VALUE) {
-				dsi->numerics[thisNumIndex] = (thisVal - thisColAvg)
-						/ thisColRange;
-			}
-		}
-	}
-	return true;
-}
-
-bool Dataset::TransformNumericsLog() {
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
-	for (; nit != numericsMask.end(); ++nit) {
-		string thisNumName = nit->first;
-		unsigned int thisNumIndex = nit->second;
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			DatasetInstance* dsi = instances[it->second];
-			double thisVal = dsi->GetNumeric(thisNumIndex);
-			// handle case of thisVal == 0 by adding small value
-			if (thisVal != MISSING_NUMERIC_VALUE) {
-				dsi->numerics[thisNumIndex] = log(thisVal + 1.0);
-			}
-		}
-	}
-	return true;
-}
-
-bool Dataset::TransformNumericsSqrt() {
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
-	for (; nit != numericsMask.end(); ++nit) {
-		string thisNumName = nit->first;
-		unsigned int thisNumIndex = nit->second;
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			DatasetInstance* dsi = instances[it->second];
-			double thisVal = dsi->GetNumeric(thisNumIndex);
-			if (thisVal != MISSING_NUMERIC_VALUE) {
-				dsi->numerics[thisNumIndex] = sqrt(thisVal);
-			}
-		}
-	}
-	return true;
-}
-
-bool Dataset::TransformNumericsAnscombe() {
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
-	double threeEighths = 3.0 / 8.0;
-	for (; nit != numericsMask.end(); ++nit) {
-		string thisNumName = nit->first;
-		unsigned int thisNumIndex = nit->second;
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			DatasetInstance* dsi = instances[it->second];
-			double thisVal = dsi->GetNumeric(thisNumIndex);
-			if (thisVal != MISSING_NUMERIC_VALUE) {
-				dsi->numerics[thisNumIndex] = 2.0 * sqrt(thisVal + threeEighths);
-			}
-		}
-	}
-	return true;
 }
 
 unsigned int Dataset::NumClasses() {
@@ -1541,11 +1429,11 @@ void Dataset::Print() {
 		cout << instanceIds[it->second] << "\t";
 		map<string, unsigned int>::const_iterator ait = attributesMask.begin();
 		for (; ait != attributesMask.end(); ++ait) {
-			cout << dsi->attributes[ait->second] << "\t";
+			cout << dsi->GetAttribute(ait->second) << "\t";
 		}
 		map<string, unsigned int>::const_iterator nit = numericsMask.begin();
 		for (; nit != numericsMask.end(); ++nit) {
-			cout << dsi->numerics[nit->second] << "\t";
+			cout << dsi->GetNumeric(nit->second) << "\t";
 		}
 		if (hasPhenotypes) {
 			if (hasContinuousPhenotypes) {

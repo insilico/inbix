@@ -8,6 +8,9 @@
 #include <iostream>
 #include <vector>
 
+#include "plink.h"
+#include "helper.h"
+
 #include "ReliefF.h"
 #include "RReliefF.h"
 #include "Dataset.h"
@@ -16,33 +19,11 @@
 
 using namespace std;
 
-RReliefF::RReliefF(Dataset* ds) :
-		ReliefF::ReliefF(ds, REGRESSION_ANALYSIS) {
+RReliefF::RReliefF(Dataset* ds, Plink* plinkPtr) :
+		ReliefF::ReliefF(ds, plinkPtr, REGRESSION_ANALYSIS) {
 	cout << Timestamp() << "RReliefF initialization" << endl;
 	if (!ds->HasContinuousPhenotypes()) {
-		cerr << "ERROR: Attempting to construct RReliefF object without a "
-				"continuous phenotype data set" << endl;
-		exit(EXIT_FAILURE);
-	}
-}
-
-RReliefF::RReliefF(Dataset* ds, po::variables_map& vm) :
-		ReliefF::ReliefF(ds, vm, REGRESSION_ANALYSIS) {
-	cout << Timestamp() << "RReliefF initialization" << endl;
-	if (!ds->HasContinuousPhenotypes()) {
-		cerr << "ERROR: Attempting to construct RReliefF object without a "
-				"continuous phenotype data set" << endl;
-		exit(EXIT_FAILURE);
-	}
-}
-
-RReliefF::RReliefF(Dataset* ds, ConfigMap& configMap) :
-		ReliefF::ReliefF(ds, configMap, REGRESSION_ANALYSIS) {
-	cout << Timestamp() << "RReliefF initialization" << endl;
-	if (!ds->HasContinuousPhenotypes()) {
-		cerr << "ERROR: Attempting to construct RReliefF object without a "
-				"continuous phenotype data set" << endl;
-		exit(EXIT_FAILURE);
+		error("ERROR: Attempting to construct RReliefF object without a continuous phenotype data set");
 	}
 }
 
@@ -104,7 +85,7 @@ bool RReliefF::ComputeAttributeScores() {
 		vector<unsigned int> nNearestNeighbors;
 		bool canGetNeighbors = R_i->GetNNearestInstances(k, nNearestNeighbors);
 		if (!canGetNeighbors) {
-			cerr << "ERROR: relieff cannot get " << k << " nearest neighbors" << endl;
+			cerr << "ERROR: Cannot get " << k << " nearest neighbors" << endl;
 			return false;
 		}
 		// check algorithm preconditions

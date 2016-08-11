@@ -11,6 +11,7 @@
 #include "options.h"
 #include "PlinkInternalsDataset.h"
 #include "PlinkInternalsDatasetInstance.h"
+#include "helper.h"
 
 using namespace std;
 
@@ -23,9 +24,9 @@ bool PlinkInternalsDataset::LoadDataset() {
   PP->printLOG("Adapting PLINK data structures to Dataset object\n");
   // --------------------------------------------------------------------------
   // get variable metadata
-  PP->printLOG("Get PLINK variable metadata\n");
   unsigned int numAttributes = PP->nl_all;
   if(numAttributes) {
+    PP->printLOG("Get PLINK SNP variable metadata for " + int2str(numAttributes) + " SNPs\n");
     hasGenotypes = true;
     attributeAlleles.resize(numAttributes);
     attributeMinorAllele.resize(numAttributes);
@@ -45,6 +46,7 @@ bool PlinkInternalsDataset::LoadDataset() {
   }
   unsigned int numNumerics = PP->nlistname.size();
   if(numNumerics) {
+    PP->printLOG("Get PLINK Numeric variable metadata for " + int2str(numNumerics) + " numerics\n");
     hasNumerics = true;
     for(int i=0; i < PP->nlistname.size(); i++) {
       string numericName = PP->nlistname[i];
@@ -52,14 +54,30 @@ bool PlinkInternalsDataset::LoadDataset() {
       numericsMask[numericName] = i;
     }
   }
-
+  
+  if((numAttributes + numNumerics) < 1) {
+    error("No SNPs or numeric attributes found");
+  }
   // --------------------------------------------------------------------------
   // look at all SNP and numeric values for all subjects
-  PP->printLOG("Get PLINK variable data for all subject\n");
+  PP->printLOG("Get PLINK variable data for all subjects\n");
+  
 	attributeLevelsSeen.resize(numAttributes);
 	genotypeCounts.resize(numAttributes);
 	attributeAlleleCounts.resize(numAttributes);
 	attributeMutationTypes.resize(numAttributes);
+  levelCounts.resize(numAttributes);
+
+  // binary or continuous trait/phenotype
+  if(par::bt) {
+    PP->printLOG("Detected BINARY phenotype\n");
+    hasContinuousPhenotypes = false;
+    levelCountsByClass.resize(numAttributes);
+  } else {
+    PP->printLOG("Detected CONTINUOUS phenotype\n");
+    hasContinuousPhenotypes = true;
+  }
+  
   for(int i=0; i < PP->sample.size(); i++) {
     string ID = PP->sample[i]->fid + PP->sample[i]->iid;
     instanceIds.push_back(ID);
@@ -72,32 +90,35 @@ bool PlinkInternalsDataset::LoadDataset() {
     tmpInd = new PlinkInternalsDatasetInstance(this, ID, PP, PP->sample[i]);
     double phenotype = -9;
     if(par::bt) {
-      hasContinuousPhenotypes = true;
-      phenotype = PP->sample[i]->phenotype;
-      tmpInd->SetPredictedValueTau(phenotype);
-      instanceIdsToLoad.push_back(ID);
-    } else {
-      hasContinuousPhenotypes = false;
       int intPheno = PP->sample[i]->aff? 2: 1;
       phenotype = static_cast<double>(PP->sample[i]->aff? 2: 1);
       classIndexes[intPheno].push_back(i);
       tmpInd->SetClass(phenotype);
+    } else {
+      phenotype = PP->sample[i]->phenotype;
+      tmpInd->SetPredictedValueTau(phenotype);
     }
+    instanceIdsToLoad.push_back(ID);
     instances.push_back(tmpInd);
     instancesMask[ID] = i;
     if(hasGenotypes) {
       for(int j=0; j < numAttributes; j++) {
-        AttributeLevel attr;
+        AttributeLevel attr = -9;
         attr = static_cast<AttributeLevel>(tmpInd->GetSimpleSNPValue(j));
         if(attr == -9) {
           missingValues[ID].push_back(j);
         }
         ++levelCounts[j][attr];
-        ++levelCountsByClass[j][make_pair(attr, tmpInd->GetClass())];
+        if(!HasContinuousPhenotypes()) {
+          ClassLevel classLevel = static_cast<ClassLevel>(tmpInd->GetClass());
+          ++levelCountsByClass[j][make_pair(attr, classLevel)];
+        }
         pair<char, char> alleles = attributeAlleles[j];
         ++attributeAlleleCounts[j][alleles.first];
         ++attributeAlleleCounts[j][alleles.second];
-        string genotype = "" + alleles.first + alleles.second;
+        string genotype = "  ";
+        genotype[0] = alleles.first;
+        genotype[1] = alleles.second;
         ++genotypeCounts[j][genotype];
         attributeLevelsSeen[j].insert(genotype);
       }

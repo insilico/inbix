@@ -41,14 +41,27 @@
 
 #include <omp.h>
 
+#include <boost/program_options.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include "regain.h"
 #include "InteractionNetwork.h"
 #include "CentralityRanker.h"
 #include "ArmadilloFuncs.h"
 #include "EpistasisEQtl.h"
 
+// ReliefSeq project integration - bcw - 8/7/16
+#include "Dataset.h"
+#include "PlinkInternalsDataset.h"
+#include "AttributeRanker.h"
+#include "ReliefSeqController.h"
+#include "ReliefF.h"
+#include "RReliefF.h"
+
 using namespace std;
 using namespace arma;
+using namespace boost;
+namespace po = boost::program_options;
 
 ofstream LOG;
 string PVERSION;
@@ -118,7 +131,7 @@ int main(int argc, char* argv[]) {
 
 	/////////////
 	// Time stamp
-	P.printLOG("Writing this text to log file [ " +
+	P.printLOG("Writing console output to log file [ " +
 					par::output_file_name + ".log ]\n");
 
 	time_t curr = time(0);
@@ -958,10 +971,6 @@ int main(int argc, char* argv[]) {
 			}
 			outputFileDetailHandle.close();
 		}
-		if(par::ranker_method == "relieff") {
-			P.printLOG("Ranking Relief-F\n");
-			P.printLOG("***** Relief-F not implemented *****\n");
-		}
 		if(par::ranker_method == "random") {
 			P.printLOG("Ranking Random\n");
 			P.printLOG("***** Random ranking not implemented *****\n");
@@ -1213,11 +1222,56 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_relieff) {
+
+    AnalysisType analysisType = NO_ANALYSIS;
+    Dataset* ds = new PlinkInternalsDataset(&P);
+    // individual-major mode for SNP bit vectors
+		P.printLOG("\nLoading data set for Relief-F analysis\n");
+    P.SNP2Ind();
+    if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
+      error("Could not load data set from PLINK internal data structures");
+    }
+    cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
+    ds->PrintStats();
+    
+    if(ds->HasGenotypes() && ds->HasNumerics()) {
+      analysisType = INTEGRATED_ANALYSIS;
+  		P.printLOG("Performing INTEGRATED analysis\n");
+    }
+    if(ds->HasGenotypes()) {
+      analysisType = SNP_ONLY_ANALYSIS;
+  		P.printLOG("Performing SNP analysis\n");
+    }
+    if(ds->HasNumerics()) {
+      analysisType = NUMERIC_ONLY_ANALYSIS;
+  		P.printLOG("Performing NUMERIC analysis\n");
+    }
+    
 		P.printLOG("\nPerforming Relief-F analysis\n");
+    ReliefSeqController rsc(ds, &P, analysisType);
+    if(par::k == 0) {
+      if(!rsc.ComputeScoresKopt()) {
+        error("ERROR: Failed to calculate optimum k ReliefSeq scores");
+      }
+    }
+    else {
+      if(!rsc.ComputeScores()) {
+        error("ERROR: Failed to calculate ReliefSeq scores");
+      }
+      rsc.PrintScores();
+    }
+    cout << Timestamp() << "ReliefSeq done" << endl;
+    
+    // ---------------------------------------------------------------------------
+    // write results files
+    string resultsFile = par::output_file_name;
+		P.printLOG("\nWriting Relief-F results to: " + resultsFile + ".relief.tab\n");
+    rsc.WriteAttributeScores(resultsFile);
+    
 		shutdown();
   }
   
-    ////////////////////////////////////////////////
+   ////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_ripm) {
 		P.printLOG("\nPerforming rip-M analysis\n");

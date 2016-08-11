@@ -317,18 +317,6 @@ public:
    ****************************************************************************/
   unsigned int GetNumericIndexFromName(std::string numericName);
   /// Normalize numerics by column sums.
-  bool TransformNumericsNormalize();
-  /// Standardize numerics by column - zero center -1 <= x <= 1.
-  bool TransformNumericsStandardize();
-  /// Standardize numerics by column - z-score.
-  bool TransformNumericsZScore();
-  /// Replace numeric value x with log(x+1).
-  bool TransformNumericsLog();
-  /// Replace numeric value x with sqrt(x).
-  bool TransformNumericsSqrt();
-  /// Replace numeric value x with Anscombe(x).
-  /// see: http://en.wikipedia.org/wiki/Anscombe_transform
-  bool TransformNumericsAnscombe();
   /// Get the number of classes in the data set.
   unsigned int NumClasses();
   /// Get the class column as read from the file.
@@ -360,17 +348,17 @@ public:
   std::pair<double, double> GetMinMaxForContinuousPhenotype();
   /// Print the entire data set in compact format.
   void Print();
-  /// Print basic statstics about the data set - discrete/SNPs only.
+  /// Print basic statistics about the data set - discrete/SNPs only.
   void PrintStats();
   /// Print statistics about the data set including numerics.
   void PrintNumericsStats();
-  /// Print very simple statistics abou the data set with no formatting.
+  /// Print very simple statistics about the data set with no formatting.
   void PrintStatsSimple(std::ostream& outStream=std::cout);
   /// Print class index information.
   void PrintClassIndexInfo(std::ostream& outStream=std::cout);
   /// Print missing value statistics.
   void PrintMissingValuesStats();
-  /// Prit attribute level counts.
+  /// Print attribute level counts.
   void PrintLevelCounts();
   /// 
   /*************************************************************************//**

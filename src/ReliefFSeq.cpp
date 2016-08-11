@@ -12,6 +12,9 @@
 #include <boost/lexical_cast.hpp>
 #include <gsl/gsl_cdf.h>
 
+#include "plink.h"
+#include "helper.h"
+
 #include "ReliefF.h"
 #include "ReliefFSeq.h"
 #include "Dataset.h"
@@ -19,117 +22,47 @@
 #include "DistanceMetrics.h"
 #include "Insilico.h"
 #include "Statistics.h"
+#include "options.h"
 
 using namespace std;
 using namespace boost;
 
-ReliefFSeq::ReliefFSeq(Dataset* ds) :
-		ReliefF::ReliefF(ds, RNASEQ_ANALYSIS) {
-	mode = "snr";
-	snrMode = "snr";
-	tstatMode = "pval";
-	s0 = 0.05;
-	cout << Timestamp() << "ReliefFSeq initializing with data set only" << endl;
-}
-
-ReliefFSeq::ReliefFSeq(Dataset* ds, po::variables_map& vm) :
-		ReliefF::ReliefF(ds, vm, RNASEQ_ANALYSIS) {
-	cout << Timestamp() << "ReliefFSeq initializing with Boost parameters"
-			<< endl;
-	/// set the various algorithm modes to one of four combinations:
-	/// snr-snr, snr-relieff, tstat-pval, tstat-abst
-	mode = "snr";
-	snrMode = "snr";
-	tstatMode = "pval";
-	if(vm.count("seq-algorithm-mode")) {
-		mode = vm["seq-algorithm-mode"].as<string>();
-		if((mode == "snr") || (mode == "tstat")) {
-			cout << Timestamp() << "ReliefFSeq mode set to: " << mode << endl;
-			if((mode == "snr") && vm.count("seq-snr-mode")) {
-				snrMode = vm["seq-snr-mode"].as<string>();
-				if((snrMode != "snr") && (snrMode != "relieff")) {
-					cerr << "ERROR: Unrecognized ReliefFSeq SNR mode: " << snrMode << endl;
-					exit(EXIT_FAILURE);
-				}
-				cout << Timestamp() << "ReliefFSeq SNR mode set to: " << snrMode << endl;
-			}
-			if((mode == "tstat") && vm.count("seq-tstat-mode")) {
-				tstatMode = vm["seq-tstat-mode"].as<string>();
-				if((tstatMode != "pval") && (tstatMode != "abst") && (tstatMode != "rawt")) {
-					cerr << "ERROR: Unrecognized ReliefFSeq t-statistic mode: " << tstatMode << endl;
-					exit(EXIT_FAILURE);
-				}
-				cout << Timestamp() << "ReliefFSeq t-statistic mode set to: " << tstatMode << endl;
-			}
-		}
-		else {
-			cerr << "ERROR: Unrecognized ReliefFSeq mode: " << mode << endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	/// set the s0 value
-	s0 = 0.05;
-	if(vm.count("seq-algorithm-s0")) {
-		s0 = vm["seq-algorithm-s0"].as<double>();
-		if((s0 >= 0) || (s0 <= 1.0)) {
-			cout << Timestamp() << "ReliefFSeq s0 set to: " << s0 << endl;
-		}
-		else {
-			cerr << "ERROR: ReliefFSeq s0 out of range (0, 1): " << s0 << endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-
-}
-
-ReliefFSeq::ReliefFSeq(Dataset* ds, ConfigMap& configMap) :
-		ReliefF::ReliefF(ds, configMap, RNASEQ_ANALYSIS) {
+ReliefFSeq::ReliefFSeq(Dataset* ds, Plink* plinkPtr) :
+		ReliefF::ReliefF(ds, plinkPtr, RNASEQ_ANALYSIS) {
 	string configValue;
 	/// set the various algorithm modes to one of four combinations:
 	/// snr-snr, snr-relieff, tstat-pval, tstat-abst
-	mode = "snr";
-	snrMode = "snr";
-	tstatMode = "pval";
-	if(GetConfigValue(configMap, "seq-algorithm-mode", configValue)) {
-		mode = configValue;
-		if((mode == "snr") || (mode == "tstat")) {
-			cout << Timestamp() << "ReliefFSeq mode set to: " << mode << endl;
-			if((mode == "snr") && GetConfigValue(configMap, "seq-snr-mode", configValue)) {
-				snrMode = configValue;
-				if((snrMode != "snr") && (snrMode != "relieff")) {
-					cerr << "ERROR: Unrecognized ReliefFSeq SNR mode: " << snrMode << endl;
-					exit(EXIT_FAILURE);
-				}
-				cout << Timestamp() << "ReliefFSeq SNR mode set to: " << snrMode << endl;
-			}
-			if((mode == "tstat") && GetConfigValue(configMap, "seq-tstat-mode", configValue)) {
-				tstatMode = configValue;
-				if((tstatMode != "pval") && ((tstatMode != "abst") || (tstatMode != "rawt"))) {
-					cerr << "ERROR: Unrecognized ReliefFSeq t-statistic mode: " << tstatMode << endl;
-					exit(EXIT_FAILURE);
-				}
-				cout << Timestamp() << "ReliefFSeq t-statistic mode set to: " << tstatMode << endl;
-			}
-		}
-		else {
-			cerr << "ERROR: Unrecognized ReliefFSeq mode: " << mode << endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-
+	mode = par::algorithmSeqMode;
+	snrMode = par::algorithmSnrMode;
+	tstatMode = par::algorithmTstatMode;
+  if((mode == "snr") || (mode == "tstat")) {
+    cout << Timestamp() << "ReliefFSeq mode set to: " << mode << endl;
+    if(mode == "snr") {
+      if((snrMode != "snr") && (snrMode != "relieff")) {
+        error("ERROR: Unrecognized ReliefFSeq SNR mode: " + snrMode);
+      }
+      cout << Timestamp() << "ReliefFSeq SNR mode set to: " << snrMode << endl;
+    }
+    if(mode == "tstat") {
+      if((tstatMode != "pval") && ((tstatMode != "abst") || (tstatMode != "rawt"))) {
+        error("ERROR: Unrecognized ReliefFSeq t-statistic mode: " + tstatMode);
+      }
+      cout << Timestamp() << "ReliefFSeq t-statistic mode set to: " << tstatMode << endl;
+    }
+  }
+  else {
+    error("ERROR: Unrecognized ReliefFSeq mode: " + mode);
+    exit(EXIT_FAILURE);
+  }
+	
 	/// set the s0 value
-	s0 = 0.05;
-	if(GetConfigValue(configMap, "seq-algorithm-s0", configValue)) {
-		s0 = lexical_cast<double>(configValue);
-		if((s0 >= 0) || (s0 <= 1.0)) {
-			cout << Timestamp() << "ReliefFSeq s0 set to: " << s0 << endl;
-		}
-		else {
-			cerr << "ERROR: ReliefFSeq s0 out of range (0, 1): " << s0 << endl;
-			exit(EXIT_FAILURE);
-		}
-	}
+  s0 = lexical_cast<double>(par::algorithmSeqS0);
+  if((s0 >= 0) || (s0 <= 1.0)) {
+    cout << Timestamp() << "ReliefFSeq s0 set to: " << s0 << endl;
+  }
+  else {
+    error("ERROR: ReliefFSeq s0 out of range (0, 1): " + dbl2str(par::algorithmSeqS0));
+  }
 
 	cout << Timestamp() << "ReliefFSeq initializing with config map" << endl;
 }

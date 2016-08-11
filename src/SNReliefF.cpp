@@ -15,21 +15,13 @@
 #include "Insilico.h"
 #include "Statistics.h"
 
+#include "plink.h"
+
 using namespace std;
 
-SNReliefF::SNReliefF(Dataset* ds) :
-		ReliefF::ReliefF(ds, RNASEQ_ANALYSIS) {
+SNReliefF::SNReliefF(Dataset* ds, Plink* plinkPtr) :
+		ReliefF::ReliefF(ds, plinkPtr, RNASEQ_ANALYSIS) {
 	cout << Timestamp() << "SNReliefF initializing" << endl;
-}
-
-SNReliefF::SNReliefF(Dataset* ds, po::variables_map& vm) :
-		ReliefF::ReliefF(ds, vm, RNASEQ_ANALYSIS) {
-	cout << Timestamp() << "SNReliefF initializing" << endl;
-}
-
-SNReliefF::SNReliefF(Dataset* ds, ConfigMap& configMap) :
-		ReliefF::ReliefF(ds, configMap, RNASEQ_ANALYSIS) {
-	cout << Timestamp() << "SNReliefF initialing" << endl;
 }
 
 SNReliefF::~SNReliefF() {

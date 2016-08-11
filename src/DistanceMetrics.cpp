@@ -23,11 +23,11 @@ pair<bool, double> CheckMissing(unsigned int attributeIndex,
                                 DatasetInstance* dsi2) {
   int numMissing = 0;
   pair<double, double> hasMissing = make_pair(false, false);
-  if(dsi1->attributes[attributeIndex] == MISSING_ATTRIBUTE_VALUE) {
+  if(dsi1->GetAttribute(attributeIndex) == MISSING_ATTRIBUTE_VALUE) {
     hasMissing.first = true;
     ++numMissing;
   }
-  if(dsi2->attributes[attributeIndex] == MISSING_ATTRIBUTE_VALUE) {
+  if(dsi2->GetAttribute(attributeIndex) == MISSING_ATTRIBUTE_VALUE) {
     hasMissing.second = true;
     ++numMissing;
   }
@@ -53,13 +53,13 @@ pair<bool, double> CheckMissing(unsigned int attributeIndex,
         diff = 1.0 / 3.0;
         //        diff = 1.0 / (double) ds->NumLevels(attributeIndex);
         //        diff = ds->GetProbabilityValueGivenClass(attributeIndex,
-        //                                                 dsi2->attributes[attributeIndex],
+        //                                                 dsi2->GetAttribute(attributeIndex],
         //                                                 dsi1->GetClass());
       } else {
         diff = 1.0 / 3.0;
         //        diff = 1.0 / (double) ds->NumLevels(attributeIndex);
         //        diff = ds->GetProbabilityValueGivenClass(attributeIndex,
-        //                                                 dsi1->attributes[attributeIndex],
+        //                                                 dsi1->GetAttribute(attributeIndex],
         //                                                 dsi2->GetClass());
       }
       // cout << "One missing value, diff = " << diff << endl;
@@ -90,11 +90,11 @@ pair<bool, double> CheckMissingNumeric(unsigned int numericIndex,
                                        DatasetInstance* dsi2) {
   int numMissing = 0;
   pair<double, double> hasMissing = make_pair(false, false);
-  if(dsi1->numerics[numericIndex] == MISSING_NUMERIC_VALUE) {
+  if(dsi1->GetNumeric(numericIndex) == MISSING_NUMERIC_VALUE) {
     hasMissing.first = true;
     ++numMissing;
   }
-  if(dsi2->numerics[numericIndex] == MISSING_NUMERIC_VALUE) {
+  if(dsi2->GetNumeric(numericIndex) == MISSING_NUMERIC_VALUE) {
     hasMissing.second = true;
     ++numMissing;
   }
@@ -108,11 +108,11 @@ pair<bool, double> CheckMissingNumeric(unsigned int numericIndex,
       if(hasMissing.first) {
         pair<double, double> thisMinMax =
                 dsi2->GetDatasetPtr()->GetMinMaxForNumeric(numericIndex);
-        diff = norm(dsi2->numerics[numericIndex], thisMinMax.first, thisMinMax.second);
+        diff = norm(dsi2->GetNumeric(numericIndex), thisMinMax.first, thisMinMax.second);
       } else {
         pair<double, double> thisMinMax =
                 dsi1->GetDatasetPtr()->GetMinMaxForNumeric(numericIndex);
-        diff = norm(dsi1->numerics[numericIndex], thisMinMax.first, thisMinMax.second);
+        diff = norm(dsi1->GetNumeric(numericIndex), thisMinMax.first, thisMinMax.second);
       }
       if(diff < 0.5) {
         diff = 1.0 - diff;
@@ -141,8 +141,8 @@ double diffAMM(unsigned int attributeIndex,
     distance = checkMissing.second;
   } else {
     distance = (double)
-            abs((int) dsi1->attributes[attributeIndex] -
-                (int) dsi2->attributes[attributeIndex]) * 0.5;
+            abs((int) dsi1->GetAttribute(attributeIndex) -
+                (int) dsi2->GetAttribute(attributeIndex)) * 0.5;
   }
   return distance;
 }
@@ -155,8 +155,8 @@ double diffGMM(unsigned int attributeIndex,
   if(checkMissing.first) {
     distance = checkMissing.second;
   } else {
-    distance = (dsi1->attributes[attributeIndex] !=
-                dsi2->attributes[attributeIndex]) ? 1.0 : 0.0;
+    distance = (dsi1->GetAttribute(attributeIndex) !=
+                dsi2->GetAttribute(attributeIndex)) ? 1.0 : 0.0;
   }
   return distance;
 }
@@ -180,8 +180,8 @@ double diffNCA(unsigned int attributeIndex,
   	genotypeMap[0] = a1 + a1;
   	genotypeMap[1] = a1 + a2;
   	genotypeMap[2] = a2 + a2;
-  	AttributeLevel attrLevel1 = dsi1->attributes[attributeIndex];
-  	AttributeLevel attrLevel2 = dsi2->attributes[attributeIndex];
+  	AttributeLevel attrLevel1 = dsi1->GetAttribute(attributeIndex);
+  	AttributeLevel attrLevel2 = dsi2->GetAttribute(attributeIndex);
   	string genotype1 = genotypeMap[attrLevel1];
   	string genotype2 = genotypeMap[attrLevel2];
   	map<char, unsigned int> nca1;
@@ -212,8 +212,8 @@ double diffNCA6(unsigned int attributeIndex,
     distance = checkMissing.second;
   } else {
     distance = (double)
-            abs((int) dsi1->attributes[attributeIndex] -
-                (int) dsi2->attributes[attributeIndex]) * 0.5;
+            abs((int) dsi1->GetAttribute(attributeIndex) -
+                (int) dsi2->GetAttribute(attributeIndex)) * 0.5;
   }
   // transition/transversion adjustment
   if(dsi1->GetDatasetPtr()->GetAttributeMutationType(attributeIndex) ==
@@ -249,9 +249,9 @@ double diffManhattan(unsigned int attributeIndex,
                      DatasetInstance* dsi1,
                      DatasetInstance* dsi2) {
 
-  //  double wekaNormDiff = fabs(norm(dsi1->numerics[attributeIndex],
+  //  double wekaNormDiff = fabs(norm(dsi1->GetNumeric(attributeIndex],
   //                                  minMax.first, minMax.second) -
-  //                             norm(dsi2->numerics[attributeIndex],
+  //                             norm(dsi2->GetNumeric(attributeIndex],
   //                                  minMax.first, minMax.second));
   // the above code is equivalent; why???
   double distance = 0.0;
@@ -263,8 +263,8 @@ double diffManhattan(unsigned int attributeIndex,
     pair<double, double> minMax =
             dsi1->GetDatasetPtr()->GetMinMaxForNumeric(attributeIndex);
     distance =
-            fabs(dsi1->numerics[attributeIndex] -
-                 dsi2->numerics[attributeIndex]) /
+            fabs(dsi1->GetNumeric(attributeIndex) -
+                 dsi2->GetNumeric(attributeIndex)) /
             (minMax.second - minMax.first);
   }
   return distance;
@@ -280,7 +280,7 @@ double diffEuclidean(unsigned int attributeIndex,
     distance = checkMissing.second;
   } else {
     distance =
-    		hypot(dsi1->numerics[attributeIndex], dsi2->numerics[attributeIndex]);
+    		hypot(dsi1->GetNumeric(attributeIndex), dsi2->GetNumeric(attributeIndex));
   }
   return distance;
 }

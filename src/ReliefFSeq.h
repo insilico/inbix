@@ -28,13 +28,12 @@
 #include <string>
 #include <fstream>
 
+#include "plink.h"
+
 #include "ReliefF.h"
 #include "Dataset.h"
 #include "DatasetInstance.h"
 #include "Insilico.h"
-#include <boost/program_options.hpp>
-
-namespace po = boost::program_options;
 
 class ReliefFSeq : public ReliefF
 {
@@ -43,19 +42,7 @@ public:
    * Construct an ReliefFSeq algorithm object.
    * \param [in] ds pointer to a Dataset object
    ****************************************************************************/
-  ReliefFSeq(Dataset* ds);
-  /*************************************************************************//**
-   * Construct an ReliefFSeq algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   * \param [in] vm reference to a Boost map of command line options
-   ****************************************************************************/
-  ReliefFSeq(Dataset* ds, po::variables_map& vm);
-  /*************************************************************************//**
-   * Construct an ReliefFSeq algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   * \param [in] configMap reference to a ConfigMap (map<string, string>)
-   ****************************************************************************/
-  ReliefFSeq(Dataset* ds, ConfigMap& configMap);
+  ReliefFSeq(Dataset* ds, Plink* plinkPtr);
   bool ComputeAttributeScores();
   AttributeScores GetScores();
   // average hit and miss diffs for gene alpha

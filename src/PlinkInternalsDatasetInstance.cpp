@@ -21,14 +21,14 @@
 using namespace std;
 using namespace insilico;
 
-PlinkInternalsDatasetInstance::PlinkInternalsDatasetInstance(
-  Dataset* ds, string instanceID, Plink* plinkPtr, Individual* plinkInd):
-  DatasetInstance(ds) {
+PlinkInternalsDatasetInstance::
+PlinkInternalsDatasetInstance(Dataset* ds, string instanceID, 
+        Plink* plinkPtr, Individual* plinkInd): DatasetInstance(ds) {
   PP = plinkPtr;
   ID = instanceID;
   individual = plinkInd;
   // switch from SNP-major to individual-major data orientation!
-  PP->SNP2Ind();
+  // PP->SNP2Ind();
 }
 
 PlinkInternalsDatasetInstance::~PlinkInternalsDatasetInstance() {

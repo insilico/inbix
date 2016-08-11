@@ -2975,6 +2975,80 @@ void setOptions(CArgs & a) {
     par::afni1dFile = a.value("--afni-1d-file");
   }
 
+  // added for Relief-F family of algorithms - bcw - 8/7/16
+  if(a.find("--relieff")) {
+    par::do_relieff = true;
+  }
+  if(a.find("--algorithm-mode")) {
+    par::algorithmMode = a.value("--algorithm-mode");
+  }
+  if(a.find("--seq-algorithm-mode")) {
+    par::algorithmSeqMode = a.value("--seq-algorithm-mode");
+  }
+  if(a.find("--seq-snr-mode")) {
+    par::algorithmSnrMode = a.value("--seq-snr-mode");
+  }
+  if(a.find("--seq-tstat-mode")) {
+    par::algorithmTstatMode = a.value("--seq-tstat-mode");
+  }
+  if(a.find("--seq-algorithm-s0")) {
+    par::algorithmSeqS0 = a.value_double("--seq-algorithm-s0");
+  }
+  if(a.find("--num-target")) {
+		par::reliefNumTarget = a.value_int("--num-target");
+  }
+  if(a.find("--iter-remove-n")) {
+		par::reliefIterNumToRemove = a.value_int("--iter-remove-n");
+  }
+  if(a.find("--iter-remove-percent")) {
+		par::reliefIterPercentToRemove = a.value_int("--iter-remove-percent");
+  }
+  if(a.find("--snp-metric-nn")) {
+    par::snpMetricNN = a.value("--snp-metric-nn");
+  }
+  if(a.find("--snp-metric-weights")) {
+    par::snpMetricWeights = a.value("--snp-metric-weights");
+  }
+  if(a.find("--numeric-metric")) {
+    par::numMetric = a.value("--numeric-metric");
+  }
+  if(a.find("--k-nearest-neighbors")) {
+    par::k = a.value_int("--k-nearest-neighbors");
+  }
+  if(a.find("--kopt-begin")) {
+		par::koptBegin = a.value_int("--kopt-begin");
+  }
+  if(a.find("--kopt-end")) {
+		par::koptEnd = a.value_int("--kopt-end");
+  }
+  if(a.find("--kopt-step")) {
+		par::koptStep = a.value_int("--kopt-step");
+  }
+  if(a.find("--write-best-k")) {
+    par::do_write_best_k = true;
+  }
+  if(a.find("--write-each-k-scores")) {
+    par::do_write_each_k_scores = true;
+  }
+  if(a.find("--number-random-samples")) {
+		par::m = a.value_int("--number-random-samples");
+  }
+  if(a.find("--weight-by-distance-method")) {
+    par::weightByDistanceMethod = a.value("--weight-by-distance-method");
+  }
+  if(a.find("--weight-by-distance-sigma")) {
+    par::weightByDistanceSigma = a.value_double("--weight-by-distance-sigma");
+  }
+  if(a.find("--distance-matrix")) {
+    par::distanceMatrixFilename = a.value("--distance-matrix");
+  }
+  if(a.find("--gain-matrix")) {
+    par::gainMatrixFilename = a.value("--gain-matrix");
+  }
+  if(a.find("--dump-titv-file")) {
+    par::titvFilename = a.value("--dump-titv-file");
+  }
+  
   // added for recursive indirect path modularity support - bcw - 5/31/16
   if(a.find("--ripm")) {
     par::do_ripm = true;
@@ -4321,6 +4395,30 @@ void setOptions(CArgs & a) {
             << "      --ripm-weighted           Keep weighted edges versus make binary\n"
             << "\n"
             << "      --relieff                 Perform a Relief-F variable ranking algorithm\n"
+            << "      --algorithm-mode          Relief algorithm mode (relieff|reliefseq)\n"
+            << "      --seq-algorithm-mode      ReliefSeq algorithm mode (snr|tstat)\n"
+            << "      --seq-snr-mode            Seq interaction algorithm SNR mode (snr|relieff)\n"
+            << "      --seq-tstat-mode          Seq interaction algorithm t-statistic mode (pval|abst|rawt)\n"
+            << "      --seq-algorithm-s0        Seq interaction algorithm s0 (0.0 <= s0 <= 1\n"
+            << "      --num-target              Target number of attributes to keep after backwards selection\n"
+            << "      --iter-remove-n           Number of attributes to remove per iteration of backwards selection\n"
+            << "      --iter-remove-percent     Percentage of attributes to remove per iteration of backwards selection\n"
+            << "      --normalize-scores        Normalize ReliefF scores? (0|1)\n"
+            << "      --snp-metric-nn           Metric for determining the difference between subjects (gm|am|nca|nca6|km)\n"
+            << "      --snp-metric-weights      Metric for determining the diff(erence) between SNPs (gm|am|nca|nca6)\n"
+            << "      --numeric-metric          Metric for determining the difference between numeric attributes (manhattan|euclidean)\n"
+            << "      --k-nearest-neighbors     Set k nearest neighbors (0=optimize k)\n"
+            << "      --kopt-begin              Optimize k starting with kopt-begin\n"
+            << "      --kopt-end                Optimize k ending with kopt-end\n"
+            << "      --kopt-step               optimize k incrementing with kopt-step\n"
+            << "      --write-best-k            optimize k, write best k's\n"
+            << "      --write-each-k-scores     optimize k, write best scores for each k\n"
+            << "      --number-random-samples   number of random samples (0=all|1 <= n <= number of samples)\n"
+            << "      --weight-by-distance-method (equal|one_over_k|exponential) \n"
+            << "      --weight-by-distance-sigma (default: 2) \n"
+            << "      --distance-matrix         Create a distance matrix for the loaded samples and exit\n"
+            << "      --gain-matrixv            Create a GAIN matrix for the loaded samples and exit\n"
+            << "      --dump-titv-file          File for dumping SNP transition/transversion information\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
@@ -4443,4 +4541,3 @@ void setOptions(CArgs & a) {
   }
 
 }
-

@@ -22,13 +22,11 @@
 #include <vector>
 #include <fstream>
 
-#include <boost/program_options.hpp>
+#include "plink.h"
 
 #include "AttributeRanker.h"
 #include "Dataset.h"
 #include "Insilico.h"
-
-namespace po = boost::program_options;
 
 class ReliefF : public AttributeRanker
 {
@@ -38,21 +36,7 @@ public:
    * \param [in] ds pointer to a Dataset object
    * \param [in] anaType analysis type
    ****************************************************************************/
-  ReliefF(Dataset* ds, AnalysisType anaType);
-  /*************************************************************************//**
-   * Construct an ReliefF algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   * \param [in] vm reference to a Boost map of command line options
-   * \param [in] anaType analysis type
-   ****************************************************************************/
-  ReliefF(Dataset* ds, po::variables_map& vm, AnalysisType anaType);
-  /*************************************************************************//**
-   * Construct an ReliefF algorithm object.
-   * \param [in] ds pointer to a Dataset object
-   * \param [in] configMap reference to a ConfigMap (map<string, string>)
-   * \param [in] anaType analysis type
-   ****************************************************************************/
-  ReliefF(Dataset* ds, ConfigMap& vm, AnalysisType anaType);
+  ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType);
   virtual ~ReliefF();
   /**
    * Compute the ReliefF scores for the current set of attributes.

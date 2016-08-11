@@ -17,8 +17,6 @@
 
 #include <omp.h>
 
-#include <boost/program_options.hpp>
-
 #include "ReliefF.h"
 #include "Dataset.h"
 #include "DatasetInstance.h"
@@ -26,8 +24,10 @@
 #include "DistanceMetrics.h"
 #include "Insilico.h"
 
-namespace po = boost::program_options;
-using namespace boost;
+#include "plink.h"
+#include "options.h"
+#include "helper.h"
+
 using namespace std;
 using namespace insilico;
 
@@ -62,7 +62,7 @@ public:
   }
 };
 
-ReliefF::ReliefF(Dataset* ds, AnalysisType anaType) :
+ReliefF::ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType):
 AttributeRanker::AttributeRanker(ds) {
   cout << Timestamp() << "ReliefF default initialization without "
           << "configuration parameters" << endl;
@@ -73,18 +73,9 @@ AttributeRanker::AttributeRanker(ds) {
     exit(-1);
   }
   analysisType = anaType;
+
   m = dataset->NumInstances();
-  SetK(10);
-
-  weightByDistanceMethod = "equal";
-  snpMetric = "gm";
-  snpDiff = diffGMM;
-  numMetric = "manhattan";
-  numDiff = diffManhattan;
-  removePerIteration = 0;
-
   cout << Timestamp() << "Number of samples: m = " << m << endl;
-  randomlySelect = true;
   if(m == 0 || m == ds->NumInstances()) {
     // sample deterministically unless a sample size has been set
     cout << Timestamp() << "Sampling all instances deterministically"
@@ -96,222 +87,12 @@ AttributeRanker::AttributeRanker(ds) {
     randomlySelect = true;
   }
 
-  cout << Timestamp() << "Number of nearest neighbors: k = " << k << endl;
-
-  cout << Timestamp() << "SNP weight update metric: " << snpMetric << endl;
-  cout << Timestamp() << "Continuous distance metric: " << numMetric << endl;
-
-  int numProcs = omp_get_num_procs();
-  int numThreads = omp_get_num_threads();
-  cout << Timestamp() << numProcs << " OpenMP processors available" << endl;
-  cout << Timestamp() << numThreads << " OpenMP threads running" << endl;
-
-  vector<string> atrNames = dataset->GetAttributeNames();
-  vector<string> numNames = dataset->GetNumericsNames();
-  scoreNames.resize(atrNames.size() + numNames.size());
-  copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
-  copy(numNames.begin(), numNames.end(),
-          scoreNames.begin() + atrNames.size());
-}
-
-ReliefF::ReliefF(Dataset* ds, po::variables_map& vm, AnalysisType anaType) :
-AttributeRanker::AttributeRanker(ds) {
-  cout << Timestamp() << "ReliefF initialization with boost command "
-          << "line parameters:" << endl;
-  if(ds) {
-    dataset = ds;
-  } else {
-    cerr << "ERROR: dataset is not initialized" << endl;
-    exit(-1);
-  }
-  analysisType = anaType;
-
-  if(vm.count("number-random-samples")) {
-    m = vm["number-random-samples"].as<unsigned int>();
-    if(!m) {
-      m = dataset->NumInstances();
-    }
-  } else {
-    m = dataset->NumInstances();
-  }
-
-  if(vm.count("k-nearest-neighbors")) {
-    SetK(vm["k-nearest-neighbors"].as<unsigned int>());
-  } else {
-    SetK(10);
-  }
-  if(k) {
-    cout << Timestamp() << "Number of nearest neighbors: k = " << k << endl;
-  } else {
-    cout << Timestamp() << "k nearest neighbors will be optimized" << endl;
-  }
-
-  snpMetric = "gm";
-  if(vm.count("snp-metric")) {
-    snpMetric = vm["snp-metric"].as<string>();
-  } else {
-    if(vm.count("snp-metric-weights")) {
-      snpMetric = vm["snp-metric-weights"].as<string>();
-    }
-  }
-
-  if(vm.count("numeric-metric")) {
-    numMetric = vm["numeric-metric"].as<string>();
-  } else {
-    numMetric = "manhattan";
-  }
-  removePerIteration = 0;
-  if(vm.count("iter-remove-n")) {
-    removePerIteration = vm["iter-remove-n"].as<unsigned int>();
-    if((removePerIteration < 1)
-            || (removePerIteration >= dataset->NumVariables())) {
-      cerr << "ERROR: Number to remove per iteration ["
-              << removePerIteration << "] not in valid range" << endl;
-      exit(-1);
-    }
-    cout << Timestamp() << "Iteratively removing " << removePerIteration
-            << endl;
-  }
-  if(vm.count("iter-remove-percent")) {
-    doRemovePercent = true;
-    removePercentage = vm["iter-remove-percent"].as<unsigned int>() / 100.0;
-    removePerIteration = (unsigned int) ((double) dataset->NumVariables()
-            * removePercentage + 0.5);
-    if((removePerIteration < 1)
-            || (removePerIteration >= dataset->NumVariables())) {
-      cerr << "ERROR: Number to remove per iteration ["
-              << removePerIteration << "] not in valid range" << endl;
-      exit(-1);
-    }
-    cout << Timestamp() << "Iteratively removing "
-            << (removePercentage * 100) << "% = " << removePerIteration
-            << endl;
-  }
-
-  if(vm.count("normalize-scores")) {
-    if(vm["normalize-scores"].as<unsigned int>()) {
-      normalizeScores = true;
-      cout << Timestamp() << "Scores will be normalized" << endl;
-    } else {
-      normalizeScores = false;
-      cout << Timestamp() << "Scores will not be normalized" << endl;
-    }
-  }
-
-  cout << Timestamp() << "Number of samples: m = " << m << endl;
-  randomlySelect = true;
-  if(m == 0 || m == ds->NumInstances()) {
-    // sample deterministically unless a sample size has been set
-    cout << Timestamp() << "Sampling all instances deterministically"
-            << endl;
-    randomlySelect = false;
-    m = ds->NumInstances();
-  } else {
-    cout << Timestamp() << "Sampling instances randomly" << endl;
-    randomlySelect = true;
-  }
-
-  /// set the SNP metric function pointer
-  bool snpMetricFunctionUnset = true;
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "GM") {
-    snpDiff = diffGMM;
-    snpMetricFunctionUnset = false;
-  }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "AM") {
-    snpDiff = diffAMM;
-    snpMetricFunctionUnset = false;
-  }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "NCA") {
-    snpDiff = diffNCA;
-    snpMetricFunctionUnset = false;
-  }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "NCA6") {
-    snpDiff = diffNCA6;
-    snpMetricFunctionUnset = false;
-  }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "KM") {
-    snpDiff = diffKM;
-    snpMetricFunctionUnset = false;
-  }
-  if(snpMetricFunctionUnset) {
-    cerr << "ERROR: Cannot set SNP metric to [" << snpMetric << "]" << endl;
-    exit(EXIT_FAILURE);
-  }
-
-  if(to_upper(numMetric) == "MANHATTAN") {
-    numDiff = diffManhattan;
-  } else {
-    if(to_upper(numMetric) == "EUCLIDEAN") {
-      numDiff = diffEuclidean;
-    } else {
-      cerr << "ERROR: [" << numMetric
-              << "] is not a valid numeric metric type" << endl;
-      exit(1);
-    }
-  }
-
-  cout << Timestamp() << "ReliefF SNP weight update metric: " << snpMetric
-          << endl;
-  cout << Timestamp() << "ReliefF continuous distance weight update metric: "
-          << numMetric << endl;
-
-  weightByDistanceMethod = vm["weight-by-distance-method"].as<string>();
-  if((weightByDistanceMethod != "exponential")
-          && (weightByDistanceMethod != "equal")) {
-    cerr << "ERROR: Invalid --weight-by-distance-method: "
-            << weightByDistanceMethod << endl;
-    exit(1);
-  }
-  weightByDistanceSigma = vm["weight-by-distance-sigma"].as<double>();
-  cout << Timestamp() << "Weight by distance method: "
-          << weightByDistanceMethod;
-  if(weightByDistanceMethod == "exponential") {
-    cout << Timestamp() << ", using sigma = " << weightByDistanceSigma
-            << endl;
-  } else {
-    cout << endl;
-  }
-
-  int numProcs = omp_get_num_procs();
-  int numThreads = omp_get_num_threads();
-  cout << Timestamp() << numProcs << " OpenMP processors available" << endl;
-  cout << Timestamp() << numThreads << " OpenMP threads in work team" << endl;
-
-  vector<string> atrNames = dataset->GetAttributeNames();
-  vector<string> numNames = dataset->GetNumericsNames();
-  scoreNames.resize(atrNames.size() + numNames.size());
-  copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
-  copy(numNames.begin(), numNames.end(),
-          scoreNames.begin() + atrNames.size());
-}
-
-ReliefF::ReliefF(Dataset* ds, ConfigMap& configMap, AnalysisType anaType) :
-AttributeRanker::AttributeRanker(ds) {
-  cout << Timestamp() << "ReliefF initialization with configuration map:"
-          << endl;
-  if(ds) {
-    dataset = ds;
-  } else {
-    cerr << "ERROR: dataset is not initialized" << endl;
-    exit(-1);
-  }
-  analysisType = anaType;
-
-  string configValue;
-
-  if(GetConfigValue(configMap, "number-random-samples", configValue)) {
-    m = lexical_cast<unsigned int>(configValue);
-    if(!m) {
-      m = dataset->NumInstances();
-    }
-  } else {
-    m = dataset->NumInstances();
-  }
-  if(GetConfigValue(configMap, "k-nearest-neighbors", configValue)) {
-    SetK(lexical_cast<unsigned int>(configValue));
-  } else {
-    SetK(10);
-  }
+  weightByDistanceMethod = par::weightByDistanceMethod;
+    
+  snpMetric = par::snpMetricNN;
+  numMetric = par::numMetric;;
+    
+  SetK(par::k);
   if(k) {
     cout << Timestamp() << "Number of nearest neighbors: k = " << k << endl;
     // k nearest neighbors and m randomly selected instances
@@ -323,35 +104,32 @@ AttributeRanker::AttributeRanker(ds) {
     cout << Timestamp() << "k nearest neighbors will be optimized" << endl;
   }
 
-  if(GetConfigValue(configMap, "snp-metric", configValue)) {
-    snpMetric = configValue;
+  cout << Timestamp() << "Number of samples: m = " << m << endl;
+  randomlySelect = true;
+  if(m == 0 || m == ds->NumInstances()) {
+    // sample deterministically unless a sample size has been set
+    cout << Timestamp() << "Sampling all instances deterministically"
+            << endl;
+    randomlySelect = false;
+    m = ds->NumInstances();
   } else {
-    if(GetConfigValue(configMap, "snp-metric-weights", configValue)) {
-      snpMetric = configValue;
-    }
-    snpMetric = "gm";
-  }
-  if(GetConfigValue(configMap, "numeric-metric", configValue)) {
-    numMetric = configValue;
-  } else {
-    numMetric = "manhattan";
+    cout << Timestamp() << "Sampling instances randomly" << endl;
+    randomlySelect = true;
   }
 
-  removePerIteration = 0;
-  if(GetConfigValue(configMap, "iter-remove-n", configValue)) {
-    removePerIteration = lexical_cast<unsigned int>(configValue);
+  removePerIteration = par::reliefIterNumToRemove;
+  if(removePerIteration) {
     if((removePerIteration < 1)
             || (removePerIteration >= dataset->NumAttributes())) {
-      cerr << "ERROR: Number to remove per iteratopn ["
-              << removePerIteration << "] not in valid range" << endl;
-      exit(EXIT_FAILURE);
+      error("ERROR: Number to remove per iteratopn [" +
+              int2str(removePerIteration) + "] not in valid range");
     }
     cout << Timestamp() << "Iteratively removing " << removePerIteration
             << endl;
   } else {
-    if(GetConfigValue(configMap, "iter-remove-percent", configValue)) {
+    removePercentage = static_cast<unsigned int>(par::reliefIterPercentToRemove) / 100.0;
+    if(removePercentage) {
       doRemovePercent = true;
-      removePercentage = lexical_cast<unsigned int>(configValue) / 100.0;
       removePerIteration =
               (unsigned int) ((double) dataset->NumAttributes()
               * removePercentage + 0.5);
@@ -366,22 +144,8 @@ AttributeRanker::AttributeRanker(ds) {
               << endl;
     }
   }
-
   cout << Timestamp() << "Iteratively removing " << removePerIteration
           << endl;
-
-  cout << Timestamp() << "Number of samples: m = " << m << endl;
-  randomlySelect = true;
-  if(m == 0 || m == ds->NumInstances()) {
-    // sample deterministically unless a sample size has been set
-    cout << Timestamp() << "Sampling all instances deterministically"
-            << endl;
-    randomlySelect = false;
-    m = ds->NumInstances();
-  } else {
-    cout << Timestamp() << "Sampling instances randomly" << endl;
-    randomlySelect = true;
-  }
 
   /// set the SNP metric function pointer
   bool snpMetricFunctionUnset = true;
@@ -426,27 +190,20 @@ AttributeRanker::AttributeRanker(ds) {
   cout << Timestamp() << "ReliefF SNP distance metric: " << snpMetric << endl;
   cout << Timestamp() << "ReliefF continuous distance metric: " << numMetric
           << endl;
-
-  if(GetConfigValue(configMap, "weight-by-distance-method", configValue)) {
-    weightByDistanceMethod = configValue;
-    if((weightByDistanceMethod != "exponential")
-            && (weightByDistanceMethod != "equal")) {
-      cerr << "ERROR: Invalid --weight-by-distance-method: "
-              << weightByDistanceMethod << endl;
-      exit(EXIT_FAILURE);
-    }
-    if(GetConfigValue(configMap, "weight-by-distance-sigma",
-            configValue)) {
-      weightByDistanceSigma = lexical_cast<double>(configValue);
-    }
-    cout << Timestamp() << "Weight by distance method: "
-            << weightByDistanceMethod;
-    if(weightByDistanceMethod == "exponential") {
-      cout << Timestamp() << ", using sigma = " << weightByDistanceSigma
-              << endl;
-    } else {
-      cout << endl;
-    }
+  
+  weightByDistanceMethod = par::weightByDistanceMethod;
+  if((weightByDistanceMethod != "exponential")
+          && (weightByDistanceMethod != "equal")) {
+    error("ERROR: Invalid --weight-by-distance-method: " + weightByDistanceMethod);
+  }
+  weightByDistanceSigma = static_cast<double>(par::weightByDistanceSigma);
+  cout << Timestamp() << "Weight by distance method: "
+          << weightByDistanceMethod;
+  if(weightByDistanceMethod == "exponential") {
+    cout << Timestamp() << ", using sigma = " << weightByDistanceSigma
+            << endl;
+  } else {
+    cout << endl;
   }
 
   int numProcs = omp_get_num_procs();
@@ -460,6 +217,7 @@ AttributeRanker::AttributeRanker(ds) {
   copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
   copy(numNames.begin(), numNames.end(),
           scoreNames.begin() + atrNames.size());
+
 }
 
 ReliefF::~ReliefF() {
@@ -795,7 +553,7 @@ bool ReliefF::PreComputeDistances() {
               dataset->ComputeInstanceToInstanceDistance(
               dataset->GetInstance(dsi1Index),
               dataset->GetInstance(dsi2Index));
-      // cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
+      //cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
     }
     if(i && (i % 100 == 0)) {
       cout << Timestamp() << i << "/" << numInstances << endl;
@@ -805,18 +563,18 @@ bool ReliefF::PreComputeDistances() {
           << endl;
 
   //  DEBUG
-  //  ofstream outFile;
-  //  outFile.open("distanceMatrix.csv");
-  //  for(unsigned int i=0; i < dataset->NumInstances(); ++i) {
-  //    for(unsigned int j=0; j < dataset->NumInstances(); ++j) {
-  //      if(j)
-  //        outFile << "," << distanceMatrix[i][j];
-  //      else
-  //        outFile << distanceMatrix[i][j];
-  //    }
-  //    outFile << endl;
-  //  }
-  //  outFile.close();
+//    ofstream outFile;
+//    outFile.open("distanceMatrix.csv");
+//    for(unsigned int i=0; i < dataset->NumInstances(); ++i) {
+//      for(unsigned int j=0; j < dataset->NumInstances(); ++j) {
+//        if(j)
+//          outFile << "," << distanceMatrix[i][j];
+//        else
+//          outFile << distanceMatrix[i][j];
+//      }
+//      outFile << endl;
+//    }
+//    outFile.close();
   //  DEBUG
 
   // for each instance: if discrete class, store the distance sums for same

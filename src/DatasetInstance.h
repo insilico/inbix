@@ -144,10 +144,6 @@ public:
    ****************************************************************************/
   bool GetNNearestInstances(unsigned int n,
                             std::vector<unsigned int>& closestInstances);
-  /// discrete attributes
-  std::vector<AttributeLevel> attributes;
-  /// continuous attributes
-  std::vector<NumericLevel> numerics;
 	/// Reset nearest neighbor information.
 	bool ResetNearestNeighbors();
 protected:
@@ -155,6 +151,10 @@ protected:
   Dataset* dataset;
   /// the class value for this instance
   ClassLevel classLabel;
+  /// discrete attributes
+  std::vector<AttributeLevel> attributes;
+  /// continuous attributes
+  std::vector<NumericLevel> numerics;
   /// vector of instance IDs for the best neighbors in this instance's class
   std::vector<std::string> bestNeighborIdsSameClass;
   /// vector of instance IDs for the best neighbors of different class(es)
