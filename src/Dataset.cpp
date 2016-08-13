@@ -2680,6 +2680,14 @@ bool Dataset::CalculateRegainMatrix(double** gainMatrix,
 	return true;
 }
 
+vector<double> Dataset::GetMAFs() {
+  vector<double> retVals(NumAttributes());
+  for(int i=0; i < attributeMinorAllele.size(); ++i) {
+    retVals[i] = attributeMinorAllele[i].second;
+  }
+  return retVals;
+}
+
 double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 		DatasetInstance* dsi2) {
 	double distance = 0;
@@ -2691,8 +2699,7 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 			if (snpMetric == "JC") {
 				distance = GetJukesCantorDistance(dsi1, dsi2);
 			} else {
-				vector<unsigned int> attributeIndices = MaskGetAttributeIndices(
-						DISCRETE_TYPE);
+				vector<unsigned int> attributeIndices = MaskGetAttributeIndices(DISCRETE_TYPE);
 				for (unsigned int i = 0; i < attributeIndices.size(); ++i) {
 					// DEBUG
 			  	pair<char, char> alleles =
@@ -2791,6 +2798,11 @@ bool Dataset::SetDistanceMetrics(string newSnpWeightMetric, string newSnpNNMetri
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "KM") {
 		snpDiffNN = diffKM;
+		snpNNMetricFunctionUnset = false;
+	}
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "GRM") {
+    // no need to set a function pointer for GRM
+		snpDiffNN = 0;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset) {
@@ -2942,7 +2954,7 @@ bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 
 	// populate the matrix - upper triangular
 	// NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
-	cout << Timestamp() << "Computing instance-to-instance distances with " 
+	cout << Timestamp() << "Computing instance-to-instance SNP distances with " 
 		<< snpMetricNN << "... " << endl;
 	//  omp_set_nested(1);
 #pragma omp parallel for schedule(dynamic, 1)
@@ -3538,8 +3550,7 @@ bool Dataset::GetNumericValues(unsigned int numericIndex,
 		numericValues.clear();
 		map<string, unsigned int>::const_iterator it;
 		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			double thisNumeric = instances[it->second]->GetNumeric(
-					numericIndex);
+			double thisNumeric = instances[it->second]->GetNumeric(numericIndex);
 			numericValues.push_back(thisNumeric);
 		}
 	} else {

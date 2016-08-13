@@ -89,9 +89,6 @@ AttributeRanker::AttributeRanker(ds) {
 
   weightByDistanceMethod = par::weightByDistanceMethod;
     
-  snpMetric = par::snpMetricNN;
-  numMetric = par::numMetric;;
-    
   SetK(par::k);
   if(k) {
     cout << Timestamp() << "Number of nearest neighbors: k = " << k << endl;
@@ -147,7 +144,9 @@ AttributeRanker::AttributeRanker(ds) {
   cout << Timestamp() << "Iteratively removing " << removePerIteration
           << endl;
 
-  /// set the SNP metric function pointer
+  /// set the SNP metric function pointer based on command line params or defaults
+  snpMetric = par::snpMetric;
+  numMetric = par::numMetric;
   bool snpMetricFunctionUnset = true;
   if(snpMetricFunctionUnset && to_upper(snpMetric) == "GM") {
     snpDiff = diffGMM;
@@ -164,6 +163,10 @@ AttributeRanker::AttributeRanker(ds) {
   if(snpMetricFunctionUnset && to_upper(snpMetric) == "NCA6") {
     snpDiff = diffNCA6;
     snpMetricFunctionUnset = false;
+  }
+  if(snpMetricFunctionUnset && to_upper(snpMetric) == "GRM") {
+    // no need to set a function pointer here for GRM
+    error("GCTA GRM metric is not allowed in weight update metric, only nearest neighbors");
   }
   if(snpMetricFunctionUnset && to_upper(snpMetric) == "KM") {
     cerr << "ERROR: KM is not supported as a ReliefF metric" << endl;
@@ -241,6 +244,9 @@ bool ReliefF::ComputeAttributeScores() {
           << one_over_m_times_k << endl;
 
   vector<string> instanceIds = dataset->GetInstanceIds();
+//  for(i = 0; i < (int) m; i++) {
+//    cout << instanceIds[i] << endl;
+//  }
   /// algorithm line 2
   for(i = 0; i < (int) m; i++) {
     // algorithm line 3
@@ -535,33 +541,62 @@ bool ReliefF::PreComputeDistances() {
   }
   cout << " done" << endl;
 
-  // populate the matrix - upper triangular
-  // NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
-  cout << Timestamp() << "1) Computing instance-to-instance distances with ... " << endl;
-  //  omp_set_nested(1);
-#pragma omp parallel for schedule(dynamic, 1)
-  for(int i = 0; i < numInstances; ++i) {
-    // cout << "Computing instance to instance distances. Row: " << i << endl;
-    // #pragma omp parallel for
-    for(int j = i + 1; j < numInstances; ++j) {
-      unsigned int dsi1Index;
-      dataset->GetInstanceIndexForID(instanceIds[i], dsi1Index);
-      unsigned int dsi2Index;
-      dataset->GetInstanceIndexForID(instanceIds[j], dsi2Index);
-      /// be sure to call Dataset::ComputeInstanceToInstanceDistance
-      distanceMatrix[i][j] = distanceMatrix[j][i] =
-              dataset->ComputeInstanceToInstanceDistance(
-              dataset->GetInstance(dsi1Index),
-              dataset->GetInstance(dsi2Index));
-      //cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
+  // TCGA genetic relationship matrix (GRM))
+  if(par::snpMetricNN == "grm") {
+    cout << Timestamp() 
+            << "1) Computing instance-to-instance distances with GCTA " 
+            << "genetic relationship matrix (GRM) ... "
+            << endl;
+    vector<double> p = dataset->GetMAFs();
+  #pragma omp parallel for schedule(dynamic, 1)
+    for(int j = 0; j < numInstances; ++j) {
+      // NOTE index variable names chosen to match GCTA paper
+      for(int k = j + 1; k < numInstances; ++k) {
+        unsigned int dsi1Index;
+        dataset->GetInstanceIndexForID(instanceIds[j], dsi1Index);
+        unsigned int dsi2Index;
+        dataset->GetInstanceIndexForID(instanceIds[k], dsi2Index);
+        unsigned int N = dataset->NumAttributes();
+        double sum = 0.0;
+        for(int i = 0; i < N; ++i) {
+          AttributeLevel x_ij = dataset->GetInstance(j)->GetAttribute(i);
+          AttributeLevel x_ik = dataset->GetInstance(k)->GetAttribute(i);
+          double p_i = p[i];
+          double grmVal = 
+          ((x_ij - 2.0 * p_i) * (x_ik - 2.0 * p_i)) / 
+          ((2 * p_i) * (1 - p_i));
+          sum += (1 - grmVal);
+        }
+        distanceMatrix[j][k] = distanceMatrix[k][j] = sum / N;
+      }
     }
-    if(i && (i % 100 == 0)) {
-      cout << Timestamp() << i << "/" << numInstances << endl;
+  } else {
+    // populate the matrix - upper triangular
+    // NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
+    cout << Timestamp() << "1) Computing instance-to-instance distances with ... " << endl;
+  #pragma omp parallel for schedule(dynamic, 1)
+    for(int i = 0; i < numInstances; ++i) {
+      // cout << "Computing instance to instance distances. Row: " << i << endl;
+      // #pragma omp parallel for
+      for(int j = i + 1; j < numInstances; ++j) {
+        unsigned int dsi1Index;
+        dataset->GetInstanceIndexForID(instanceIds[i], dsi1Index);
+        unsigned int dsi2Index;
+        dataset->GetInstanceIndexForID(instanceIds[j], dsi2Index);
+        /// be sure to call Dataset::ComputeInstanceToInstanceDistance
+        distanceMatrix[i][j] = distanceMatrix[j][i] =
+                dataset->ComputeInstanceToInstanceDistance(
+                dataset->GetInstance(dsi1Index),
+                dataset->GetInstance(dsi2Index));
+        //cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
+      }
+      if(i && (i % 100 == 0)) {
+        cout << Timestamp() << i << "/" << numInstances << endl;
+      }
     }
+    cout << Timestamp() << numInstances << "/" << numInstances << " done"
+            << endl;
   }
-  cout << Timestamp() << numInstances << "/" << numInstances << " done"
-          << endl;
-
   //  DEBUG
 //    ofstream outFile;
 //    outFile.open("distanceMatrix.csv");

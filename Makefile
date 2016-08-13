@@ -29,7 +29,7 @@ CXX_WIN = g++.exe
 
 # Any other compiler flags here ( -Wall, -g, etc)
 # optimized mode
-CXXFLAGS += -O2 -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
+CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 LDFLAGS += -L/usr/local/lib -lgsl -lboost_program_options
 # IQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \

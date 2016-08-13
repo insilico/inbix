@@ -22,7 +22,6 @@
 
 #include "plink.h"
 #include "Dataset.h"
-#include "DatasetInstance.h"
 
 class PlinkInternalsDataset : public Dataset
 {

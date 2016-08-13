@@ -248,6 +248,7 @@ public:
    ****************************************************************************/
   virtual AttributeMutationType
   GetAttributeMutationType(unsigned int attributeIndex);
+  std::vector<double> GetMAFs();
   /// Apply Jukes-Cantor distance
   double GetJukesCantorDistance(DatasetInstance* dsi1, DatasetInstance* dsi2);
   /// Get Kimura Two-Parameter distance
@@ -650,8 +651,9 @@ protected:
    ****************************************************************************/
   bool WriteNewPlinkCovarDataset(std::string baseDatasetFilename);
   /*************************************************************************//**
-   * Compute the discrete difference in an attribute between two instances
-   * for determining nearest neighbors.
+   * Compute the discrete difference in an attribute between two instances for
+   * Relief-F scoring.
+   * 
    * \param [in] attributeIndex index into vector of all attributes
    * \param [in] dsi1 pointer to DatasetInstance 1
    * \param [in] dsi2 pointer to DatasetInstance 2
@@ -661,7 +663,8 @@ protected:
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
   /*************************************************************************//**
-   * Compute the discrete difference in an attribute between two instances.
+   * Compute the discrete difference in an attribute between two instances
+   * for determining nearest neighbors.
    * \param [in] attributeIndex index into vector of all attributes
    * \param [in] dsi1 pointer to DatasetInstance 1
    * \param [in] dsi2 pointer to DatasetInstance 2
@@ -706,7 +709,7 @@ protected:
   std::vector<std::map<char, unsigned int> > attributeAlleleCounts;
   /// minor allele, minor allele frequency
   std::vector<std::pair<char, double> > attributeMinorAllele;
-  /// Does this data set have alelelic information?
+  /// Does this data set have alellelic information?
   bool hasAllelicInfo;
   /// genotype->count
   std::vector<std::map<std::string, unsigned int> > genotypeCounts;

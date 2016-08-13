@@ -1232,7 +1232,8 @@ int main(int argc, char* argv[]) {
       error("Could not load data set from PLINK internal data structures");
     }
     cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
-    ds->PrintStats();
+
+    ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
     
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;

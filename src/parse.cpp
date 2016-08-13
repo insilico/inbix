@@ -4417,7 +4417,7 @@ void setOptions(CArgs & a) {
             << "      --weight-by-distance-method (equal|one_over_k|exponential) \n"
             << "      --weight-by-distance-sigma (default: 2) \n"
             << "      --distance-matrix         Create a distance matrix for the loaded samples and exit\n"
-            << "      --gain-matrixv            Create a GAIN matrix for the loaded samples and exit\n"
+            << "      --gain-matrix             Create a GAIN matrix for the loaded samples and exit\n"
             << "      --dump-titv-file          File for dumping SNP transition/transversion information\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"

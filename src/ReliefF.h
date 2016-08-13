@@ -60,7 +60,7 @@ public:
    * \param [in] baseFIlename filename to write score-attribute name pairs
    ****************************************************************************/
   void WriteAttributeScores(std::string baseFilename);
-  /// Precompute all pairwise instance-to-instance distances.
+  /// Pre-compute all pairwise instance-to-instance distances.
   bool PreComputeDistances();
   /// Overrides base class method.
   AttributeScores GetScores();
@@ -70,7 +70,7 @@ private:
   /// no default constructor
   ReliefF();
 protected:
-  /// Compute theconst AttributeScores& ComputeScores(); weight by distance factors for nearest neighbors.
+  /// Compute the const AttributeScores& ComputeScores(); weight by distance factors for nearest neighbors.
   bool ComputeWeightByDistanceFactors();
   /// type of analysis to perform
   AnalysisType analysisType;
