@@ -38,7 +38,7 @@ double PlinkInternalsDatasetInstance::GetSimpleSNPValue(int snp) {
   bool i1 = individual->one[snp];
 	bool i2 = individual->two[snp];
   ///////////////////////
-  // Autosomal coding
+  // Autosomal coding: counts minor alleles: aka dosage
   double retVal = 0;
   if(i1) {
     if(!i2) {

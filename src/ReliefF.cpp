@@ -548,27 +548,55 @@ bool ReliefF::PreComputeDistances() {
             << "genetic relationship matrix (GRM) ... "
             << endl;
     vector<double> p = dataset->GetMAFs();
-  #pragma omp parallel for schedule(dynamic, 1)
+    unsigned int N = dataset->NumAttributes();
+    double A_jk = 0;
+  #pragma omp parallel for schedule(dynamic,1)
     for(int j = 0; j < numInstances; ++j) {
       // NOTE index variable names chosen to match GCTA paper
-      for(int k = j + 1; k < numInstances; ++k) {
-        unsigned int dsi1Index;
-        dataset->GetInstanceIndexForID(instanceIds[j], dsi1Index);
-        unsigned int dsi2Index;
-        dataset->GetInstanceIndexForID(instanceIds[k], dsi2Index);
-        unsigned int N = dataset->NumAttributes();
+      for(int k = j; k < numInstances; ++k) {
+//        unsigned int dsi1Index;
+//        dataset->GetInstanceIndexForID(instanceIds[j], dsi1Index);
+//        unsigned int dsi2Index;
+//        dataset->GetInstanceIndexForID(instanceIds[k], dsi2Index);
         double sum = 0.0;
         for(int i = 0; i < N; ++i) {
           AttributeLevel x_ij = dataset->GetInstance(j)->GetAttribute(i);
           AttributeLevel x_ik = dataset->GetInstance(k)->GetAttribute(i);
           double p_i = p[i];
-          double grmVal = 
-          ((x_ij - 2.0 * p_i) * (x_ik - 2.0 * p_i)) / 
-          ((2 * p_i) * (1 - p_i));
-          sum += (1 - grmVal);
+          double two_p_i = 2 * p_i;
+          double summation_expr = 0;
+          if(j == k) {
+            summation_expr = 
+                    ((x_ij * x_ij - ((1 + two_p_i)) * x_ij) + (two_p_i * two_p_i)) / 
+                    (two_p_i * (1 - p_i));
+          } else {
+            summation_expr = 
+                    ((x_ij - two_p_i) * (x_ik - two_p_i)) / 
+                    (two_p_i * (1 - p_i));
+          }
+          sum += summation_expr;
         }
-        distanceMatrix[j][k] = distanceMatrix[k][j] = sum / N;
+        if(j == k) {
+          A_jk = 1 + (sum / N);
+          distanceMatrix[j][k] = (1- A_jk);
+        } else {
+          A_jk = sum / N;
+          distanceMatrix[j][k] = distanceMatrix[k][j] = (1 - A_jk);
+        }
       }
+      // write GRM
+      ofstream outFile("inbix.grm.tab");
+      for(int i=0; i < numInstances; ++i) {
+        for(int j=0; j < numInstances; ++j) {
+          if(j) {
+            outFile << "\t" << distanceMatrix[i][j];  
+          } else {
+            outFile << distanceMatrix[i][j];  
+          }
+        }
+        outFile << endl;
+      }
+      outFile.close();
     }
   } else {
     // populate the matrix - upper triangular
