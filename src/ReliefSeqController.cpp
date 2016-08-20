@@ -170,7 +170,7 @@ bool ReliefSeqController::ComputeScores() {
                 + "for writing");
       }
       cout << Timestamp()
-              << "Writing ALL reliefseq scores to [" + scoreFilename.str() + "]" << endl;
+              << "Writing ALL relieff scores to [" + scoreFilename.str() + "]" << endl;
       PrintAttributeScores(outFile);
       outFile.close();
     }

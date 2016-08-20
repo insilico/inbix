@@ -1259,9 +1259,9 @@ int main(int argc, char* argv[]) {
       if(!rsc.ComputeScores()) {
         error("ERROR: Failed to calculate ReliefSeq scores");
       }
-      rsc.PrintScores();
+      //rsc.PrintScores();
     }
-    cout << Timestamp() << "ReliefSeq done" << endl;
+    cout << Timestamp() << "Relief-F algorithm done" << endl;
     
     // ---------------------------------------------------------------------------
     // write results files

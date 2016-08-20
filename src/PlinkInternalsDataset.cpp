@@ -78,12 +78,19 @@ bool PlinkInternalsDataset::LoadDataset() {
     hasContinuousPhenotypes = true;
   }
   
+  unsigned int nextInstanceIdx = 0;
   for(int i=0; i < PP->sample.size(); i++) {
     string ID = PP->sample[i]->fid + PP->sample[i]->iid;
-    instanceIds.push_back(ID);
-    if(PP->sample[i]->phenotype == -9) {
+    if(par::verbose) {
+      PP->printLOG("[ DEBUG ] individual i: " + int2str(i)
+              + ", ID: " + ID 
+              + ", next index: " + int2str(nextInstanceIdx) + "\n");
+    }
+    if(PP->sample[i]->missing) {
       // missing phenotype so skip this individual
-      PP->printLOG("Missing phenotype for ID: " + ID + ", skipping\n");
+      if(par::verbose) {
+        PP->printLOG("ID: " + ID + " missing, skipping\n");
+      }
       continue;
     }
     PlinkInternalsDatasetInstance* tmpInd = 0;
@@ -98,9 +105,11 @@ bool PlinkInternalsDataset::LoadDataset() {
       phenotype = PP->sample[i]->phenotype;
       tmpInd->SetPredictedValueTau(phenotype);
     }
+    instanceIds.push_back(ID);
     instanceIdsToLoad.push_back(ID);
     instances.push_back(tmpInd);
-    instancesMask[ID] = i;
+    instancesMask[ID] = nextInstanceIdx;
+    nextInstanceIdx++;
     if(hasGenotypes) {
       for(int j=0; j < numAttributes; j++) {
         AttributeLevel attr = -9;
@@ -145,6 +154,10 @@ bool PlinkInternalsDataset::LoadDataset() {
   }
   hasPhenotypes = true;  
   hasAllelicInfo = true;
+
+  PP->printLOG("Final number of subjects loaded: " + int2str(instances.size()) + "\n");
+  PP->printLOG("Final number of SNPs loaded: " + int2str(numAttributes) + "\n");
+  PP->printLOG("Final number of numerics loaded: " + int2str(numNumerics) + "\n");
 
   // this has already been done above; called by iterative Relief-F to update
   // UpdateAllLevelCounts();
