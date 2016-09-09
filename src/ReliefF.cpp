@@ -550,7 +550,7 @@ bool ReliefF::PreComputeDistances() {
     vector<double> p = dataset->GetMAFs();
     unsigned int N = dataset->NumAttributes();
     double A_jk = 0;
-  #pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
     for(int j = 0; j < numInstances; ++j) {
       // NOTE index variable names chosen to match GCTA paper
       for(int k = j; k < numInstances; ++k) {
@@ -585,7 +585,7 @@ bool ReliefF::PreComputeDistances() {
         }
       }
       // write GRM
-      ofstream outFile("inbix.grm.tab");
+      ofstream outFile(par::output_file_name + ".grm.tab");
       for(int i=0; i < numInstances; ++i) {
         for(int j=0; j < numInstances; ++j) {
           if(j) {
@@ -602,7 +602,7 @@ bool ReliefF::PreComputeDistances() {
     // populate the matrix - upper triangular
     // NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
     cout << Timestamp() << "1) Computing instance-to-instance distances with ... " << endl;
-  #pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for schedule(dynamic,1)
     for(int i = 0; i < numInstances; ++i) {
       // cout << "Computing instance to instance distances. Row: " << i << endl;
       // #pragma omp parallel for
