@@ -584,20 +584,26 @@ bool ReliefF::PreComputeDistances() {
           distanceMatrix[j][k] = distanceMatrix[k][j] = (1 - A_jk);
         }
       }
-      // write GRM
-      ofstream outFile(par::output_file_name + ".grm.tab");
-      for(int i=0; i < numInstances; ++i) {
-        for(int j=0; j < numInstances; ++j) {
-          if(j) {
-            outFile << "\t" << distanceMatrix[i][j];  
-          } else {
-            outFile << distanceMatrix[i][j];  
-          }
-        }
-        outFile << endl;
+      if(j && (j % 100 == 0)) {
+        cout << Timestamp() << j << "/" << numInstances << endl;
       }
-      outFile.close();
     }
+    cout << Timestamp() << numInstances << "/" << numInstances << " done"
+            << endl;
+    // write GRM as the algorithm runs
+    cout << Timestamp() << "[ " << par::output_file_name << ".grm.tab ]" << endl;
+    ofstream outFile(par::output_file_name + ".grm.tab");
+    for(int i=0; i < numInstances; ++i) {
+      for(int j=0; j < numInstances; ++j) {
+        if(j) {
+          outFile << "\t" << distanceMatrix[i][j];  
+        } else {
+          outFile << distanceMatrix[i][j];  
+        }
+      }
+      outFile << endl;
+    }
+    outFile.close();
   } else {
     // populate the matrix - upper triangular
     // NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
