@@ -66,7 +66,7 @@ ifeq ($(SYS),UNIX)
   LIB += -lgomp
   LIB += -larmadillo
   LIB += -llapack
-  LIB += -lblas
+  LIB += -lopenblas
  endif
 endif
 

@@ -1338,34 +1338,40 @@ void InteractionNetwork::SaveModules(string saveFilename) {
 }
 
 pair<double, vec> 
-  InteractionNetwork::ModularityBestSplit(arma::mat& B, double m) {
+  InteractionNetwork::ModularityBestSplit(mat& B, double m) {
 
  	vec eigval;
 	mat eigvec;
-	eig_sym(eigval, eigvec, B);
-  //cout << "B:" << endl << B << endl;
-  //cout << eigvec << endl;
-  //cout << eigval << endl;
+  double Q = 0;
+  colvec s_out;
+	bool decompSuccess = eig_sym(eigval, eigvec, B);
+  if(decompSuccess) {
+    //cout << "B:" << endl << B << endl;
+    //cout << eigvec << endl;
+    //cout << eigval << endl;
 
-	uword  maxeig_idx;
-	eigval.max(maxeig_idx);
-	colvec s_out = eigvec.col(maxeig_idx);
-  //cout << s_out << endl;
-  //exit(1);
-	for(unsigned int i=0; i < s_out.size(); ++i) {
-		if(s_out(i) < 0) {
-			s_out(i) = -1;
-		}
-		else {
-			s_out(i) = 1;
-		}
-	}
-  //cout << s_out << endl;
-  //exit(1);
-	mat Q_mat = s_out.t() * B * s_out;
-	double Q = Q_mat(0, 0);
-	Q *= (1.0 / (m * 4.0));
-
+    uword  maxeig_idx;
+    eigval.max(maxeig_idx);
+    s_out = eigvec.col(maxeig_idx);
+    //cout << s_out << endl;
+    //exit(1);
+    for(unsigned int i=0; i < s_out.size(); ++i) {
+      if(s_out(i) < 0) {
+        s_out(i) = -1;
+      }
+      else {
+        s_out(i) = 1;
+      }
+    }
+    //cout << s_out << endl;
+    //exit(1);
+    mat Q_mat = s_out.t() * B * s_out;
+    double Q = Q_mat(0, 0);
+    Q *= (1.0 / (m * 4.0));
+  } else {
+    PP->printLOG("WARNING: eig_sym decomposition failed, setting Q = 0\n");
+  }
+  
 	return(make_pair(Q, s_out));
 }
 

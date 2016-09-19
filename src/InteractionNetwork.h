@@ -39,6 +39,8 @@ enum NetworkMatrixType {
 	NET_MATRIX_BOTH
 };
 
+extern Plink* PP;
+
 class InteractionNetwork {
 public:
 	// construct using a file representing the variable interactions matrix
