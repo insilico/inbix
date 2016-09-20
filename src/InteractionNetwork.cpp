@@ -135,7 +135,10 @@ bool InteractionNetwork::PrepareConnectivityMatrix() {
 				} else {
 	        if(useBinaryThreshold) {
 	          connMatrix(i, j) = 1.0;
-	        } // else use weight
+	        } else {
+            // else use weight
+            connMatrix(i, j) = edgeValue;
+          }
 				}
 			}
 		}
