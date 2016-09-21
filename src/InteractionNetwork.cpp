@@ -69,14 +69,15 @@ InteractionNetwork::InteractionNetwork(string matrixFileParam,
 	networkFile = matrixFileParam;
 
 	// set default values
+	debugMode = false;
   connectivityThreshold = DEFAULT_CONNECTIVITY_THRESHOLD;
   useBinaryThreshold = true;
+  connectivityThresholdAbs = false;
 	startMergeOrder = 2;
 	maxMergeOrder = 4;
 	maxModuleSize = 10;
 	minModuleSize = 200;
 	connMatrix = adjMatrix;
-	debugMode = false;
 }
 
 InteractionNetwork::InteractionNetwork(double** variablesMatrix,
@@ -120,6 +121,7 @@ bool InteractionNetwork::PrepareConnectivityMatrix() {
 	// keep original adjacency matrix
 	connMatrix = adjMatrix;
 	numNodes = connMatrix.n_cols;
+	this->PrintSummary();
 
 	// convert the adjacency matrix to a connectivity matrix
 	connMatrix.diag() = zeros<vec>(numNodes);
@@ -178,8 +180,7 @@ bool InteractionNetwork::SetBinaryThresholding(bool binaryFlag) {
   return true;
 }
 
-unsigned int InteractionNetwork::NumNodes()
-{
+unsigned int InteractionNetwork::NumNodes() {
 	return adjMatrix.n_cols;
 }
 
@@ -714,6 +715,8 @@ bool InteractionNetwork::ripM(unsigned int pStartMergeOrder,
 	                            unsigned int pMaxMergeOrder,
 	                            unsigned int pMinModuleSize, 
 	                            unsigned int pMaxModuleSize) {
+  PrepareConnectivityMatrix();
+  
 	// converted from R - bcw - June 2016
 	startMergeOrder = pStartMergeOrder;
 	maxMergeOrder = pMaxMergeOrder;
@@ -1352,7 +1355,6 @@ pair<double, vec>
     //cout << "B:" << endl << B << endl;
     //cout << eigvec << endl;
     //cout << eigval << endl;
-
     uword  maxeig_idx;
     eigval.max(maxeig_idx);
     s_out = eigvec.col(maxeig_idx);
@@ -1369,7 +1371,7 @@ pair<double, vec>
     //cout << s_out << endl;
     //exit(1);
     mat Q_mat = s_out.t() * B * s_out;
-    double Q = Q_mat(0, 0);
+    Q = Q_mat(0, 0);
     Q *= (1.0 / (m * 4.0));
   } else {
     PP->printLOG("WARNING: eig_sym decomposition failed, setting Q = 0\n");

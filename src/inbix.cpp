@@ -714,13 +714,13 @@ int main(int argc, char* argv[]) {
 	// so do not exit with an error when these conditions are detected.
 	if((P.nl_all == 0) && (P.nlistname.size() == 0) &&
 					(!par::do_modularity) && (!par::do_ranking) &&
-					(!par::do_regain_post)) {
+					(!par::do_regain_post) && (!par::sifNetwork)) {
 		error("Stopping as there are no SNPs or numeric attributes "
 						"left for analysis\n");
 	}
 
 	if((P.n == 0) && (!par::do_modularity) && (!par::do_ranking)
-					&& (!par::do_regain_post)) {
+					&& (!par::do_regain_post) && (!par::sifNetwork)) {
 		error("Stopping as there are no individuals left for analysis\n");
 	}
 
@@ -1295,7 +1295,8 @@ int main(int argc, char* argv[]) {
 							"given inbix options");
 		}
 		P.printLOG("--- Network loaded\n");
-
+    network->PrintSummary();
+    
 		// preprocessing transformations
 		if(par::modFisherTransform) {
 			P.printLOG("Transforming adjacency matrix connectivity using "
@@ -1313,8 +1314,8 @@ int main(int argc, char* argv[]) {
 		} else {
 			if(par::thresholdType == "soft") {
 				P.printLOG("Transforming adjacency matrix connectivity using "
-					"power with exponent " + dbl2str(par::modPowerTransformExponent) + "\n");
-				network->ApplyPowerTransform(par::modPowerTransformExponent);
+					"power with exponent (soft threshold): " + dbl2str(par::thresholdValue) + "\n");
+				network->ApplyPowerTransform(par::thresholdValue);
 				P.printLOG("--- Power transformed\n");
 				network->PrintSummary();
 			}
@@ -1326,6 +1327,7 @@ int main(int argc, char* argv[]) {
 			P.printLOG("Using binary edges thresholding to 1 if edge > threshold, else 0\n");
 			network->SetBinaryThresholding(true);
 		}
+  	network->PrintSummary();
 
 		// compute modularity recursively and merge small modules with rip-M
 		network->SetDebugMode(par::verbose);
