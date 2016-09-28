@@ -24,6 +24,14 @@ typedef std::vector<ModuleIndices> ModuleList;
 typedef std::pair<double, ModuleList> ModularityResult;
 typedef std::pair<double, std::vector<double> > HomophilyResult;
 
+typedef struct _RipmResult {
+  std::vector<int> degrees;
+  std::vector<int> sizes;
+  std::vector<Indices> hubs;
+  std::vector<int> hubDegrees;
+  ModuleList modules;
+} RipmResult;
+
 enum MatrixFileType {
   INVALID_FILE,
 	REGAIN_FILE,
@@ -168,6 +176,7 @@ private:
 	unsigned int minModuleSize;
 	// connectivity matrix
 	arma::mat ripmMatrix;
+  RipmResult ripmResult;
 
 	// communities/modules
 	double Q;

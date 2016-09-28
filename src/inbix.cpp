@@ -58,6 +58,13 @@
 #include "ReliefF.h"
 #include "RReliefF.h"
 
+// Ranger random forest project integration - bcw - 9/26/16
+#include "Data.h"
+#include "DataDouble.h"
+#include "Forest.h"
+#include "ForestClassification.h"
+#include "ForestRegression.h"
+
 using namespace std;
 using namespace arma;
 using namespace boost;
@@ -1220,6 +1227,83 @@ int main(int argc, char* argv[]) {
 	}
 
 	////////////////////////////////////////////////
+	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
+	if(par::do_randomforest) {
+		P.printLOG("\nPerforming random forest analysis\n");
+    P.SNP2Ind();
+    Forest* forest = 0;
+    try {
+      P.printLOG("Creating random forest object\n");
+      if(par::bt) {
+        P.printLOG("Creating ForestClassification\n");
+        forest = new ForestClassification;
+      } else {
+        P.printLOG("Creating ForestRegression\n");
+        forest = new ForestRegression;
+      }
+      forest->setVerboseOutput(&cout);
+      P.printLOG("Loading data object\n");
+      Data* data = new DataDouble();
+      if(data->loadFromPlink(&P)) {
+        error("loadFromPlink(&P)");
+      }
+      vector<string> variable_names;
+      for(int i=0; i < P.nlistname.size(); i++) {
+        string numericName = P.nlistname[i];
+        // cout << numericName << endl;
+        variable_names.push_back(numericName);
+      }
+      variable_names.push_back("Class");
+      
+      P.printLOG("Initializing forest with inbix data\n");
+      unsigned int minNodeSize = 0;
+      if(par::bt) {
+        minNodeSize = DEFAULT_MIN_NODE_SIZE_CLASSIFICATION;
+      } else {
+        minNodeSize = DEFAULT_MIN_NODE_SIZE_REGRESSION;
+      }
+      forest->init(par::depvarname, 
+              par::memmode, 
+              data, 
+              par::mtry, 
+              par::output_file_name,
+              par::ntree, 
+              0,
+              0, 
+              par::impmeasure,
+              minNodeSize,
+              par::statusvarname,
+              par::do_rfprobability, 
+              par::rfreplace,
+              par::catvars, 
+              par::savemem, 
+              par::splitrule,
+              par::predall, 
+              par::fraction, 
+              par::alpha, 
+              par::minprop, 
+              par::holdout);
+      P.printLOG("Running random forest algorithm\n");
+      forest->run(par::verbose);
+      P.printLOG("Writing output files\n");
+      forest->writeOutput();
+    } catch (std::exception& e) {
+      std::cerr << "Error: " << e.what() << " inbix will EXIT now." << std::endl;
+      if(forest) {
+        delete forest;
+        forest = 0;
+      }
+    }
+    if(forest) {
+      delete forest;
+      forest = 0;
+    }
+
+    // end gracefully
+		P.printLOG("Random Forest analysis complete\n");
+		shutdown();
+  }
+    ////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_relieff) {
 

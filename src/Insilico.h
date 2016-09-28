@@ -20,6 +20,8 @@
 #include <vector>
 #include <map>
 #include <iterator>
+#include <cfloat>
+#include <climits>
 
 class Dataset;
 

@@ -29,11 +29,13 @@ CXX_WIN = g++.exe
 
 # Any other compiler flags here ( -Wall, -g, etc)
 # optimized mode
-CXXFLAGS += -O2 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
+CXXFLAGS += -O2 -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 LDFLAGS += -L/usr/local/lib -lgsl -lboost_program_options
+
 # IQTL
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
 #  -L/usr/local/lib -DIQTL
+
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 
@@ -45,12 +47,8 @@ LIB_IGRAPH = /usr/lib/libigraph.so
 OUTPUT = inbix
 
 # Some system specific flags
-ifeq ($(SYS),WIN)
- CXXFLAGS += -DWIN
- CXX = $(CXX_WIN)
- ifndef FORCE_DYNAMIC
-  CXXFLAGS += -static
- endif
+ifndef FORCE_DYNAMIC
+ CXXFLAGS += -static
 endif
 
 ifeq ($(SYS),UNIX)
@@ -72,17 +70,6 @@ endif
 
 ifeq ($(SYS),MAC)
  CXXFLAGS += -DUNIX
- CXX = $(CXX_UNIX)
-endif
-
-ifeq ($(SYS),SOLARIS)
- CXXFLAGS += -fast
- CXXFLAGS += -xtarget=ultraT2  # specific Sun hardware (must be specified after the -fast option)
- CXXFLAGS += -xdepend=no       # required to fix seg fault in iropt
- LIB = -lstdc++
- LIB += -lgcc
- LIB += -lsocket         # added for socket support
- LIB += -lnsl            # added for network services support
  CXX = $(CXX_UNIX)
 endif
 
@@ -120,7 +107,11 @@ CentralityRanker.cpp EpistasisEQtl.cpp Dataset.cpp AttributeRanker.cpp	\
 DistanceMetrics.cpp PlinkInternalsDataset.cpp RReliefF.cpp ReliefF.cpp	\
 ReliefFSeq.cpp SNReliefF.cpp DatasetInstance.cpp Insilico.cpp DgeData.cpp  \
 BirdseedData.cpp ChiSquared.cpp Statistics.cpp ReliefSeqController.cpp \
-PlinkInternalsDatasetInstance.cpp
+PlinkInternalsDatasetInstance.cpp \
+ArgumentHandler.cpp DataChar.cpp Data.cpp DataDouble.cpp DataFloat.cpp \
+ForestClassification.cpp Forest.cpp ForestProbability.cpp \
+ForestRegression.cpp ForestSurvival.cpp TreeClassification.cpp \
+Tree.cpp TreeProbability.cpp TreeRegression.cpp TreeSurvival.cpp utility.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h \
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h	\
@@ -131,7 +122,11 @@ EpistasisEQtl.h Dataset.h AttributeRanker.h DistanceMetrics.h \
 PlinkInternalsDataset.h RReliefF.h ReliefF.h ReliefFSeq.h SNReliefF.h  \
 DatasetInstance.h Insilico.h BestN.h DgeData.h BirdseedData.h \
 ChiSquared.h Statistics.h PlinkInternalsDatasetInstance.h \
-ReliefSeqController.h
+ReliefSeqController.h \
+ArgumentHandler.h DataDouble.h Data.h Forest.h ForestRegression.h \
+globals.h Tree.h TreeRegression.h utility.h DataChar.h DataFloat.h \
+ForestClassification.h ForestProbability.h ForestSurvival.h \
+TreeClassification.h TreeProbability.h TreeSurvival.h version.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS
@@ -141,7 +136,7 @@ ifeq ($(SYS),MAC)
 LIB += -ldl
 endif
 ifeq ($(SYS),UNIX)
-LIB += -ldl -lcrypt
+LIB += -ldl -lcrypt -pthread
 endif
 endif
 

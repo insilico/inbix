@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include "plink.h"
+#include "globals.h"
 
 using namespace std;
 
@@ -448,6 +449,33 @@ public:
   static unsigned int reliefNumTarget;
 	static unsigned int reliefIterNumToRemove;
 	static unsigned int reliefIterPercentToRemove;
+  
+  // added for Relief-F support - bcw - 9/26/16
+  // most are used as defaults for Ranger initialization
+  static bool do_randomforest;
+  static vector<std::string> alwayssplitvars;
+  static string caseweights;
+  static string depvarname;
+  static double fraction;
+  static bool holdout;
+  static MemoryMode memmode;
+  static bool savemem;
+  static string predict;
+  static string splitweights;
+  static unsigned int nrfthreads;
+  static bool predall;
+  static double alpha;
+  static double minprop;
+  static vector<string> catvars;
+  static ImportanceMode impmeasure;
+  static unsigned int targetpartitionsize;
+  static unsigned int mtry;
+  static bool do_rfprobability;
+  static SplitRule splitrule;
+  static string statusvarname;
+  static unsigned int ntree;
+  static bool rfreplace;
+  static TreeType treetype;
   
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;

@@ -590,7 +590,8 @@ bool ReliefF::PreComputeDistances() {
     }
     cout << Timestamp() << numInstances << "/" << numInstances << " done"
             << endl;
-    // write GRM as the algorithm runs
+    
+    // write GRM matrix to file with output prefix
     cout << Timestamp() << "[ " << par::output_file_name << ".grm.tab ]" << endl;
     ofstream outFile(par::output_file_name + ".grm.tab");
     for(int i=0; i < numInstances; ++i) {

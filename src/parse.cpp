@@ -2975,6 +2975,20 @@ void setOptions(CArgs & a) {
     par::afni1dFile = a.value("--afni-1d-file");
   }
 
+  // added for Random Forest algorithm - bcw - 9/26/16
+  if(a.find("--randomforest")) {
+    par::do_randomforest = true;
+  }
+  if(a.find("--ntree")) {
+		par::ntree = a.value_int("--num-target");
+  }
+  if(a.find("--mtry")) {
+		par::mtry = a.value_int("--mtry");
+  }
+  if(a.find("--memmode")) {
+		par::memmode = (MemoryMode) a.value_int("--memmode");
+  }
+
   // added for Relief-F family of algorithms - bcw - 8/7/16
   if(a.find("--relieff")) {
     par::do_relieff = true;
@@ -4419,6 +4433,11 @@ void setOptions(CArgs & a) {
             << "      --distance-matrix         Create a distance matrix for the loaded samples and exit\n"
             << "      --gain-matrix             Create a GAIN matrix for the loaded samples and exit\n"
             << "      --dump-titv-file          File for dumping SNP transition/transversion information\n"
+            << "\n"
+            << "      --randomforest            Perform a random forest classification/regression\n"
+            << "      --ntree                   Number of trees in the forest (500)\n"
+            << "      --mtry                    Number of variables to possibly split at in each node (sqrt(N))\n"
+            << "      --memmode                 Memory mode (0=double/default, 1=float, 2=char)\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"

@@ -748,7 +748,51 @@ bool InteractionNetwork::ripM(unsigned int pStartMergeOrder,
 			                 " size: " + int2str(results[i].size()) + "\n");
 		modules.push_back(results[i]);
 	}
-
+  
+//  arma::vec globalDegrees = sum(adjMatrix, dim=1);
+//	for(Indices moduleIdx=0; moduleIdx < modules.size(); ++moduleIdx) {
+//    ripmResult.sizes.push_back(results[i].size());
+//    ModuleIndices thisModule = modules[moduleIdx];
+//		for(Indices memberIdx=0; memberIdx < thisModule.size();	++memberIdx) {
+//			Indices nodeIndex = thisModule[memberIdx];
+//      string nodeName = nodeNames[nodeIndex];
+//      Indices nodeModule = (moduleIdx + 1);
+//		}
+//    // get hub
+//	}
+   
+  /* post-process the modules for network information
+   * R code:
+  diag(Acorr) <- 0
+  global_degrees <- rowSums(Acorr)
+  names(global_degrees) <- colnames(Acorr)
+  module_hubs <- NULL
+  module_degrees <- NULL
+  for(module_idx in 1:length(rip_modules$module_list)) {
+    this_module <- rip_modules$module_list[[module_idx]]
+    #     this_global_degrees <- global_degrees[this_module]
+    #     names(this_global_degrees) <- this_module
+    if(length(this_module) > 1) {
+      this_module_matrix <- Acorr[this_module, this_module]
+      this_module_matrix_degrees <- rowSums(this_module_matrix)
+    } else {
+      this_module_matrix <- Acorr[this_module, ]
+      this_module_matrix_degrees <- c(sum(this_module_matrix))
+    }
+    names(this_module_matrix_degrees) <- this_module
+    this_module_hub <- this_module_matrix_degrees[which.max(this_module_matrix_degrees)]
+    this_module_hub_degree <- this_module_matrix_degrees[names(this_module_hub)]
+    module_hubs <- c(module_hubs, this_module_hub)
+    module_degrees <- c(module_degrees, this_module_hub_degree)
+  }
+  rip_modules$hubs <- module_hubs
+  rip_modules$sizes <- sapply(rip_modules$module_list, FUN=length)
+  rip_modules$degrees <- module_degrees
+  rip_modules$adj <- Acorr
+  # return
+  rip_modules
+  */
+  
 	return true;
 }
 
@@ -1376,7 +1420,13 @@ pair<double, vec>
   } else {
     PP->printLOG("WARNING: eig_sym decomposition failed, setting Q = 0\n");
   }
-  
+
+	// for now just check for whacky values  
+  if(std::isnan(Q) || std::isinf(Q)) {
+  	PP->printLOG("WHACK VALUE, ana or +/-inf, setting to 0");
+  	Q = 0;
+  }
+
 	return(make_pair(Q, s_out));
 }
 

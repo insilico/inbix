@@ -13,6 +13,7 @@
 #include <string>
 #include "options.h"
 #include "CentralityRanker.h"
+#include "globals.h"
 
 using namespace std;
 
@@ -354,6 +355,33 @@ string par::reliefSeqAlgorithmMode = "snr";
 double par::reliefSeqAlgorithmS0 = 0.05;
 string par::reliefSeqSnrMode = "snr";
 string par::reliefSeqTstatMode = "pval";
+
+// added for Random Forest support - bcw - 9/26/16
+// most are used as defaults for Ranger initialization
+bool par::do_randomforest = false;
+vector<std::string> par::alwayssplitvars;
+string par::caseweights = "";
+string par::depvarname = "Class";
+double par::fraction = 1.0;
+bool par::holdout = false;
+MemoryMode par::memmode = MEM_DOUBLE;
+bool par::savemem = false;
+string par::predict = "";
+string par::splitweights = "";
+unsigned int par::nrfthreads = 0;
+bool par::predall = false;
+double par::alpha = 0.5;
+double par::minprop = 0.1;
+vector<string> par::catvars;
+ImportanceMode par::impmeasure = IMP_NONE;
+unsigned int par::targetpartitionsize = 0;
+unsigned int par::mtry = 0;
+bool par::do_rfprobability = false;
+SplitRule par::splitrule = LOGRANK;
+string par::statusvarname = "";
+unsigned int par::ntree = 500;
+bool par::rfreplace = true;
+TreeType par::treetype = TREE_CLASSIFICATION;
 
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;
