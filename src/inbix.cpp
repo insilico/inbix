@@ -1294,12 +1294,12 @@ int main(int argc, char* argv[]) {
         forest = 0;
       }
     }
+
+    // end gracefully
     if(forest) {
       delete forest;
       forest = 0;
     }
-
-    // end gracefully
 		P.printLOG("Random Forest analysis complete\n");
 		shutdown();
   }

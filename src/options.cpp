@@ -373,7 +373,7 @@ bool par::predall = false;
 double par::alpha = 0.5;
 double par::minprop = 0.1;
 vector<string> par::catvars;
-ImportanceMode par::impmeasure = IMP_NONE;
+ImportanceMode par::impmeasure = IMP_GINI;
 unsigned int par::targetpartitionsize = 0;
 unsigned int par::mtry = 0;
 bool par::do_rfprobability = false;
