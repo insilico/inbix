@@ -43,9 +43,9 @@ public:
 
   virtual ~TreeSurvival();
 
-  void initInternal();
+  void initInternal() override;
 
-  void appendToFileInternal(std::ofstream& file);
+  void appendToFileInternal(std::ofstream& file) override;
   void computePermutationImportanceInternal(std::vector<std::vector<size_t>>* permutations);
 
   const std::vector<std::vector<double> >& getChf() const {
@@ -59,11 +59,11 @@ public:
 
 private:
 
-  void createEmptyNodeInternal();
+  void createEmptyNodeInternal() override;
   void computeSurvival(size_t nodeID);
-  double computePredictionAccuracyInternal();
+  double computePredictionAccuracyInternal() override;
 
-  bool splitNodeInternal(size_t nodeID, std::vector<size_t>& possible_split_varIDs);
+  bool splitNodeInternal(size_t nodeID, std::vector<size_t>& possible_split_varIDs) override;
 
   bool findBestSplit(size_t nodeID, std::vector<size_t>& possible_split_varIDs);
   bool findBestSplitMaxstat(size_t nodeID, std::vector<size_t>& possible_split_varIDs);
@@ -87,7 +87,7 @@ private:
   void findBestSplitValueLogRankUnordered(size_t nodeID, size_t varID, double& best_value, size_t& best_varID,
       double& best_logrank);
 
-  void cleanUpInternal() {
+  void cleanUpInternal() override {
     delete[] num_deaths;
     delete[] num_samples_at_risk;
   }

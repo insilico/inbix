@@ -40,22 +40,22 @@ public:
   bool LoadDataset();
   double GetSimpleSNPValue(int snp);
   /// return the number of discrete attributes
-  unsigned int NumAttributes();
+  unsigned int NumAttributes() override;
   /*************************************************************************//**
    * Get and return an attribute value at index.
    * \param [in] index attribute index
    * \return attribute value at index
    ****************************************************************************/
-  AttributeLevel GetAttribute(unsigned int index);
+  AttributeLevel GetAttribute(unsigned int index) override;
   /// return the number of continuous attributes
-  unsigned int NumNumerics();
+  unsigned int NumNumerics() override;
   /*************************************************************************//**
    * Get and return numeric value at index.
    * \param [in] index numeric index
    * \return numeric value at index
    ****************************************************************************/
-  NumericLevel GetNumeric(unsigned int index);
-  void Print();
+  NumericLevel GetNumeric(unsigned int index) override;
+  void Print() override;
 private:
   Plink* PP;
   string ID;

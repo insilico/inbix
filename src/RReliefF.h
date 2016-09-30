@@ -37,7 +37,7 @@ public:
    * \param [in] ds pointer to a Dataset object
    ****************************************************************************/
   RReliefF(Dataset* ds, Plink* plinkPtr);
-  bool ComputeAttributeScores();
+  bool ComputeAttributeScores() override;
   virtual ~RReliefF();
 private:  
 };

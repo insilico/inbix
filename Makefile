@@ -29,7 +29,7 @@ CXX_WIN = g++.exe
 
 # Any other compiler flags here ( -Wall, -g, etc)
 # optimized mode
-CXXFLAGS += -O2 -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
+CXXFLAGS += -O2 -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DNDEBUG -Wno-write-strings -std=c++11
 LDFLAGS += -L/usr/local/lib -lgsl -lboost_program_options
 
 # IQTL
@@ -107,7 +107,7 @@ CentralityRanker.cpp EpistasisEQtl.cpp Dataset.cpp AttributeRanker.cpp	\
 DistanceMetrics.cpp PlinkInternalsDataset.cpp RReliefF.cpp ReliefF.cpp	\
 ReliefFSeq.cpp SNReliefF.cpp DatasetInstance.cpp Insilico.cpp DgeData.cpp  \
 BirdseedData.cpp ChiSquared.cpp Statistics.cpp ReliefSeqController.cpp \
-PlinkInternalsDatasetInstance.cpp \
+PlinkInternalsDatasetInstance.cpp EvaporativeCooling.cpp Deseq.cpp Edger.cpp \
 ArgumentHandler.cpp DataChar.cpp Data.cpp DataDouble.cpp DataFloat.cpp \
 ForestClassification.cpp Forest.cpp ForestProbability.cpp \
 ForestRegression.cpp ForestSurvival.cpp TreeClassification.cpp \
@@ -122,7 +122,7 @@ EpistasisEQtl.h Dataset.h AttributeRanker.h DistanceMetrics.h \
 PlinkInternalsDataset.h RReliefF.h ReliefF.h ReliefFSeq.h SNReliefF.h  \
 DatasetInstance.h Insilico.h BestN.h DgeData.h BirdseedData.h \
 ChiSquared.h Statistics.h PlinkInternalsDatasetInstance.h \
-ReliefSeqController.h \
+ReliefSeqController.h EvaporativeCooling.h Deseq.h Edger.h \
 ArgumentHandler.h DataDouble.h Data.h Forest.h ForestRegression.h \
 globals.h Tree.h TreeRegression.h utility.h DataChar.h DataFloat.h \
 ForestClassification.h ForestProbability.h ForestSurvival.h \

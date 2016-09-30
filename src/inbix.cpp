@@ -65,6 +65,11 @@
 #include "ForestClassification.h"
 #include "ForestRegression.h"
 
+// Evaporative Cooling (EC) - bcw - 9/29/16
+#include "EvaporativeCooling.h"
+#include "Deseq.h"
+#include "Edger.h"
+
 using namespace std;
 using namespace arma;
 using namespace boost;
@@ -742,6 +747,7 @@ int main(int argc, char* argv[]) {
 			P.locus[l]->allele1 = "0";
 	}
 
+	/////////////////////////////////////////////////////////////////////////////
 	// perform epistatic eQTL analysis
   if(par::do_iqtl) {
 		P.printLOG("Performing iQTL analysis\n");
@@ -795,6 +801,7 @@ int main(int argc, char* argv[]) {
     shutdown();
   }
   
+	/////////////////////////////////////////////////////////////////////////////
 	// compute a coexpression matrix of the numeric data
 	if(par::do_coexpression_all || par::do_coexpression_casecontrol) {
 		if(!par::numeric_file) {
@@ -856,7 +863,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
-	////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// data set export requested - bcw - 5/21/13
 	if(par::exportArff) {
 		P.printLOG("Performing data set export to Weka ARFF format\n");
@@ -867,6 +874,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
+ 	/////////////////////////////////////////////////////////////////////////////
 	// delimited format for Excel, R, etc - bcw - 5/22/13
 	if(par::exportDelimited) {
 		P.printLOG("Performing data set export to delimited format\n");
@@ -884,7 +892,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
-	////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// variable ranking requested - bcw - 5/16/13
 	if(par::do_ranking) {
 		P.printLOG("Performing variable ranking\n");
@@ -1155,7 +1163,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
-	////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// modularity analysis requested - bcw - 5/13/13
 	// NOTE: if regain file specified AND modularity assume 
 	// no transform option.
@@ -1226,7 +1234,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
-	////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_randomforest) {
 		P.printLOG("\nPerforming random forest analysis\n");
@@ -1242,19 +1250,11 @@ int main(int argc, char* argv[]) {
         forest = new ForestRegression;
       }
       forest->setVerboseOutput(&cout);
-      P.printLOG("Loading data object\n");
+      P.printLOG("Loading data object from inbix internal data structures\n");
       Data* data = new DataDouble();
       if(data->loadFromPlink(&P)) {
         error("loadFromPlink(&P)");
       }
-      vector<string> variable_names;
-      for(int i=0; i < P.nlistname.size(); i++) {
-        string numericName = P.nlistname[i];
-        // cout << numericName << endl;
-        variable_names.push_back(numericName);
-      }
-      variable_names.push_back("Class");
-      
       P.printLOG("Initializing forest with inbix data\n");
       unsigned int minNodeSize = 0;
       if(par::bt) {
@@ -1269,7 +1269,7 @@ int main(int argc, char* argv[]) {
               par::output_file_name,
               par::ntree, 
               0,
-              0, 
+              par::nrfthreads, 
               par::impmeasure,
               minNodeSize,
               par::statusvarname,
@@ -1295,6 +1295,11 @@ int main(int argc, char* argv[]) {
       }
     }
 
+    // write the forest in Ranger internal format for prediction
+    if(par::writeforest) {
+      forest->writeOutputInternal();
+    }
+
     // end gracefully
     if(forest) {
       delete forest;
@@ -1303,8 +1308,9 @@ int main(int argc, char* argv[]) {
 		P.printLOG("Random Forest analysis complete\n");
 		shutdown();
   }
-    ////////////////////////////////////////////////
-	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
+
+	/////////////////////////////////////////////////////////////////////////////
+	// Relief-F analysis requested - bcw - 5/31/16
 	if(par::do_relieff) {
 
     AnalysisType analysisType = NO_ANALYSIS;
@@ -1356,7 +1362,50 @@ int main(int argc, char* argv[]) {
 		shutdown();
   }
   
-   ////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
+	// Evaporative Cooling analysis requested - bcw - 5/31/16
+	if(par::do_ec) {
+
+    AnalysisType analysisType = NO_ANALYSIS;
+    Dataset* ds = new PlinkInternalsDataset(&P);
+    // individual-major mode for SNP bit vectors
+		P.printLOG("\nLoading data set for Evaporative Cooling analysis\n");
+    P.SNP2Ind();
+    if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
+      error("Could not load data set from PLINK internal data structures");
+    }
+    cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
+
+    ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
+    
+    if(ds->HasGenotypes() && ds->HasNumerics()) {
+      analysisType = INTEGRATED_ANALYSIS;
+  		P.printLOG("Performing INTEGRATED analysis\n");
+    }
+    if(ds->HasGenotypes()) {
+      analysisType = SNP_ONLY_ANALYSIS;
+  		P.printLOG("Performing SNP analysis\n");
+    }
+    if(ds->HasNumerics()) {
+      analysisType = NUMERIC_ONLY_ANALYSIS;
+  		P.printLOG("Performing NUMERIC analysis\n");
+    }
+    
+		P.printLOG("\nPerforming Evaporative Cooling analysis\n");
+    EvaporativeCooling ec(ds, &P, analysisType);
+    ec.ComputeECScores();
+    cout << Timestamp() << "Evaporative Cooling algorithm done" << endl;
+    
+    // ---------------------------------------------------------------------------
+    // write results files
+    string resultsFile = par::output_file_name;
+		P.printLOG("\nWriting Evaporative Cooling results to: " + resultsFile + ".relief.tab\n");
+    ec.WriteAttributeScores(resultsFile);
+    
+		shutdown();
+  }
+  
+	/////////////////////////////////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_ripm) {
 		P.printLOG("\nPerforming rip-M analysis\n");
@@ -1436,7 +1485,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
-	////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// dcVar analysis requested - bcw - 2/22/15
 	if(par::do_dcvar) {
 		P.printLOG("Performing dcVar analysis\n");
@@ -1652,7 +1701,7 @@ int main(int argc, char* argv[]) {
     shutdown();
 	}
 
-	////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// dcGAIN analysis requested - bcw - 10/30/13
 	// moved algorithm to armaDcgain function - bcw - 3/12/15
 	if(par::do_differential_coexpression) {
@@ -1783,7 +1832,7 @@ int main(int argc, char* argv[]) {
     shutdown();
   }
 
-	////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {
 		P.printLOG("Performing reGAIN analysis\n");
@@ -1842,7 +1891,7 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
-	//////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN post processing requested - bcw - 5/3/13
 	if(par::do_regain_post) {
 		P.printLOG("Performing reGAIN file post processing\n");

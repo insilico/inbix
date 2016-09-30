@@ -33,7 +33,7 @@ public:
    * \param [in] ds pointer to a Dataset object
    ****************************************************************************/
   DatasetInstance(Dataset* ds);
-  ~DatasetInstance();
+  virtual ~DatasetInstance();
   /// return the Dataset pointer associated with this instance
   Dataset* GetDatasetPtr();
   /*************************************************************************//**
@@ -44,7 +44,7 @@ public:
    ****************************************************************************/
   bool LoadInstanceFromVector(std::vector<AttributeLevel> newAttributes);
   /// return the number of discrete attributes
-  unsigned int NumAttributes();
+  virtual unsigned int NumAttributes();
   /*************************************************************************//**
    * Get and return an attribute value at index.
    * \param [in] index attribute index

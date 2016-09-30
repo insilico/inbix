@@ -49,7 +49,7 @@ public:
   /// Compute the ReliefF scores by iteratively removing worst attributes.
   bool ComputeAttributeScoresIteratively();
   /// Resets some data structures for the next iteration of ReliefF
-  bool ResetForNextIteration() override;
+  bool ResetForNextIteration();
   /*************************************************************************//**
    * Write the scores and attribute names to stream.
    * \param [in] outStream stream to write score-attribute name pairs
@@ -63,9 +63,9 @@ public:
   /// Pre-compute all pairwise instance-to-instance distances.
   bool PreComputeDistances();
   /// Overrides base class method.
-  AttributeScores GetScores() override;
+  AttributeScores GetScores();
   /// Implements AttributeRanker interface.
-  AttributeScores ComputeScores() override;
+  AttributeScores ComputeScores();
 private:
   /// no default constructor
   ReliefF();

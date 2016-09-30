@@ -368,20 +368,31 @@ MemoryMode par::memmode = MEM_DOUBLE;
 bool par::savemem = false;
 string par::predict = "";
 string par::splitweights = "";
-unsigned int par::nrfthreads = 0;
+unsigned int par::nrfthreads = DEFAULT_NUM_THREADS;
 bool par::predall = false;
-double par::alpha = 0.5;
-double par::minprop = 0.1;
+double par::alpha = DEFAULT_ALPHA;
+double par::minprop = DEFAULT_MINPROP;
 vector<string> par::catvars;
 ImportanceMode par::impmeasure = IMP_GINI;
 unsigned int par::targetpartitionsize = 0;
 unsigned int par::mtry = 0;
 bool par::do_rfprobability = false;
-SplitRule par::splitrule = LOGRANK;
+SplitRule par::splitrule = DEFAULT_SPLITRULE;
 string par::statusvarname = "";
-unsigned int par::ntree = 500;
+unsigned int par::ntree = DEFAULT_NUM_TREE;
 bool par::rfreplace = true;
 TreeType par::treetype = TREE_CLASSIFICATION;
+bool par::writeforest = false;
+
+// added for Evaporative Cooling support - bcw - 9/29/16
+bool par::do_ec = false;
+string par::ecAlgorithmSteps = "all";
+string par::ecMeAlgorithm = "rf";
+string par::ecItAlgorithm = "relieff";
+bool par::ecOptimizeTemp = false;
+unsigned int par::ecNumTarget = 0;
+unsigned int par::ecIterNumToRemove = 0;
+unsigned int par::ecIterPercentToRemove = 0;
 
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;

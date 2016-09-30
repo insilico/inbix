@@ -52,7 +52,7 @@ class SNReliefF : public ReliefF
 {
 public:
   SNReliefF(Dataset* ds, Plink* plinkPtr);
-  bool ComputeAttributeScores();
+  bool ComputeAttributeScores() override;
   /// Precompute nearest neighbor gene statistics for all instances.
   bool PreComputeNeighborGeneStats();
   /// Print the neighbor statistics data structure

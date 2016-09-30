@@ -46,15 +46,15 @@ public:
       std::vector<bool>& is_ordered_variable);
 
 private:
-  void initInternal(std::string status_variable_name);
-  void growInternal();
-  void predictInternal();
-  void computePredictionErrorInternal();
-  void writeOutputInternal();
-  void writeConfusionFile();
-  void writePredictionFile();
-  void saveToFileInternal(std::ofstream& outfile);
-  void loadFromFileInternal(std::ifstream& infile);
+  void initInternal(std::string status_variable_name) override;
+  void growInternal() override;
+  void predictInternal() override;
+  void computePredictionErrorInternal() override;
+  void writeOutputInternal() override;
+  void writeConfusionFile() override;
+  void writePredictionFile() override;
+  void saveToFileInternal(std::ofstream& outfile) override;
+  void loadFromFileInternal(std::ifstream& infile) override;
 
   DISALLOW_COPY_AND_ASSIGN(ForestRegression);
 };

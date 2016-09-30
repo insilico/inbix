@@ -450,7 +450,7 @@ public:
 	static unsigned int reliefIterNumToRemove;
 	static unsigned int reliefIterPercentToRemove;
   
-  // added for Relief-F support - bcw - 9/26/16
+  // added for Random Forests support - bcw - 9/26/16
   // most are used as defaults for Ranger initialization
   static bool do_randomforest;
   static vector<std::string> alwayssplitvars;
@@ -476,6 +476,17 @@ public:
   static unsigned int ntree;
   static bool rfreplace;
   static TreeType treetype;
+  static bool writeforest;
+
+  // added for Evaporative Cooling support - bcw - 9/29/16
+  static bool do_ec;
+  static string ecAlgorithmSteps;
+  static string ecMeAlgorithm;
+  static string ecItAlgorithm;
+  static bool ecOptimizeTemp;
+  static unsigned int ecNumTarget;
+  static unsigned int ecIterNumToRemove;
+  static unsigned int ecIterPercentToRemove;
   
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;

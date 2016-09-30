@@ -23,6 +23,21 @@
 using namespace std;
 using namespace insilico;
 
+bool scoresSortAsc(const pair<double, string>& p1,
+        const std::pair<double, string>& p2) {
+	return p1.first < p2.first;
+}
+
+bool scoresSortAscByName(const pair<double, string>& p1,
+        const pair<double, string>& p2) {
+	return p1.second < p2.second;
+}
+
+bool scoresSortDesc(const pair<double, string>& p1,
+        const pair<double, string>& p2) {
+	return p1.first > p2.first;
+}
+
 RandomJungleTreeType DetermineRandomJungleTreeType(AttributeType attributeType,
 		ClassType classType) {
 

@@ -43,8 +43,8 @@ public:
    * \param [in] ds pointer to a Dataset object
    ****************************************************************************/
   ReliefFSeq(Dataset* ds, Plink* plinkPtr);
-  bool ComputeAttributeScores();
-  AttributeScores GetScores();
+  bool ComputeAttributeScores() override;
+  AttributeScores GetScores() override;
   // average hit and miss diffs for gene alpha
   std::pair<double, double> MuDeltaAlphas(unsigned int alpha);
   /// standard deviations of hit and miss diffs for gene alpha

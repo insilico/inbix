@@ -38,7 +38,7 @@ public:
   DataFloat(double* data_double, std::vector<std::string> variable_names, size_t num_rows, size_t num_cols);
   virtual ~DataFloat();
 
-  double get(size_t row, size_t col) const {
+  double get(size_t row, size_t col) const override {
     if (col < num_cols_no_sparse) {
       return data[col * num_rows + row];
     } else {
@@ -48,11 +48,11 @@ public:
     }
   }
 
-  void reserveMemory() {
+  void reserveMemory() override {
     data = new float[num_cols * num_rows];
   }
 
-  void set(size_t col, size_t row, double value, bool& error) {
+  void set(size_t col, size_t row, double value, bool& error) override {
     data[col * num_rows + row] = (float) value;
   }
 

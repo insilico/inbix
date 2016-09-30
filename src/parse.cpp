@@ -2980,7 +2980,7 @@ void setOptions(CArgs & a) {
     par::do_randomforest = true;
   }
   if(a.find("--ntree")) {
-		par::ntree = a.value_int("--num-target");
+		par::ntree = a.value_int("--ntree");
   }
   if(a.find("--mtry")) {
 		par::mtry = a.value_int("--mtry");
@@ -2988,7 +2988,42 @@ void setOptions(CArgs & a) {
   if(a.find("--memmode")) {
 		par::memmode = (MemoryMode) a.value_int("--memmode");
   }
+  if(a.find("--impmeasure")) {
+		par::impmeasure = (ImportanceMode) a.value_int("--impmeasure");
+  }
+  if(a.find("--writeforest")) {
+		par::writeforest = true;
+  }
+  if(a.find("--rfthreads")) {
+		par::nrfthreads = a.value_int("--rfthreads");
+  }
 
+  // added for Evaporative Cooling algorithm - bcw - 9/29/16
+  if(a.find("--ec")) {
+    par::do_ec = true;
+  }
+  if(a.find("--ec-optimize-temp")) {
+    par::ecOptimizeTemp = true;
+  }
+  if(a.find("--ec-algorithm-steps")) {
+    par::ecAlgorithmSteps = a.value("--ec-algorithm-steps");
+  }
+  if(a.find("--ec-me-algorithm")) {
+    par::ecMeAlgorithm = a.value("--ec-me-algorithm");
+  }
+  if(a.find("--ec-it-algorithm")) {
+    par::ecItAlgorithm = a.value("--ec-it-algorithm");
+  }
+  if(a.find("ec-num-target")) {
+		par::ecNumTarget = a.value_int("ec-num-target");
+  }
+  if(a.find("ec-iter-remove-n")) {
+		par::ecIterNumToRemove = a.value_int("ec-iter-remove-n");
+  }
+  if(a.find("ec-iter-remove-percent")) {
+		par::ecIterPercentToRemove = a.value_int("ec-iter-remove-percent");
+  }
+        
   // added for Relief-F family of algorithms - bcw - 8/7/16
   if(a.find("--relieff")) {
     par::do_relieff = true;
@@ -4438,6 +4473,18 @@ void setOptions(CArgs & a) {
             << "      --ntree                   Number of trees in the forest (500)\n"
             << "      --mtry                    Number of variables to possibly split at in each node (sqrt(N))\n"
             << "      --memmode                 Memory mode (0=double/default, 1=float, 2=char)\n"
+            << "      --impmeasure              Importance measure (0=None/default, 1=GINI, 2=Permutation scale std err, 3=Permutation no scaling)\n"
+            << "      --writeforest             Save forest to file <outprefix>.forest\n"
+            << "      --rfthreads               Number of threads (default 0=all available)\n"
+            << "\n"
+            << "      --ec                      Perform a random forest analysis\n"
+            << "      --ec-optimize-temp        Turn on temperature optimization\n"
+            << "      --ec-algorithm-steps      Algorithm steps (all/default|me|it)\n"
+            << "      --ec-me-algorithm         randomforest|edger|deseq|\n"
+            << "      --ec-it-algorithm         relieff\n"
+            << "      --ec-num-target           Target number of attributes iterative removal\n"
+            << "      --ec-iter-remove-n        Number to remove per iteration\n"
+            << "      --ec-iter-remove-percent  Percent to remove per iteration\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
