@@ -59,11 +59,7 @@
 #include "RReliefF.h"
 
 // Ranger random forest project integration - bcw - 9/26/16
-#include "Data.h"
-#include "DataDouble.h"
-#include "Forest.h"
-#include "ForestClassification.h"
-#include "ForestRegression.h"
+#include "RandomForest.h"
 
 // Evaporative Cooling (EC) - bcw - 9/29/16
 #include "EvaporativeCooling.h"
@@ -1238,66 +1234,17 @@ int main(int argc, char* argv[]) {
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_randomforest) {
 		P.printLOG("\nPerforming random forest analysis\n");
-    P.SNP2Ind();
-    Forest* forest = 0;
-    try {
-      P.printLOG("Creating random forest object\n");
-      if(par::bt) {
-        P.printLOG("Creating ForestClassification\n");
-        forest = new ForestClassification;
-      } else {
-        P.printLOG("Creating ForestRegression\n");
-        forest = new ForestRegression;
-      }
-      forest->setVerboseOutput(&cout);
-      P.printLOG("Loading data object from inbix internal data structures\n");
-      Data* data = new DataDouble();
-      if(data->loadFromPlink(&P)) {
-        error("loadFromPlink(&P)");
-      }
-      P.printLOG("Initializing forest with inbix data\n");
-      unsigned int minNodeSize = 0;
-      if(par::bt) {
-        minNodeSize = DEFAULT_MIN_NODE_SIZE_CLASSIFICATION;
-      } else {
-        minNodeSize = DEFAULT_MIN_NODE_SIZE_REGRESSION;
-      }
-      forest->init(par::depvarname, 
-              par::memmode, 
-              data, 
-              par::mtry, 
-              par::output_file_name,
-              par::ntree, 
-              0,
-              par::nrfthreads, 
-              par::impmeasure,
-              minNodeSize,
-              par::statusvarname,
-              par::do_rfprobability, 
-              par::rfreplace,
-              par::catvars, 
-              par::savemem, 
-              par::splitrule,
-              par::predall, 
-              par::fraction, 
-              par::alpha, 
-              par::minprop, 
-              par::holdout);
-      P.printLOG("Running random forest algorithm\n");
-      forest->run(par::verbose);
-      P.printLOG("Writing output files\n");
-      forest->writeOutput();
-    } catch (std::exception& e) {
-      std::cerr << "Error: " << e.what() << " inbix will EXIT now." << std::endl;
-      if(forest) {
-        delete forest;
-        forest = 0;
-      }
-    }
 
+    P.SNP2Ind();
+    Dataset* ds = new PlinkInternalsDataset(&P);
+
+    RandomForest* forest = new RandomForest(ds, PP);
+    // AttributeScores scores = forest->ComputeScores();
+    forest->ComputeScores();
+    
     // write the forest in Ranger internal format for prediction
     if(par::writeforest) {
-      forest->writeOutputInternal();
+      forest->WriteScoresInternal();
     }
 
     // end gracefully

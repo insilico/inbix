@@ -109,7 +109,7 @@ ReliefFSeq.cpp SNReliefF.cpp DatasetInstance.cpp Insilico.cpp DgeData.cpp  \
 BirdseedData.cpp ChiSquared.cpp Statistics.cpp ReliefSeqController.cpp \
 PlinkInternalsDatasetInstance.cpp EvaporativeCooling.cpp Deseq.cpp Edger.cpp \
 ArgumentHandler.cpp DataChar.cpp Data.cpp DataDouble.cpp DataFloat.cpp \
-ForestClassification.cpp Forest.cpp ForestProbability.cpp \
+ForestClassification.cpp Forest.cpp ForestProbability.cpp RandomForest.cpp \
 ForestRegression.cpp ForestSurvival.cpp TreeClassification.cpp \
 Tree.cpp TreeProbability.cpp TreeRegression.cpp TreeSurvival.cpp utility.cpp
 
@@ -124,8 +124,8 @@ DatasetInstance.h Insilico.h BestN.h DgeData.h BirdseedData.h \
 ChiSquared.h Statistics.h PlinkInternalsDatasetInstance.h \
 ReliefSeqController.h EvaporativeCooling.h Deseq.h Edger.h \
 ArgumentHandler.h DataDouble.h Data.h Forest.h ForestRegression.h \
-globals.h Tree.h TreeRegression.h utility.h DataChar.h DataFloat.h \
-ForestClassification.h ForestProbability.h ForestSurvival.h \
+RandomForest.h globals.h Tree.h TreeRegression.h utility.h DataChar.h \
+DataFloat.h ForestClassification.h ForestProbability.h ForestSurvival.h \
 TreeClassification.h TreeProbability.h TreeSurvival.h version.h
 
 ifdef WITH_R_PLUGINS

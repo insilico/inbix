@@ -17,8 +17,8 @@
 
 #include "Dataset.h"
 #include "DatasetInstance.h"
-#include "StringUtils.h"
 #include "Insilico.h"
+#include "StringUtils.h"
 
 using namespace std;
 using namespace insilico;
