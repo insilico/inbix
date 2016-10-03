@@ -28,16 +28,15 @@
 #include "plink.h"
 #include "options.h"
 
-// class interface
-#include "EvaporativeCooling.h"
-#include "Deseq.h"
-#include "Edger.h"
-
 // EC project
 #include "Insilico.h"
 #include "Dataset.h"
 #include "Statistics.h"
 #include "StringUtils.h"
+#include "EvaporativeCooling.h"
+#include "Deseq.h"
+#include "Edger.h"
+#include "RandomForest.h"
 #include "ReliefF.h"
 #include "RReliefF.h"
 #include "ReliefFSeq.h"
@@ -127,7 +126,7 @@ EvaporativeCooling::EvaporativeCooling(Dataset* ds, Plink* plinkPtr,
 	maineffectAlgorithm = NULL;
 	switch(meAlgorithmType) {
 	case EC_ME_ALG_RJ:
-		// maineffectAlgorithm = new RandomForest(ds);
+		maineffectAlgorithm = new RandomForest(ds, PP);
 		break;
 	case EC_ME_ALG_DESEQ:
 		maineffectAlgorithm = new Deseq(ds);

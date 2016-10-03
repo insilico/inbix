@@ -81,11 +81,11 @@ bool PlinkInternalsDataset::LoadDataset() {
   unsigned int nextInstanceIdx = 0;
   for(int i=0; i < PP->sample.size(); i++) {
     string ID = PP->sample[i]->fid + PP->sample[i]->iid;
-    if(par::verbose) {
-      PP->printLOG("[ DEBUG ] individual i: " + int2str(i)
-              + ", ID: " + ID 
-              + ", next index: " + int2str(nextInstanceIdx) + "\n");
-    }
+//    if(par::verbose) {
+//      PP->printLOG("[ DEBUG ] individual i: " + int2str(i)
+//              + ", ID: " + ID 
+//              + ", next index: " + int2str(nextInstanceIdx) + "\n");
+//    }
     if(PP->sample[i]->missing) {
       // missing phenotype so skip this individual
       if(par::verbose) {

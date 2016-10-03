@@ -373,7 +373,7 @@ bool par::predall = false;
 double par::alpha = DEFAULT_ALPHA;
 double par::minprop = DEFAULT_MINPROP;
 vector<string> par::catvars;
-ImportanceMode par::impmeasure = IMP_GINI;
+ImportanceMode par::impmeasure = IMP_NONE;
 unsigned int par::targetpartitionsize = 0;
 unsigned int par::mtry = 0;
 bool par::do_rfprobability = false;
@@ -387,7 +387,7 @@ bool par::writeforest = false;
 // added for Evaporative Cooling support - bcw - 9/29/16
 bool par::do_ec = false;
 string par::ecAlgorithmSteps = "all";
-string par::ecMeAlgorithm = "rf";
+string par::ecMeAlgorithm = "randomforest";
 string par::ecItAlgorithm = "relieff";
 bool par::ecOptimizeTemp = false;
 unsigned int par::ecNumTarget = 0;

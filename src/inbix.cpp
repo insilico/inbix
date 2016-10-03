@@ -1231,22 +1231,36 @@ int main(int argc, char* argv[]) {
 	}
 
 	/////////////////////////////////////////////////////////////////////////////
-	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
+	// Random Forest analysis requested - bcw - 9/25/16
 	if(par::do_randomforest) {
 		P.printLOG("\nPerforming random forest analysis\n");
 
+    // ---------------------------------------------------------------------------
     P.SNP2Ind();
     Dataset* ds = new PlinkInternalsDataset(&P);
+    if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
+      error("Could not load data set from PLINK internal data structures");
+    }
+    cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
 
+    // ---------------------------------------------------------------------------
     RandomForest* forest = new RandomForest(ds, PP);
     // AttributeScores scores = forest->ComputeScores();
     forest->ComputeScores();
     
+    // ---------------------------------------------------------------------------
     // write the forest in Ranger internal format for prediction
     if(par::writeforest) {
-      forest->WriteScoresInternal();
+      // not implemented! wait for Ranger updates
+      P.printLOG("forest->WriteScoresInternal() is not implemented in Ranger yet!\n");
+      // forest->WriteScoresInternal();
     }
 
+    // ---------------------------------------------------------------------------
+    // write the results
+    forest->WriteScores(par::output_file_name);
+    
+    // ---------------------------------------------------------------------------
     // end gracefully
     if(forest) {
       delete forest;
@@ -1257,21 +1271,22 @@ int main(int argc, char* argv[]) {
   }
 
 	/////////////////////////////////////////////////////////////////////////////
-	// Relief-F analysis requested - bcw - 5/31/16
+	// Relief-F analysis requested - bcw - 8/19/16
 	if(par::do_relieff) {
 
-    AnalysisType analysisType = NO_ANALYSIS;
-    Dataset* ds = new PlinkInternalsDataset(&P);
+    // ---------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
 		P.printLOG("\nLoading data set for Relief-F analysis\n");
     P.SNP2Ind();
+    Dataset* ds = new PlinkInternalsDataset(&P);
     if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
       error("Could not load data set from PLINK internal data structures");
     }
     cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
 
+    // ---------------------------------------------------------------------------
     ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
-    
+    AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;
   		P.printLOG("Performing INTEGRATED analysis\n");
@@ -1285,6 +1300,7 @@ int main(int argc, char* argv[]) {
   		P.printLOG("Performing NUMERIC analysis\n");
     }
     
+    // ---------------------------------------------------------------------------
 		P.printLOG("\nPerforming Relief-F analysis\n");
     ReliefSeqController rsc(ds, &P, analysisType);
     if(par::k == 0) {
@@ -1310,21 +1326,21 @@ int main(int argc, char* argv[]) {
   }
   
 	/////////////////////////////////////////////////////////////////////////////
-	// Evaporative Cooling analysis requested - bcw - 5/31/16
+	// Evaporative Cooling analysis requested - bcw - 9/30/16
 	if(par::do_ec) {
-
-    AnalysisType analysisType = NO_ANALYSIS;
-    Dataset* ds = new PlinkInternalsDataset(&P);
+    // ---------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
 		P.printLOG("\nLoading data set for Evaporative Cooling analysis\n");
     P.SNP2Ind();
+    Dataset* ds = new PlinkInternalsDataset(&P);
     if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
       error("Could not load data set from PLINK internal data structures");
     }
     cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
 
+    // ---------------------------------------------------------------------------
     ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
-    
+    AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;
   		P.printLOG("Performing INTEGRATED analysis\n");
@@ -1338,6 +1354,7 @@ int main(int argc, char* argv[]) {
   		P.printLOG("Performing NUMERIC analysis\n");
     }
     
+    // ---------------------------------------------------------------------------
 		P.printLOG("\nPerforming Evaporative Cooling analysis\n");
     EvaporativeCooling ec(ds, &P, analysisType);
     ec.ComputeECScores();
@@ -1346,7 +1363,7 @@ int main(int argc, char* argv[]) {
     // ---------------------------------------------------------------------------
     // write results files
     string resultsFile = par::output_file_name;
-		P.printLOG("\nWriting Evaporative Cooling results to: " + resultsFile + ".relief.tab\n");
+		P.printLOG("\nWriting Evaporative Cooling results\n");
     ec.WriteAttributeScores(resultsFile);
     
 		shutdown();

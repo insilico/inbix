@@ -92,6 +92,7 @@ RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr):
       delete forest;
       forest = 0;
     }
+    shutdown();
   }
 }
 
@@ -110,7 +111,9 @@ AttributeScores RandomForest::ComputeScores() {
     const vector<string>& varNames = data->getVariableNames();
     scores.clear();
     for (size_t i=0; i < varNames.size(); ++i) {
-      scores.push_back(make_pair(rfScores[i], varNames[i]));
+      if(varNames[i] != "Class") {
+        scores.push_back(make_pair(rfScores[i], varNames[i]));
+      }
     }
   } else {
     error("RandomForest::ComputeScores object has not been constructed");
