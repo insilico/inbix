@@ -361,7 +361,6 @@ public:
   void PrintMissingValuesStats();
   /// Print attribute level counts.
   void PrintLevelCounts();
-  /// 
   /*************************************************************************//**
    * Write attribute level counts to a text file.
    * \param [in] levelsFilename filename to write levels to

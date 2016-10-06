@@ -10,7 +10,10 @@
 #include <string>
 #include <vector>
 #include <map>
+
 #include "plink.h"
+#include "helper.h"
+
 #include "Dataset.h"
 #include "DatasetInstance.h"
 #include "PlinkInternalsDatasetInstance.h"
@@ -63,16 +66,13 @@ unsigned int PlinkInternalsDatasetInstance::NumAttributes() {
 
 AttributeLevel PlinkInternalsDatasetInstance::GetAttribute(unsigned int index) {
   if(dataset->HasGenotypes()) {
-    if(index < dataset->NumAttributes()) {
+    if(index < PP->locus.size()) {
       return static_cast<AttributeLevel>(GetSimpleSNPValue(index));
     } else {
-      cerr << "ERROR: Attribute index is out of range: " << index << endl;
-      exit(1);
+      error("PlinkInternalsDatasetInstance::GetAttribute ERROR: Attribute index is out of range: " + int2str(index) + "\n");
     }
   } else {
-    cerr << "ERROR: Attempting to access SNP value when none "
-            << "have been loaded" << endl;
-    exit(1);
+    error("PlinkInternalsDatasetInstance::GetAttribute ERROR: Attempting to access SNP value when none have been loaded\n");
   }
 }
 
@@ -82,15 +82,13 @@ unsigned int PlinkInternalsDatasetInstance::NumNumerics() {
 
 double PlinkInternalsDatasetInstance::GetNumeric(unsigned int index) {
   if(dataset->HasNumerics()) {
-    if(index < dataset->NumNumerics()) {
+    if(index < individual->nlist.size()) {
       return individual->nlist[index];
     } else {
-      cerr << "ERROR: Numeric index out of range: " << index << endl;
-      exit(1);
+      error("PlinkInternalsDatasetInstance::GetNumeric ERROR: Attribute index is out of range: " + int2str(index) + "\n");
     }
   } else {
-    cerr << "ERROR: Attempting to access numeric value when none "
-            << "have been loaded" << endl;
+    error("PlinkInternalsDatasetInstance::GetNumeric ERROR: Attempting to access SNP value when none have been loaded\n");
     exit(1);
   }
 }

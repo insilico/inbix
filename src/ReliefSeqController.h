@@ -82,7 +82,7 @@ private:
   /// pointer to an interaction ranker algorithm object
   AttributeRanker* reliefseqAlgorithm;
 
-  // number of threads to use for random jungle
+  // number of threads to use for random forest
   unsigned int numThreads;
   /// number of attributes to remove per iteration
   unsigned int numToRemovePerIteration;
@@ -90,6 +90,8 @@ private:
   unsigned int numToRemoveNextIteration;
 
   /// number of target attributes
+  bool doRemovePercent;
+  double removePercentage;
   unsigned int numTargetAttributes;
   /// attributes that have been evaporated so far
   AttributeScores removedAttributes;

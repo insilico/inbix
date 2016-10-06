@@ -37,7 +37,6 @@ public:
   PlinkInternalsDatasetInstance(Dataset* ds, std::string instanceID,
                                 Plink* plinkPtr, Individual* plinkInd);
   ~PlinkInternalsDatasetInstance();
-  bool LoadDataset();
   double GetSimpleSNPValue(int snp);
   /// return the number of discrete attributes
   unsigned int NumAttributes() override;

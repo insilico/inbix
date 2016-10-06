@@ -62,32 +62,40 @@ ReliefSeqController::ReliefSeqController(Dataset* ds, Plink* plinkPtr,
 
   outFilesPrefix = par::output_file_name;
 
-  // set the number of attributes to remove per iteration
-  numToRemovePerIteration = static_cast<int>(par::reliefIterNumToRemove);
-  numTargetAttributes = static_cast<int>(par::reliefNumTarget);
-  if(numToRemovePerIteration) {
-    unsigned int iterPercentToRemove = static_cast<int>(par::reliefIterPercentToRemove);
-    cout << Timestamp() << "Iteratively removing " << iterPercentToRemove
-            << " percent" << endl;
-    numToRemovePerIteration = (unsigned int) (((double) iterPercentToRemove
-            / 100.0) * dataset->NumVariables());
-
-    cout << Timestamp() << "Removing " << numToRemovePerIteration
-            << " attributes on first iteration" << endl;
-
-    // set the number of target attributes
-    if(numTargetAttributes == 0) {
-      numTargetAttributes = ds->NumVariables();
-      numToRemovePerIteration = 0;
+  doRemovePercent = false;
+  removePercentage = 0;
+  numTargetAttributes = ds->NumVariables();
+  if(par::do_iterative_removal) {
+    numTargetAttributes = par::relieffNumTarget;
+    unsigned int numPredictors = dataset->NumVariables();
+    if((numTargetAttributes < 1) || (numTargetAttributes > numPredictors)) {
+      if(numTargetAttributes == 0) {
+        numTargetAttributes = numPredictors;
+      } else {
+            error("Target number of variables out of range: " + int2str(numTargetAttributes));
+      }
     }
-    if(numTargetAttributes > dataset->NumVariables()) {
-      error("--num-target must be less than or equal to the " 
-              "number of attributes in the data set");
-    }
-    cout << Timestamp() << "Removing attributes until best "
-              << numTargetAttributes << " remain" << endl;
-  }
   
+    if(par::relieffIterNumToRemove) {
+      numToRemovePerIteration = par::relieffIterNumToRemove;
+      cout << Timestamp() << "Iteratively removing " << numToRemovePerIteration << endl;
+      doRemovePercent = false;
+    } else {
+      removePercentage = ((double) par::relieffIterPercentToRemove) / 100.0;
+      numToRemovePerIteration =
+               (unsigned int) ((double) dataset->NumAttributes()
+               * removePercentage + 0.5);
+      cout << Timestamp() << "Iteratively removing "
+              << (removePercentage * 100) << "% = " << numToRemovePerIteration
+              << endl;
+      doRemovePercent = true;
+    }
+    if((numToRemovePerIteration < 1)
+            || (numToRemovePerIteration >= numPredictors)) {
+      error("Number to remove per iteration [" + int2str(numToRemovePerIteration) 
+        + "] not in valid range 1 < n < " + int2str(numPredictors));
+    }
+  }
   // multi core setup
   unsigned int maxThreads = omp_get_num_procs();
   cout << Timestamp() << maxThreads << " OpenMP processors available"
@@ -105,7 +113,7 @@ ReliefSeqController::~ReliefSeqController() {
 
 bool ReliefSeqController::ComputeScores() {
   unsigned int numWorkingAttributes = dataset->NumVariables();
-  numTargetAttributes = numWorkingAttributes;
+  //numTargetAttributes = numWorkingAttributes;
   if(numWorkingAttributes < numTargetAttributes) {
     error("ERROR: The number of attributes in the data set " + \
             int2str(numWorkingAttributes) + \
@@ -128,12 +136,14 @@ bool ReliefSeqController::ComputeScores() {
     cout << Timestamp() << "Algorithm iteration: " << iteration
             << ", working attributes: " << numWorkingAttributes
             << ", target attributes: " << numTargetAttributes << endl;
-    cout << Timestamp()
-            << "Ti/Tv: transitions: " << titvCounts.first
-            << " transversions: " << titvCounts.second
-            << " ratio: " << titvRatio
-            << endl;
-
+    if(dataset->HasGenotypes()) {
+      cout << Timestamp()
+              << "Ti/Tv: transitions: " << titvCounts.first
+              << " transversions: " << titvCounts.second
+              << " ratio: " << titvRatio
+              << endl;
+    }
+    
     // -------------------------------------------------------------------------
     cout << Timestamp() << "Running algorithm" << endl;
     if(!RunReliefF()) {
@@ -166,8 +176,8 @@ bool ReliefSeqController::ComputeScores() {
       cout << Timestamp() << "Removing the worst attributes" << endl;
       unsigned int numToRemove = numToRemovePerIteration;
       numToRemoveNextIteration = numToRemove - numToRemovePerIteration;
-      if(par::reliefIterPercentToRemove) {
-        unsigned int iterPercentToRemove = par::reliefIterPercentToRemove;
+      if(par::relieffIterPercentToRemove) {
+        unsigned int iterPercentToRemove = par::relieffIterPercentToRemove;
         numToRemove = (int) (((double) iterPercentToRemove / 100.0)
                 * dataset->NumVariables());
         numToRemoveNextIteration = (int) (((double) iterPercentToRemove / 100.0)
@@ -403,7 +413,7 @@ bool ReliefSeqController::RunReliefF() {
   }
 
   if(!par::do_normalize_scores) {
-    PP->printLOG("Skipping normalize scores\n");
+    PP->printLOG(Timestamp() + "Skipping normalize scores\n");
     return true;
   }
   
@@ -462,16 +472,14 @@ bool ReliefSeqController::RemoveWorstAttributes(unsigned int numToRemove) {
   cout << Timestamp() << "Removing " << numToRemoveAdj << " attributes" << endl;
   sort(scores.begin(), scores.end(), scoresSortAsc);
   for(unsigned int i = 0; i < numToRemoveAdj; ++i) {
-
     // worst score and attribute name
     pair<double, string> worst = scores[i];
     //    cout << "\t\t\t\tRemoving: "
     //            << worst.second << " (" << worst.first << ")" << endl;
-
     // save worst
     removedAttributes.push_back(worst);
     // remove the attribute from those under consideration
-    if(!dataset->MaskRemoveVariable(worst.second)) {
+    if(!dataset->MaskRemoveVariableType(worst.second, DISCRETE_TYPE)) {
       cerr << "ERROR: Could not remove worst attribute: " << worst.second
               << endl;
       return false;
@@ -480,4 +488,3 @@ bool ReliefSeqController::RemoveWorstAttributes(unsigned int numToRemove) {
 
   return true;
 }
-

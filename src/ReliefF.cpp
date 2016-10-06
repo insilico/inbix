@@ -64,8 +64,8 @@ public:
 
 ReliefF::ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType):
 AttributeRanker::AttributeRanker(ds) {
-  cout << Timestamp() << "ReliefF default initialization without "
-          << "configuration parameters" << endl;
+  cout << Timestamp() << "ReliefF initialization from Plink parameters" << endl;
+  PP = plinkPtr;
   if(ds) {
     dataset = ds;
   } else {
@@ -114,35 +114,38 @@ AttributeRanker::AttributeRanker(ds) {
     randomlySelect = true;
   }
 
-  removePerIteration = par::reliefIterNumToRemove;
-  if(removePerIteration) {
-    if((removePerIteration < 1)
-            || (removePerIteration >= dataset->NumAttributes())) {
-      error("ERROR: Number to remove per iteratopn [" +
-              int2str(removePerIteration) + "] not in valid range");
-    }
-    cout << Timestamp() << "Iteratively removing " << removePerIteration
-            << endl;
-  } else {
-    removePercentage = static_cast<unsigned int>(par::reliefIterPercentToRemove) / 100.0;
-    if(removePercentage) {
-      doRemovePercent = true;
-      removePerIteration =
-              (unsigned int) ((double) dataset->NumAttributes()
-              * removePercentage + 0.5);
-      if((removePerIteration < 1)
-              || (removePerIteration >= dataset->NumAttributes())) {
-        cerr << "ERROR: Number to remove per iteration ["
-                << removePerIteration << "] not in valid range" << endl;
-        exit(-1);
+  numTarget = ds->NumVariables();
+  if(par::do_iterative_removal) {
+    numTarget = par::relieffNumTarget;
+    unsigned int numPredictors = dataset->NumVariables();
+    if((numTarget < 1) || (numTarget > numPredictors)) {
+      if(numTarget == 0) {
+        numTarget = numPredictors;
+      } else {
+            error("Target number of variables out of range: " + int2str(numTarget));
       }
+    }
+  
+    if(par::relieffIterNumToRemove) {
+      removePerIteration = par::relieffIterNumToRemove;
+      cout << Timestamp() << "Iteratively removing " << removePerIteration << endl;
+      doRemovePercent = false;
+    } else {
+      removePercentage = ((double) par::relieffIterPercentToRemove) / 100.0;
+      removePerIteration =
+               (unsigned int) ((double) dataset->NumAttributes()
+               * removePercentage + 0.5);
       cout << Timestamp() << "Iteratively removing "
               << (removePercentage * 100) << "% = " << removePerIteration
               << endl;
+      doRemovePercent = true;
+    }
+    if((removePerIteration < 1)
+            || (removePerIteration >= numPredictors)) {
+      error("Number to remove per iteration [" + int2str(removePerIteration) 
+        + "] not in valid range 1 < n < " + int2str(numPredictors));
     }
   }
-  cout << Timestamp() << "Iteratively removing " << removePerIteration
-          << endl;
 
   /// set the SNP metric function pointer based on command line params or defaults
   snpMetric = par::snpMetric;
@@ -220,7 +223,6 @@ AttributeRanker::AttributeRanker(ds) {
   copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
   copy(numNames.begin(), numNames.end(),
           scoreNames.begin() + atrNames.size());
-
 }
 
 ReliefF::~ReliefF() {
@@ -445,7 +447,7 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
     }
     for(unsigned int i = 0; i < removeThisIteration; ++i) {
       string attributeToDelete = attributeScores[i].second;
-      //      cout << "\t\t\tremoving attribute: " << attributeToDelete << endl;
+      // cout << "\t\t\tremoving attribute: " << attributeToDelete << endl;
 
       if(!dataset->MaskRemoveVariable(attributeToDelete)) {
         cerr << "ERROR: ReliefF::ComputeAttributeScoresIteratively: "
@@ -457,8 +459,8 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
     }
 
     ++iterations;
-
-    ResetForNextIteration();
+    PP->printLOG("iteration [ " + int2str(iterations) + " ]\n");
+    //ResetForNextIteration();
   } // iterate
 
   // populate finalScores with remaining scores
@@ -488,9 +490,8 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
 }
 
 bool ReliefF::ResetForNextIteration() {
-
+  PP->printLOG(Timestamp() + "***** ResetForNextIteration *****\n");
   PreComputeDistances();
-
   return true;
 }
 
@@ -515,22 +516,20 @@ void ReliefF::WriteAttributeScores(string baseFilename) {
   ofstream outFile;
   outFile.open(resultsFilename.c_str());
   if(outFile.bad()) {
-    cerr << "ERROR: Could not open scores file " << resultsFilename
-            << "for writing" << endl;
-    exit(1);
+    error("ERROR: Could not open scores file " + resultsFilename + " for writing\n");
   }
   PrintAttributeScores(outFile);
   outFile.close();
 }
 
 bool ReliefF::PreComputeDistances() {
-  cout << Timestamp() << "Precomputing instance distances" << endl;
+  PP->printLOG(Timestamp() + "Precomputing instance distances\n");
   map<string, unsigned int> instanceMask = dataset->MaskGetInstanceMask();
   vector<string> instanceIds = dataset->MaskGetInstanceIds();
   int numInstances = instanceIds.size();
 
   // create a distance matrix
-  cout << Timestamp() << "Allocating distance matrix";
+  PP->printLOG(Timestamp() + "Allocating distance matrix");
   double** distanceMatrix;
   distanceMatrix = new double*[numInstances];
   for(int i = 0; i < numInstances; ++i) {
@@ -539,13 +538,16 @@ bool ReliefF::PreComputeDistances() {
       distanceMatrix[i][j] = 0.0;
     }
   }
-  cout << " done" << endl;
+  PP->printLOG(" done\n");
 
   // TCGA genetic relationship matrix (GRM))
   if(par::snpMetricNN == "grm") {
+    if(dataset->NumNumerics()) {
+      error("GRM distance metric is not available for numeric data");
+    }
     cout << Timestamp() 
             << "1) Computing instance-to-instance distances with GCTA " 
-            << "genetic relationship matrix (GRM) ... "
+            << "genetic relationship matrix (GRM)"
             << endl;
     vector<double> p = dataset->GetMAFs();
     unsigned int N = dataset->NumAttributes();
@@ -608,10 +610,10 @@ bool ReliefF::PreComputeDistances() {
   } else {
     // populate the matrix - upper triangular
     // NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
-    cout << Timestamp() << "1) Computing instance-to-instance distances with ... " << endl;
+    PP->printLOG(Timestamp() + "1) Computing instance-to-instance distances\n");
 #pragma omp parallel for schedule(dynamic,1)
-    for(int i = 0; i < numInstances; ++i) {
-      // cout << "Computing instance to instance distances. Row: " << i << endl;
+    for(int i=0; i < numInstances; ++i) {
+      //cout << "Computing instance to instance distances. Row: " << i << endl;
       // #pragma omp parallel for
       for(int j = i + 1; j < numInstances; ++j) {
         unsigned int dsi1Index;
@@ -787,8 +789,4 @@ bool ReliefF::ComputeWeightByDistanceFactors() {
   } // end all instances
 
   return true;
-}
-
-void librelieff_is_present(void) {
-  ;
 }

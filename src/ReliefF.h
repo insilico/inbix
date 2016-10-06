@@ -108,6 +108,8 @@ protected:
   bool doRemovePercent;
   /// percentage of attributes to remove per iteration if running iteratively
   double removePercentage;
+  /// number of target attributes
+  unsigned int numTarget;
   /// name of the weight-by-distance method
   std::string weightByDistanceMethod;
   /// sigma value used in exponential decay weight-by-distance
@@ -117,6 +119,8 @@ protected:
   std::vector<double> W;
   /// attribute names associated with scores
   std::vector<std::string> scoreNames;
+  
+  Plink* PP;
 };
 
 #endif

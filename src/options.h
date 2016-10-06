@@ -422,6 +422,8 @@ public:
   static bool do_write_best_k;
   static bool do_write_each_k_scores;
   static bool do_normalize_scores;
+  static bool do_iterative_removal;
+  static bool do_kopt;
 	static string distanceMatrixFilename;
 	static string gainMatrixFilename;
 	static string titvFilename;
@@ -446,9 +448,9 @@ public:
 	static double reliefSeqAlgorithmS0;
 	static string reliefSeqSnrMode;
 	static string reliefSeqTstatMode;
-  static unsigned int reliefNumTarget;
-	static unsigned int reliefIterNumToRemove;
-	static unsigned int reliefIterPercentToRemove;
+  static unsigned int relieffNumTarget;
+	static unsigned int relieffIterNumToRemove;
+	static unsigned int relieffIterPercentToRemove;
   
   // added for Random Forests support - bcw - 9/26/16
   // most are used as defaults for Ranger initialization

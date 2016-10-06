@@ -27,8 +27,8 @@ class PlinkInternalsDataset : public Dataset
 {
 public:
   PlinkInternalsDataset(Plink* plinkPtr);
-  bool LoadDataset();
-  ~PlinkInternalsDataset() { ; }
+  bool LoadDatasetPP();
+  ~PlinkInternalsDataset();
 private:
   Plink* PP;
 };

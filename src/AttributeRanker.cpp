@@ -31,7 +31,7 @@ AttributeScores AttributeRanker::GetScores() {
 }
 
 void AttributeRanker::WriteScores(string baseFilename) {
-	string resultsFilename = baseFilename + ".ranks";
+	string resultsFilename = baseFilename + ".relieff.tab";
 	ofstream outFile;
 	outFile.open(resultsFilename.c_str());
 	if (outFile.bad()) {

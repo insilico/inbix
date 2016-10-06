@@ -336,9 +336,9 @@ string par::algorithmSeqMode = "snr";
 string par::algorithmSnrMode = "snr";
 string par::algorithmTstatMode = "pval";
 double par::algorithmSeqS0 = 0.05;
-unsigned int par::reliefNumTarget = 0;
-unsigned int par::reliefIterNumToRemove = 0;
-unsigned int par::reliefIterPercentToRemove = 0;
+unsigned int par::relieffNumTarget = 0;
+unsigned int par::relieffIterNumToRemove = 0;
+unsigned int par::relieffIterPercentToRemove = 0;
 unsigned int par::k = 10;
 unsigned int par::koptBegin = 1;
 unsigned int par::koptEnd = 1;
@@ -386,6 +386,8 @@ bool par::writeforest = false;
 
 // added for Evaporative Cooling support - bcw - 9/29/16
 bool par::do_ec = false;
+bool par::do_iterative_removal = false;
+bool par::do_kopt = false;
 string par::ecAlgorithmSteps = "all";
 string par::ecMeAlgorithm = "randomforest";
 string par::ecItAlgorithm = "relieff";

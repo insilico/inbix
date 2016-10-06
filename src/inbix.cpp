@@ -54,9 +54,9 @@
 #include "Dataset.h"
 #include "PlinkInternalsDataset.h"
 #include "AttributeRanker.h"
-#include "ReliefSeqController.h"
 #include "ReliefF.h"
 #include "RReliefF.h"
+#include "ReliefFSeq.h"
 
 // Ranger random forest project integration - bcw - 9/26/16
 #include "RandomForest.h"
@@ -1237,11 +1237,11 @@ int main(int argc, char* argv[]) {
 
     // ---------------------------------------------------------------------------
     P.SNP2Ind();
-    Dataset* ds = new PlinkInternalsDataset(&P);
-    if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
+    PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
+    if(!ds->LoadDatasetPP()) {
       error("Could not load data set from PLINK internal data structures");
     }
-    cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
+    P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // ---------------------------------------------------------------------------
     RandomForest* forest = new RandomForest(ds, PP);
@@ -1273,54 +1273,79 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// Relief-F analysis requested - bcw - 8/19/16
 	if(par::do_relieff) {
-
     // ---------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
-		P.printLOG("\nLoading data set for Relief-F analysis\n");
+		P.printLOG("Loading data set for Relief-F analysis from Plink data structures\n");
     P.SNP2Ind();
-    Dataset* ds = new PlinkInternalsDataset(&P);
-    if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
+    PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
+    if(!ds->LoadDatasetPP()) {
       error("Could not load data set from PLINK internal data structures");
     }
-    cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
+    P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // ---------------------------------------------------------------------------
     ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
     AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;
-  		P.printLOG("Performing INTEGRATED analysis\n");
+  		P.printLOG(Timestamp() + "Performing INTEGRATED analysis\n");
     }
     if(ds->HasGenotypes()) {
       analysisType = SNP_ONLY_ANALYSIS;
-  		P.printLOG("Performing SNP analysis\n");
+  		P.printLOG(Timestamp() + "Performing SNP analysis\n");
     }
     if(ds->HasNumerics()) {
       analysisType = NUMERIC_ONLY_ANALYSIS;
-  		P.printLOG("Performing NUMERIC analysis\n");
+  		P.printLOG(Timestamp() + "Performing NUMERIC analysis\n");
     }
     
     // ---------------------------------------------------------------------------
-		P.printLOG("\nPerforming Relief-F analysis\n");
-    ReliefSeqController rsc(ds, &P, analysisType);
-    if(par::k == 0) {
-      if(!rsc.ComputeScoresKopt()) {
-        error("ERROR: Failed to calculate optimum k ReliefSeq scores");
+		P.printLOG(Timestamp() + "Performing Relief-F analysis\n");
+    string algorithmMode = par::algorithmMode;
+    /// pointer to an interaction ranker algorithm object
+    ReliefF* relieffAlgorithm;
+    if(algorithmMode == "relieff") {
+      if(ds->HasContinuousPhenotypes()) {
+        P.printLOG(Timestamp() + "Constructing Regression ReliefF\n" );
+        relieffAlgorithm = new RReliefF(ds, PP);
+      } else {
+        P.printLOG(Timestamp() + "Constructing Standard ReliefF\n");
+        relieffAlgorithm = new ReliefF(ds, PP, analysisType);
+      }
+    } else {
+      if(algorithmMode == "reliefseq") {
+        P.printLOG(Timestamp() + "Constructing ReliefSeq\n");
+        relieffAlgorithm = new ReliefFSeq(ds, PP);
+      } else {
+        error("ERROR: unrecognized Relief-F algorithm mode: " + algorithmMode);
       }
     }
-    else {
-      if(!rsc.ComputeScores()) {
-        error("ERROR: Failed to calculate ReliefSeq scores");
-      }
-      //rsc.PrintScores();
+
+    if(par::do_iterative_removal) {
+      relieffAlgorithm->ComputeAttributeScoresIteratively();
+    } else {
+      relieffAlgorithm->ComputeAttributeScores();
     }
-    cout << Timestamp() << "Relief-F algorithm done" << endl;
+    
+//    ReliefSeqController rsc(ds, &P, analysisType);
+//    if(par::k == 0) {
+//      if(!rsc.ComputeScoresKopt()) {
+//        error("ERROR: Failed to calculate optimum k ReliefSeq scores");
+//      }
+//    }
+//    else {
+//      if(!rsc.ComputeScores()) {
+//        error("ERROR: Failed to calculate ReliefSeq scores");
+//      }
+//      rsc.PrintScores();
+//    }
+    P.printLOG(Timestamp() + "Relief-F algorithm done\n");
     
     // ---------------------------------------------------------------------------
     // write results files
     string resultsFile = par::output_file_name;
-		P.printLOG("\nWriting Relief-F results to: " + resultsFile + ".relief.tab\n");
-    rsc.WriteAttributeScores(resultsFile);
+		P.printLOG(Timestamp() + "Writing Relief-F results to: " + resultsFile + ".relief.tab\n");
+    relieffAlgorithm->WriteAttributeScores(par::output_file_name);
     
 		shutdown();
   }
@@ -1332,11 +1357,11 @@ int main(int argc, char* argv[]) {
     // individual-major mode for SNP bit vectors
 		P.printLOG("\nLoading data set for Evaporative Cooling analysis\n");
     P.SNP2Ind();
-    Dataset* ds = new PlinkInternalsDataset(&P);
-    if(!((PlinkInternalsDataset*)ds)->LoadDataset()) {
+    PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
+    if(!ds->LoadDatasetPP()) {
       error("Could not load data set from PLINK internal data structures");
     }
-    cout << "***** PlinkInternalsDataset*)ds)->LoadDataset() *****" << endl;
+    P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // ---------------------------------------------------------------------------
     ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
@@ -1363,7 +1388,7 @@ int main(int argc, char* argv[]) {
     // ---------------------------------------------------------------------------
     // write results files
     string resultsFile = par::output_file_name;
-		P.printLOG("\nWriting Evaporative Cooling results\n");
+		P.printLOG("Writing Evaporative Cooling results\n");
     ec.WriteAttributeScores(resultsFile);
     
 		shutdown();

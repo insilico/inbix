@@ -2732,14 +2732,13 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 	// added 6/16/11
 	// compute numeric distances
 	if (HasNumerics()) {
-		//cout << "Computing numeric instance-to-instance distance..." << endl;
-		vector<unsigned int> numericIndices = MaskGetAttributeIndices(
-				NUMERIC_TYPE);
-		//cout << "\tNumber of numerics: " << numericIndices.size() << endl;
+		// cout << "Computing numeric instance-to-instance distance..." << endl;
+		vector<unsigned int> numericIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
+		// cout << "\tNumber of numerics: " << numericIndices.size() << endl;
 		for (unsigned int i = 0; i < numericIndices.size(); ++i) {
-			//cout << "\t\tNumeric index: " << numericIndices[i] << endl;
+			// cout << "\t\tNumeric index: " << numericIndices[i] << endl;
 			double numDistance = numDiff(numericIndices[i], dsi1, dsi2);
-			//cout << "Numeric distance " << i << " => " << numDistance << endl;
+			// cout << "Numeric distance " << i << " => " << numDistance << endl;
 			distance += numDistance;
 		}
 	}

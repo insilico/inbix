@@ -3044,13 +3044,16 @@ void setOptions(CArgs & a) {
     par::algorithmSeqS0 = a.value_double("--seq-algorithm-s0");
   }
   if(a.find("--num-target")) {
-		par::reliefNumTarget = a.value_int("--num-target");
+    par::do_iterative_removal = true;
+		par::relieffNumTarget = a.value_int("--num-target");
   }
   if(a.find("--iter-remove-n")) {
-		par::reliefIterNumToRemove = a.value_int("--iter-remove-n");
+    par::do_iterative_removal = true;
+		par::relieffIterNumToRemove = a.value_int("--iter-remove-n");
   }
   if(a.find("--iter-remove-percent")) {
-		par::reliefIterPercentToRemove = a.value_int("--iter-remove-percent");
+    par::do_iterative_removal = true;
+		par::relieffIterPercentToRemove = a.value_int("--iter-remove-percent");
   }
   if(a.find("--snp-metric-nn")) {
     par::snpMetricNN = a.value("--snp-metric-nn");
@@ -3065,18 +3068,23 @@ void setOptions(CArgs & a) {
     par::k = a.value_int("--k-nearest-neighbors");
   }
   if(a.find("--kopt-begin")) {
+    par::do_kopt = true;
 		par::koptBegin = a.value_int("--kopt-begin");
   }
   if(a.find("--kopt-end")) {
+    par::do_kopt = true;
 		par::koptEnd = a.value_int("--kopt-end");
   }
   if(a.find("--kopt-step")) {
+    par::do_kopt = true;
 		par::koptStep = a.value_int("--kopt-step");
   }
   if(a.find("--write-best-k")) {
+    par::do_kopt = true;
     par::do_write_best_k = true;
   }
   if(a.find("--write-each-k-scores")) {
+    par::do_kopt = true;
     par::do_write_each_k_scores = true;
   }
   if(a.find("--number-random-samples")) {
