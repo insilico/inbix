@@ -1327,24 +1327,11 @@ int main(int argc, char* argv[]) {
       relieffAlgorithm->ComputeAttributeScores();
     }
     
-//    ReliefSeqController rsc(ds, &P, analysisType);
-//    if(par::k == 0) {
-//      if(!rsc.ComputeScoresKopt()) {
-//        error("ERROR: Failed to calculate optimum k ReliefSeq scores");
-//      }
-//    }
-//    else {
-//      if(!rsc.ComputeScores()) {
-//        error("ERROR: Failed to calculate ReliefSeq scores");
-//      }
-//      rsc.PrintScores();
-//    }
     P.printLOG(Timestamp() + "Relief-F algorithm done\n");
     
     // ---------------------------------------------------------------------------
     // write results files
     string resultsFile = par::output_file_name;
-		P.printLOG(Timestamp() + "Writing Relief-F results to: " + resultsFile + ".relief.tab\n");
     relieffAlgorithm->WriteAttributeScores(par::output_file_name);
     
 		shutdown();

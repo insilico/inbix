@@ -459,7 +459,6 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
     }
 
     ++iterations;
-    PP->printLOG("iteration [ " + int2str(iterations) + " ]\n");
     //ResetForNextIteration();
   } // iterate
 
@@ -496,28 +495,35 @@ bool ReliefF::ResetForNextIteration() {
 }
 
 void ReliefF::PrintAttributeScores(ofstream & outFile) {
-  vector<double>::const_iterator scoresIt = W.begin();
   unsigned int nameIdx = 0;
+  AttributeScores scoresMap;
+  vector<double>::const_iterator scoresIt = W.begin();
   for(; scoresIt != W.end(); ++scoresIt) {
-    outFile << *scoresIt << "\t" << scoreNames[nameIdx] << endl;
+    scoresMap.push_back(make_pair(*scoresIt, scoreNames[nameIdx]));
     ++nameIdx;
+  }
+  sort(scoresMap.begin(), scoresMap.end(), scoresSortDesc);
+  AttributeScoresCIt smIt=scoresMap.begin();
+  for(; smIt != scoresMap.end(); ++smIt) {
+    outFile << smIt->first << "\t" << smIt->second << endl;
   }
 }
 
 void ReliefF::WriteAttributeScores(string baseFilename) {
-
   string resultsFilename = baseFilename;
   if(dataset->HasContinuousPhenotypes()) {
-    resultsFilename += ".rrelieff";
+    resultsFilename += ".rrelieff.tab";
   } else {
-    resultsFilename += ".relieff";
+    resultsFilename += ".relieff.tab";
   }
+	PP->printLOG(Timestamp() + "Writing Relief-F results to: " + resultsFilename + "\n");
 
   ofstream outFile;
   outFile.open(resultsFilename.c_str());
   if(outFile.bad()) {
     error("ERROR: Could not open scores file " + resultsFilename + " for writing\n");
   }
+  //sort(W.begin(), W.end(), std::greater<double>());
   PrintAttributeScores(outFile);
   outFile.close();
 }
