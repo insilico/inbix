@@ -1321,10 +1321,15 @@ int main(int argc, char* argv[]) {
       }
     }
 
+    // here's where we run the algorithm
     if(par::do_iterative_removal) {
       relieffAlgorithm->ComputeAttributeScoresIteratively();
     } else {
-      relieffAlgorithm->ComputeAttributeScores();
+      if(par::k) {
+        relieffAlgorithm->ComputeAttributeScores();
+      } else {
+        relieffAlgorithm->ComputeAttributeScoresKopt();
+      }
     }
     
     P.printLOG(Timestamp() + "Relief-F algorithm done\n");

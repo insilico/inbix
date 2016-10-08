@@ -66,6 +66,14 @@ public:
   AttributeScores GetScores() override;
   /// Implements AttributeRanker interface.
   AttributeScores ComputeScores() override;
+  void PrintBestKs();
+   /*************************************************************************//**
+	 * Write the best k-nearest neighbors best k and attribute names to file.
+	 * \param [in] baseFilename filename to write best-k-attribute name pairs
+	 ****************************************************************************/
+  void WriteBestKs(std::string baseFilename);
+   /// Compute scores based on optimum k
+  bool ComputeAttributeScoresKopt();
 private:
   /// no default constructor
   ReliefF();
@@ -119,8 +127,32 @@ protected:
   std::vector<double> W;
   /// attribute names associated with scores
   std::vector<std::string> scoreNames;
-  
+
+  // pointer to the PLINK universe
   Plink* PP;
+
+  // --------------------------------------------------------------------------
+  // kopt/best k algorithm from ReliefSeq - bcw - 10/7/16
+  /*************************************************************************//**
+	 * Remove the worst attribute based on free energy scores.
+	 * \param [in] numToRemove number of attributes to remove/evaporate
+	 * \return distance
+	 ****************************************************************************/
+  bool RemoveWorstAttributes(unsigned int numToRemove=1);
+  bool SetKoptParameters();
+  /// Determine the maximum k value for optimization.
+  unsigned int GetKmax();
+  
+  /// attributes that have been evaporated so far
+  AttributeScores removedAttributes;
+  /// optimize k begin value
+  unsigned int koptBegin;
+  /// optimize k end value
+  unsigned int koptEnd;
+  /// optimize k step value
+  unsigned int koptStep;
+  /// best k by attribute
+  std::map<std::string, unsigned int> bestKs;
 };
 
 #endif

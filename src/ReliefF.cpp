@@ -5,6 +5,7 @@
  *
  * Totally redone for the McKinney In Silico Lab in 2011.
  * Using OpenMP for multi-core parallelization - April 2011.
+ * Integration into inbix Fall 2016.
  */
 
 #include <cstdlib>
@@ -488,6 +489,86 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
   return true;
 }
 
+bool ReliefF::ComputeAttributeScoresKopt() {
+  PP->printLOG(Timestamp() + "Running Relief-F with kopt to determine best k\n");
+  // set the optimization parameters from the command line parameters
+  if(!SetKoptParameters()) {
+    return false;
+  }
+
+  // iterate over all k's
+  //vector<map<string, double> > allScores;
+  vector<unsigned int> koptValues;
+	bool hasNames = false;
+	vector<vector<double> > allScores;
+	vector<string> scoreNames;
+  for(unsigned int thisK = koptBegin; thisK <= koptEnd; thisK += koptStep) {
+    // run ReliefF on this k
+    cout << Timestamp() << "--------------------------" << endl;
+    cout << Timestamp() << "Running ReliefSeq for k=" << thisK << endl;
+    k =thisK;
+    koptValues.push_back(thisK);
+    scores.clear();
+		dataset->ResetNearestNeighbors();
+    scores = ComputeScores();
+	  sort(scores.begin(), scores.end(), scoresSortAscByName);
+		vector<double> thisScores;
+		AttributeScoresCIt scoresIt = scores.begin();
+		for(; scoresIt != scores.end(); ++scoresIt) {
+			if(!hasNames) {
+				scoreNames.push_back(scoresIt->second);
+			}
+			thisScores.push_back(scoresIt->first);
+		}
+		allScores.push_back(thisScores);
+	
+		// I/O
+    if(par::do_write_each_k_scores) {
+      stringstream filePrefix;
+      filePrefix << par::output_file_name << "." << thisK;
+      WriteAttributeScores(filePrefix.str());
+    }
+    // PrintScores();
+    hasNames = true;
+  }
+
+  // print allScores
+//	for(unsigned int i=0; i < koptValues.size(); ++i) {
+//		for(unsigned int j=0; j < scoreNames.size(); ++j) {
+//      cout << allScores[i][j] << " ";
+//    }
+//    cout << endl;
+//  }
+  
+  // pick best scores and k's for each attribute
+  scores.clear();
+	for(unsigned int i=0; i < scoreNames.size(); ++i) {
+    string thisVar = scoreNames[i];
+		unsigned int bestK = koptValues[0];
+    // cout << thisVar;
+		double bestScore = -1.0;
+		for(unsigned int j=0; j < koptValues.size(); ++j) {
+			unsigned int thisK = koptValues[j];
+			double thisScore = allScores[j][i];
+      if(thisScore > bestScore) {
+        bestScore = thisScore;
+        bestK = thisK;
+      }
+    }
+    // cout << "\t" << bestScore << " (" << bestK << ")" << endl;
+    scores.push_back(make_pair(bestScore, thisVar));
+    bestKs[thisVar] = bestK;
+  }
+
+  sort(scores.begin(), scores.end(), scoresSortDesc);
+  
+  if(par::do_write_best_k) {
+    WriteBestKs(par::output_file_name);
+  }
+  
+  return true;
+}
+
 bool ReliefF::ResetForNextIteration() {
   PP->printLOG(Timestamp() + "***** ResetForNextIteration *****\n");
   PreComputeDistances();
@@ -793,6 +874,114 @@ bool ReliefF::ComputeWeightByDistanceFactors() {
     }
     //    cout << "---------------------------------------------------------" << endl;
   } // end all instances
+
+  return true;
+}
+
+bool ReliefF::SetKoptParameters() {
+  // TODO: wrap these conversions in try/catch exception handler
+  unsigned int tempKoptBegin = par::koptBegin;
+  unsigned int tempKoptEnd = par::koptEnd;
+  unsigned int tempKoptStep = par::koptStep;
+  // changed for continuous phenos - 7/26/15
+  unsigned int kmax = dataset->NumInstances();
+
+  // error conditions
+  if(tempKoptBegin > tempKoptEnd) {
+    cerr << "ERROR: k optimization begin [" << tempKoptBegin
+            << "] is greater than end [" << tempKoptEnd << "]" << endl;
+    return false;
+  }
+  if(tempKoptEnd > kmax) {
+    cerr << "ERROR: k optimization end [" << tempKoptEnd
+            << "] is greater than maximum k [" << kmax << "]" << endl;
+    return false;
+  }
+  if((tempKoptBegin == tempKoptEnd) == tempKoptStep) {
+    cerr << "ERROR: k optimization specified but the range "
+            << "and step values do not specify any iterations"
+            << endl;
+    return false;
+  }
+
+  // passed all error checks
+  koptBegin = tempKoptBegin;
+  koptEnd = tempKoptEnd;
+  koptStep = tempKoptStep;
+  cout << Timestamp() << "k optimization parameters: begin: " << koptBegin
+          << ", kopt end: " << koptEnd << ", step: " << koptStep << endl;
+
+  return true;
+}
+
+unsigned int ReliefF::GetKmax() {
+  map<ClassLevel, vector<unsigned int> > classIdxMap =
+          dataset->GetClassIndexes();
+  map<ClassLevel, vector<unsigned int> >::const_iterator mit =
+          classIdxMap.begin();
+  unsigned int minClassCount = mit->second.size();
+  ++mit;
+  for(; mit != classIdxMap.end(); ++mit) {
+    if(mit->second.size() < minClassCount) {
+      minClassCount = mit->second.size();
+    }
+  }
+  return minClassCount - 1;
+}
+
+void ReliefF::PrintBestKs() {
+  for(map<string, unsigned int>::const_iterator kIt = bestKs.begin();
+      kIt != bestKs.end(); ++kIt) {
+    cout << kIt->first << "\t" << kIt->second << endl;
+  }
+}
+
+void ReliefF::WriteBestKs(string baseFilename) {
+  string resultsFilename = baseFilename;
+  ofstream outFile;
+  resultsFilename = baseFilename + ".bestk";
+  outFile.open(resultsFilename.c_str());
+  if(outFile.bad()) {
+    cerr << "ERROR: Could not open scores file " << resultsFilename
+            << "for writing" << endl;
+    exit(1);
+  }
+  cout << Timestamp()
+          << "Writing reliefseq best k's to [" + resultsFilename + "]" << endl;
+  for(map<string, unsigned int>::const_iterator kIt = bestKs.begin();
+    kIt != bestKs.end(); ++kIt) {
+    outFile << kIt->first << "\t" << kIt->second << endl;
+  }
+
+  outFile.close();
+}
+
+bool ReliefF::RemoveWorstAttributes(unsigned int numToRemove) {
+  unsigned int numToRemoveAdj = numToRemove;
+  unsigned int numAttr = dataset->NumAttributes();
+  if((numAttr - numToRemove) < numTarget) {
+    cout << Timestamp() << "WARNING: attempt to remove " << numToRemove
+            << " attributes which will remove more than target "
+            << "number of attributes " << numTarget << ". Adjusting"
+            << endl;
+    numToRemoveAdj = numAttr - numTarget;
+  }
+  cout << Timestamp() << "Removing " << numToRemoveAdj << " attributes" << endl;
+  sort(scores.begin(), scores.end(), scoresSortAsc);
+  for(unsigned int i = 0; i < numToRemoveAdj; ++i) {
+    // worst score and attribute name
+    pair<double, string> worst = scores[i];
+    //    cout << "\t\t\t\tRemoving: "
+    //            << worst.second << " (" << worst.first << ")" << endl;
+    // save worst
+    removedAttributes.push_back(worst);
+    // remove the attribute from those under consideration
+    if(!dataset->MaskRemoveVariableType(worst.second, DISCRETE_TYPE)) {
+      cerr << "ERROR: Could not remove worst attribute: " << worst.second
+              << endl;
+      return false;
+    }
+  }
 
   return true;
 }
