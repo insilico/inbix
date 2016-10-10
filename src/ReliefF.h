@@ -78,6 +78,9 @@ private:
   /// no default constructor
   ReliefF();
 protected:
+  // pointer to the PLINK ecosystem
+  Plink* PP;
+
   /// Compute the const AttributeScores& ComputeScores(); weight by distance factors for nearest neighbors.
   bool ComputeWeightByDistanceFactors();
   /// type of analysis to perform
@@ -122,14 +125,8 @@ protected:
   std::string weightByDistanceMethod;
   /// sigma value used in exponential decay weight-by-distance
   double weightByDistanceSigma;
-
   /// attribute scores/weights
   std::vector<double> W;
-  /// attribute names associated with scores
-  std::vector<std::string> scoreNames;
-
-  // pointer to the PLINK universe
-  Plink* PP;
 
   // --------------------------------------------------------------------------
   // kopt/best k algorithm from ReliefSeq - bcw - 10/7/16

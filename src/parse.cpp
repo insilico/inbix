@@ -3079,6 +3079,9 @@ void setOptions(CArgs & a) {
     par::do_kopt = true;
 		par::koptStep = a.value_int("--kopt-step");
   }
+  if(a.find("--normalize-scores")) {
+    par::do_normalize_scores = true;
+  }
   if(a.find("--write-best-k")) {
     par::do_kopt = true;
     par::do_write_best_k = true;

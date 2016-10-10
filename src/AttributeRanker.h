@@ -57,6 +57,8 @@ protected:
   Dataset* dataset;
   /// attribute scores and names
   AttributeScores scores;
+  /// attribute names associated with scores
+  std::vector<std::string> scoreNames;
   /// Error from using ranked attributes in a classifier.
   double classificationAccuracy;
 	/// Normalize scores 0-1?
