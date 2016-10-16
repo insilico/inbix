@@ -40,28 +40,27 @@
 #include "ReliefF.h"
 #include "RReliefF.h"
 #include "ReliefFSeq.h"
+#include "PlinkInternalsDataset.h"
+#include "helper.h"
 
 using namespace std;
 using namespace insilico;
 
 EvaporativeCooling::EvaporativeCooling(Dataset* ds, Plink* plinkPtr,
         AnalysisType anaType) {
-	cout << Timestamp() << "Evaporative Cooling initialization:" << endl;
+	PP->printLOG(Timestamp() + "Evaporative Cooling constructor\n");
 	if (ds) {
 		dataset = ds;
 	} else {
-		cerr << "ERROR: data set is not initialized" << endl;
-		exit(EXIT_FAILURE);
+		error("EvaporativeCooling constructor: PLINK data set is not initialized");
 	}
   PP = plinkPtr;
 	analysisType = anaType;
-
 	if(par::ecOptimizeTemp) {
 		optimizeTemperature = true;
 	}
 	optimalTemperature = 1.0;
 	bestClassificationError = 1.0;
-
 	// set the number of target attributes
 	numTargetAttributes = par::ecNumTarget;
 	if (numTargetAttributes == 0) {
@@ -69,126 +68,106 @@ EvaporativeCooling::EvaporativeCooling(Dataset* ds, Plink* plinkPtr,
 		numToRemovePerIteration = 0;
 	}
 	if (numTargetAttributes > dataset->NumVariables()) {
-		cerr << "--ec-num-target must be less than or equal to the "
-				<< "number of attributes in the data set" << endl;
+		error("--ec-num-target must be less than or equal to the number of attributes in the data set\n");
 		exit(EXIT_FAILURE);
 	}
-	cout << Timestamp() << "EC is removing attributes until best "
-			<< numTargetAttributes << " remain" << endl;
-
+	PP->printLOG(Timestamp() + "EC is removing attributes until best " +
+			int2str(numTargetAttributes) + " remain\n");
 	/// set the EC steps to perform
   string ecAlgParam = par::ecAlgorithmSteps;
   string meAlgorithmParam = par::ecMeAlgorithm;
   string itAlgorithmParam = par::ecItAlgorithm;
-
 	algorithmType = EC_ALG_ME_IT;
   if (ecAlgParam == "all") {
     algorithmType = EC_ALG_ME_IT;
-    cout << Timestamp()
-        << "Running EC in standard mode: Main effects + interaction effects"
-        << endl;
+    PP->printLOG(Timestamp() + "Running EC in standard mode: Main effects + interaction effects\n");
   } else {
     if (ecAlgParam == "me") {
       algorithmType = EC_ALG_ME_ONLY;
-      cout << Timestamp() << "Running EC in main effects only mode" << endl;
+      PP->printLOG(Timestamp() + "Running EC in main effects only mode\n");
     } else {
       if (ecAlgParam == "it") {
         algorithmType = EC_ALG_IT_ONLY;
-        cout << Timestamp() << "Running EC in interactions effects only mode"
-            << endl;
+        PP->printLOG(Timestamp() + "Running EC in interactions effects only mode\n");
       } else {
-        cerr << "ERROR: --ec-algorithm-steps must be one of: "
-            << "all, me or it" << endl;
-        exit(EXIT_FAILURE);
+        error("-ec-algorithm-steps must be one of: all, me or it\n");
       }
     }
   }
-
 	/// set the main effects algorithm
 	meAlgorithmType = EC_ME_ALG_RJ;
   string ecMeAlgParam = par::ecMeAlgorithm;
   if (ecMeAlgParam == "randomforest") {
     meAlgorithmType = EC_ME_ALG_RJ;
-    cout << Timestamp()
-        << "EC main effects algorithm set to: Random Jungle"
-        << endl;
+    PP->printLOG(Timestamp() + "EC main effects algorithm set to: Random Forest\n");
   } else {
     if (ecMeAlgParam == "deseq") {
       meAlgorithmType = EC_ME_ALG_DESEQ;
-      cout << Timestamp()
-          << "Running EC in main effects algorithm set to: DESeq" << endl;
+      PP->printLOG(Timestamp() + "Running EC in main effects algorithm set to: DESeq\n");
     } else {
-      cerr << "ERROR: --ec-me-algorithm must be one of: "
-          << "rrelieff or deseq" << endl;
-      exit(EXIT_FAILURE);
+      error("--ec-me-algorithm must be one of: rrelieff or deseq\n");
     }
   }
 	maineffectAlgorithm = NULL;
 	switch(meAlgorithmType) {
 	case EC_ME_ALG_RJ:
+    PP->printLOG(Timestamp() + "Creating RandomForest main effects object\n");
 		maineffectAlgorithm = new RandomForest(ds, PP);
 		break;
 	case EC_ME_ALG_DESEQ:
+    PP->printLOG(Timestamp() + "Creating DESeq main effects object\n");
 		maineffectAlgorithm = new Deseq(ds);
 		break;
 	case EC_ME_ALG_EDGER:
+    PP->printLOG(Timestamp() + "Creating edgeR main effects object\n");
 		maineffectAlgorithm = new Edger(ds);
 		break;
 	}
-
 	/// set the interaction algorithm
 	itAlgorithmType = EC_IT_ALG_RF;
   string ecItAlgParam = par::ecItAlgorithm;
   if (ecItAlgParam == "relieff") {
     itAlgorithmType = EC_IT_ALG_RF;
-    cout << Timestamp()
-        << "EC interaction effects algorithm set to: ReliefF"
-        << endl;
+    PP->printLOG(Timestamp() + "EC interaction effects algorithm set to: ReliefF\n");
   } else {
     if (ecItAlgParam == "reliefseq") {
       itAlgorithmType = EC_IT_ALG_RFSEQ;
-      cout << Timestamp()
-          << "Running EC interaction effects algorithm set to: ReliefFSeq"
-          << endl;
+      PP->printLOG(Timestamp() + "EC interaction effects algorithm set to: ReliefFSeq\n");
     } else {
-      cerr << "ERROR: --ec-it-algorithm must be one of: "
-          << "relieff or reliefseq" << endl;
-      exit(EXIT_FAILURE);
+      error("--ec-it-algorithm must be one of: relieff or reliefseq");
     }
   }
 	interactionAlgorithm = NULL;
 	switch(itAlgorithmType) {
 	case EC_IT_ALG_RF:
     if(ds->HasContinuousPhenotypes()) {
-      cout << Timestamp() << "Constructing Regression ReliefF..." << endl;
+      PP->printLOG(Timestamp() + "Creating Regression ReliefF object" );
       interactionAlgorithm = new RReliefF(ds, PP);
     } else {
-      cout << Timestamp() << "Constructing Standard ReliefF..." << endl;
+      PP->printLOG(Timestamp() + "Creating Standard ReliefF object\n");
       interactionAlgorithm = new ReliefF(ds, PP, anaType);
     }
 		break;
 	case EC_IT_ALG_RFSEQ:
-    cout << Timestamp() << "Constructing ReliefFSeq..." << endl;
+    PP->printLOG(Timestamp() + "Creating ReliefFSeq object\n");
 		interactionAlgorithm = new ReliefFSeq(ds, PP);
 		break;
 	}
-
 	// set the number of attributes to remove per iteration
-	numToRemovePerIteration = 0;
-	numToRemovePerIteration = par::ecIterNumToRemove;
-	unsigned int iterPercentToRemove = par::ecIterPercentToRemove;
-	numToRemovePerIteration = (unsigned int) (((double) iterPercentToRemove
-    / 100.0) * dataset->NumAttributes());
-	cout << Timestamp() << "EC will remove " << numToRemovePerIteration
-			<< " attributes on first iteration" << endl;
+  if(par::do_iterative_removal_ec) {
+    numToRemovePerIteration = par::ecIterNumToRemove;
+    if(!numToRemovePerIteration) {
+      unsigned int iterPercentToRemove = par::ecIterPercentToRemove;
+      numToRemovePerIteration = (unsigned int) (((double) iterPercentToRemove
+        / 100.0) * dataset->NumAttributes());
+    }
+    PP->printLOG(Timestamp() + "EC will remove " + int2str(numToRemovePerIteration) + 
+        " attributes on first iteration\n");
+  }
 
-	// multithreading setup
-	unsigned int maxThreads = omp_get_num_procs();
-	cout << Timestamp() << maxThreads << " OpenMP processors available to EC"
-			<< endl;
-	numRFThreads = maxThreads;
-	cout << Timestamp() << "EC will use " << numRFThreads << " threads" << endl;
-
+	// openMP multi-threading setup
+	numRFThreads = omp_get_num_procs();
+	PP->printLOG(Timestamp() + "EC has " + int2str(numRFThreads) + " threads\n");
 } // end of constructor
 
 EvaporativeCooling::~EvaporativeCooling() {
@@ -201,13 +180,14 @@ EvaporativeCooling::~EvaporativeCooling() {
 }
 
 bool EvaporativeCooling::ComputeECScores() {
+  stringstream msg;
 	unsigned int numWorkingAttributes = dataset->NumVariables();
 	if (numWorkingAttributes < numTargetAttributes) {
-		cerr << "ERROR: The number of attributes in the data set "
+		msg << "ERROR: The number of attributes in the data set "
 				<< numWorkingAttributes
 				<< " is less than the number of target attributes "
 				<< numTargetAttributes << endl;
-		return false;
+		error(msg.str());
 	}
 
 	// EC algorithm as in Figure 5, page 10 of the paper referenced
@@ -217,34 +197,41 @@ bool EvaporativeCooling::ComputeECScores() {
 	unsigned int iteration = 1;
 	optimalTemperature = 1.0;
 	while (numWorkingAttributes >= numTargetAttributes) {
-		pair<unsigned int, unsigned int> titvCounts =
-				dataset->GetAttributeTiTvCounts();
-		double titvRatio = titvCounts.first;
-		if(titvCounts.second) {
-			titvRatio = (double) titvCounts.first / (double) titvCounts.second;
-		}
+		pair<unsigned int, unsigned int> titvCounts;
+    double titvRatio = 0;
+    if(dataset->HasGenotypes()) {
+      titvCounts = dataset->GetAttributeTiTvCounts();
+      titvRatio = titvCounts.first;
+      if(titvCounts.second) {
+        titvRatio = (double) titvCounts.first / (double) titvCounts.second;
+      }
+    }
 
-		cout << Timestamp()
+		msg << Timestamp()
 				<< "----------------------------------------------------"
 				<< "-------------------------" << endl;
-		cout << Timestamp() << "EC algorithm...iteration: " << iteration
+		msg << Timestamp() << "EC algorithm...iteration: " << iteration
 				<< ", working attributes: " << numWorkingAttributes
 				<< ", target attributes: " << numTargetAttributes
 				<< ", temperature: " << optimalTemperature
-				<< ", best CE: " << bestClassificationError << endl;
-		cout << Timestamp()
-				<< "Ti/Tv: transitions: " << titvCounts.first
-				<< " transversions: " << titvCounts.second
-				<< " ratio: " << titvRatio
-				<< endl;
-		cout << fixed << setprecision(1);
-
+				<< ", best classification error: " << bestClassificationError << endl;
+    if(dataset->HasGenotypes()) {
+      msg << Timestamp()
+          << "Ti/Tv: transitions: " << titvCounts.first
+          << " transversions: " << titvCounts.second
+          << " ratio: " << titvRatio
+          << endl;
+    }
+		PP->printLOG(msg.str());
+    msg.clear();
+    
 		// -------------------------------------------------------------------------
 		// run main effects algorithm and get the normalized scores for use in EC
 		if ((algorithmType == EC_ALG_ME_IT) || (algorithmType == EC_ALG_ME_ONLY)) {
-			cout << Timestamp() << "Running Random Jungle" << endl;
+			PP->printLOG(Timestamp() + "Running Random Forest\n");
 			maineffectScores = maineffectAlgorithm->ComputeScores();
 			double classificationError = maineffectAlgorithm->GetClassificationError();
+      PP->printLOG(Timestamp() + "Classifier error: " + dbl2str(classificationError) + "\n");
 			if(classificationError < bestClassificationError) {
 				bestClassificationError = classificationError;
 			}
@@ -264,12 +251,11 @@ bool EvaporativeCooling::ComputeECScores() {
 		// -------------------------------------------------------------------------
 		// run interaction effects algorithm and get normalized score for use in EC
 		if ((algorithmType == EC_ALG_ME_IT) || (algorithmType == EC_ALG_IT_ONLY)) {
-			cout << Timestamp() << "Running ReliefF" << endl;
+			PP->printLOG(Timestamp() + "Running ReliefF\n");
 			if (!RunReliefF()) {
-				cerr << "ERROR: In EC algorithm: ReliefF failed" << endl;
-				return false;
+				error("In EC algorithm: ReliefF failed");
 			}
-			cout << setprecision(1);
+			//cout << setprecision(1);
 			// ReliefF standalone runs
 			if ((algorithmType == EC_ALG_IT_ONLY)
 					&& (numWorkingAttributes == numTargetAttributes)) {
@@ -283,10 +269,9 @@ bool EvaporativeCooling::ComputeECScores() {
 
 		// -------------------------------------------------------------------------
 		// compute free energy for all attributes
-		cout << Timestamp() << "Computing free energy" << endl;
+		PP->printLOG(Timestamp() + "Computing free energy\n");
 		if (!ComputeFreeEnergy(optimalTemperature)) {
-			cerr << "ERROR: In EC algorithm: ComputeFreeEnergy failed" << endl;
-			return false;
+			error("In EC algorithm: ComputeFreeEnergy failed\n");
 		}
 		// PrintAllScoresTabular();
 		// PrintKendallTaus();
@@ -294,7 +279,7 @@ bool EvaporativeCooling::ComputeECScores() {
 		// -------------------------------------------------------------------------
 		// optimize the temperature by sampling a set of delta values around T
 		if(optimizeTemperature) {
-			cout << Timestamp() << "Optimizing coupling temperature T" << endl;
+			PP->printLOG(Timestamp() + "Optimizing coupling temperature T\n");
 			vector<double> temperatureDeltas;
 			temperatureDeltas.push_back(-0.2);
 			temperatureDeltas.push_back(0.2);
@@ -308,18 +293,15 @@ bool EvaporativeCooling::ComputeECScores() {
 		ofstream outFile;
 		outFile.open(scoreFilename.str().c_str());
 		if(outFile.bad()) {
-			cerr << "ERROR: Could not open scores file " << scoreFilename.str()
-					<< "for writing" << endl;
-			exit(1);
+			error("Could not open scores file " + scoreFilename.str() + "for writing");
 		}
-		cout << Timestamp()
-				<< "Writing ALL EC scores to [" + scoreFilename.str() + "]" << endl;
+		PP->printLOG(Timestamp() + "Writing ALL EC scores to [" + scoreFilename.str() + "]\n");
 		PrintAllAttributeScores(outFile);
 		outFile.close();
 
 		// -------------------------------------------------------------------------
 		// remove the worst attributes and iterate
-		cout << Timestamp() << "Removing the worst attributes" << endl;
+		PP->printLOG(Timestamp() + "Removing the worst attributes\n");
 		unsigned int numToRemove = numToRemovePerIteration;
 		numToRemoveNextIteration = numToRemove - numToRemovePerIteration;
 		if (par::ecIterPercentToRemove) {
@@ -338,19 +320,21 @@ bool EvaporativeCooling::ComputeECScores() {
 //      return false;
 			break;
 		}
-		cout << Timestamp() << "Removing the worst " << numToRemove << " attributes"
-				<< endl;
+		PP->printLOG(Timestamp() + 
+      "EvaporativeCooling::ComputeECScores removing the worst " + 
+      int2str(numToRemove) + " attributes\n");
 		if (!RemoveWorstAttributes(numToRemove)) {
-			cerr << "ERROR: In EC algorithm: RemoveWorstAttribute failed" << endl;
-			return false;
+			error("EvaporativeCooling::ComputeECScores: RemoveWorstAttribute failed");
 		}
+    cout << "DEBUG: numToRemove: " << numToRemove << endl;
 		numWorkingAttributes -= numToRemove;
 
 		++iteration;
+    maineffectAlgorithm->InitializeData(true);
+    interactionAlgorithm->ResetForNextIteration();
 	}
 
-	cout << Timestamp() << "EC algorithm ran for " << iteration << " iterations"
-			<< endl;
+	PP->printLOG(Timestamp() + "EC algorithm ran for " + int2str(iteration) + " iterations\n");
 
 	// remaining free energy attributes are the ones we want to write as a
 	// new dataset to be analyzed with (re)GAIN + SNPrank
@@ -498,9 +482,7 @@ void EvaporativeCooling::WriteAttributeScores(string baseFilename) {
 		// we should not get here by the CLI front end but it is possible to call
 		// this from other programs in the future or when used as a library
 		// TODO: better message
-		cerr << "ERROR: Attempting to write attribute scores before the analysis "
-				<< "type was determined. " << endl;
-		return;
+		error("ERROR: Attempting to write attribute scores before the analysis type was determined.");
 	}
 }
 
@@ -542,13 +524,13 @@ bool EvaporativeCooling::PrintAllScoresTabular() {
 	// sanity checks
 	if (maineffectScores.size() != interactionScores.size()) {
 		cerr
-				<< "ERROR: Random Jungle and Relief-F scores lists are not the same size"
+				<< "ERROR: Random Forest and Relief-F scores lists are not the same size"
 				<< endl;
 		return false;
 	}
 	if (freeEnergyScores.size() != interactionScores.size()) {
 		cerr
-				<< "ERROR: Random Jungle and Relief-F scores lists are not the same size"
+				<< "ERROR: Random Forest and Relief-F scores lists are not the same size"
 				<< endl;
 		return false;
 	}
@@ -576,13 +558,13 @@ bool EvaporativeCooling::PrintKendallTaus() {
 	// sanity checks
 	if (maineffectScores.size() != interactionScores.size()) {
 		cerr
-				<< "ERROR: Random Jungle and Relief-F scores lists are not the same size"
+				<< "ERROR: Random Forest and Relief-F scores lists are not the same size"
 				<< endl;
 		return false;
 	}
 	if (freeEnergyScores.size() != interactionScores.size()) {
 		cerr
-				<< "ERROR: Random Jungle and Relief-F scores lists are not the same size"
+				<< "ERROR: Random Forest and Relief-F scores lists are not the same size"
 				<< endl;
 		return false;
 	}
@@ -630,50 +612,51 @@ bool EvaporativeCooling::RunReliefF() {
 		return true;
 	}
 
-	cout << Timestamp() << "Normalizing ReliefF scores to 0-1" << endl;
-	pair<double, string> firstScore = interactionScores[0];
-	double minRFScore = firstScore.first;
-	double maxRFScore = firstScore.first;
-	AttributeScoresCIt rfScoresIt = interactionScores.begin();
-	for (; rfScoresIt != interactionScores.end(); ++rfScoresIt) {
-		pair<double, string> thisScore = *rfScoresIt;
-		if (thisScore.first < minRFScore) {
-			minRFScore = thisScore.first;
-		}
-		if (thisScore.first > maxRFScore) {
-			maxRFScore = thisScore.first;
-		}
-	}
+  if(par::do_normalize_scores) {
+    cout << Timestamp() << "Normalizing ReliefF scores to 0-1" << endl;
+    pair<double, string> firstScore = interactionScores[0];
+    double minRFScore = firstScore.first;
+    double maxRFScore = firstScore.first;
+    AttributeScoresCIt rfScoresIt = interactionScores.begin();
+    for (; rfScoresIt != interactionScores.end(); ++rfScoresIt) {
+      pair<double, string> thisScore = *rfScoresIt;
+      if (thisScore.first < minRFScore) {
+        minRFScore = thisScore.first;
+      }
+      if (thisScore.first > maxRFScore) {
+        maxRFScore = thisScore.first;
+      }
+    }
+    // normalize attribute scores if necessary
+    if (minRFScore == maxRFScore) {
+      cout << Timestamp() << "WARNING: Relief-F min and max scores are the same. "
+          << "No normalization necessary" << endl;
+      return true;
+    }
+    AttributeScores newRFScores;
+    double rfRange = maxRFScore - minRFScore;
+    for (AttributeScoresIt it = interactionScores.begin(); it != interactionScores.end(); ++it) {
+      pair<double, string> thisScore = *it;
+      double key = thisScore.first;
+      string val = thisScore.second;
+      newRFScores.push_back(make_pair((key - minRFScore) / rfRange, val));
+    }
 
-	// normalize attribute scores if necessary
-	if (minRFScore == maxRFScore) {
-		cout << Timestamp() << "WARNING: Relief-F min and max scores are the same. "
-				<< "No normalization necessary" << endl;
-		return true;
-	}
-
-	AttributeScores newRFScores;
-	double rfRange = maxRFScore - minRFScore;
-	for (AttributeScoresIt it = interactionScores.begin(); it != interactionScores.end(); ++it) {
-		pair<double, string> thisScore = *it;
-		double key = thisScore.first;
-		string val = thisScore.second;
-		newRFScores.push_back(make_pair((key - minRFScore) / rfRange, val));
-	}
-
-	interactionScores.clear();
-	interactionScores = newRFScores;
-
+    interactionScores.clear();
+    interactionScores = newRFScores;
+  }
+  
 	return true;
 }
 
 bool EvaporativeCooling::ComputeFreeEnergy(double temperature) {
+  stringstream msg;
 	if (algorithmType == EC_ALG_ME_IT) {
 		if (maineffectScores.size() != interactionScores.size()) {
-			cerr << "ERROR: EvaporativeCooling::ComputeFreeEnergy scores lists are "
-					"unequal. RJ: " << maineffectScores.size() << " vs. RF: " << interactionScores.size()
-					<< endl;
-			return false;
+			msg << "EvaporativeCooling::ComputeFreeEnergy scores lists are "
+              "unequal. RandomForest: " << maineffectScores.size() 
+              << " vs. Relief-F: "  << interactionScores.size();
+			error(msg.str());
 		}
 	}
 
@@ -702,49 +685,62 @@ bool EvaporativeCooling::ComputeFreeEnergy(double temperature) {
 		}
 		break;
 	default:
-		cerr << "ERROR: EvaporativeCooling::ComputeFreeEnergy: "
-				<< "could not determine EC algorithm type" << endl;
-		return false;
+		msg << "EvaporativeCooling::ComputeFreeEnergy: "
+				<< "could not determine EC algorithm type";
+		error(msg.str());
 	}
 
 	return true;
 }
 
 bool EvaporativeCooling::RemoveWorstAttributes(unsigned int numToRemove) {
+  if(par::verbose) PP->printLOG("ENTERING EvaporativeCooling::RemoveWorstAttributes\n");
+  stringstream msg;
 	unsigned int numToRemoveAdj = numToRemove;
 	unsigned int numAttr = dataset->NumAttributes();
 	if ((numAttr - numToRemove) < numTargetAttributes) {
-		cout << Timestamp() << "WARNING: attempt to remove " << numToRemove
+		msg << Timestamp() << "WARNING: attempt to remove " << numToRemove
 				<< " attributes which will remove more than target "
 				<< "number of attributes " << numTargetAttributes << ". Adjusting"
 				<< endl;
+    PP->printLOG(msg.str());
+    msg.str("");
 		numToRemoveAdj = numAttr - numTargetAttributes;
 	}
-	cout << Timestamp() << "Removing " << numToRemoveAdj << " attributes" << endl;
+	msg << Timestamp() << "EvaporativeCooling::RemoveWorstAttributes " 
+          << numToRemoveAdj << " attributes" << endl;
+  PP->printLOG(msg.str());
+  msg.str("");
 	sort(freeEnergyScores.begin(), freeEnergyScores.end(), scoresSortAsc);
-	for (unsigned int i = 0; i < numToRemoveAdj; ++i) {
-
+	for (unsigned int i=0; i < numToRemoveAdj; ++i) {
 		// worst score and attribute name
 		pair<double, string> worst = freeEnergyScores[i];
-//    cout << "\t\t\t\tRemoving: "
-//            << worst.second << " (" << worst.first << ")" << endl;
-
+    if(par::verbose) {
+      msg << Timestamp() << "current worst attribute" << i << ": " 
+              << worst.second << " (" << worst.first << ")" << endl;
+      PP->printLOG(msg.str());
+      msg.str("");
+    }
 		// save worst
+    if(par::verbose) PP->printLOG("saving worst attributes to evaporatedAttributes\n");
 		evaporatedAttributes.push_back(worst);
 		// remove the attribute from those under consideration
+    if(par::verbose) PP->printLOG("calling dataset->MaskRemoveVariable\n");
 		if (!dataset->MaskRemoveVariable(worst.second)) {
-			cerr << "ERROR: Could not remove worst attribute: " << worst.second
-					<< endl;
-			return false;
+			error("Could not remove worst attribute: " + worst.second + "\n");
 		}
 	}
+  if(par::verbose) PP->printLOG("RETURNING FROM EvaporativeCooling::RemoveWorstAttributes\n");
 
 	return true;
 }
 
 double EvaporativeCooling::OptimizeTemperature(vector<double> deltas) {
-	cout << Timestamp() << "--- OPTIMIZER BEGIN: Classification error to beat: "
-			<< bestClassificationError << endl;
+  stringstream msg;
+  msg << Timestamp() << "--- OPTIMIZER BEGIN: Classification error to beat: "
+          << dbl2str(bestClassificationError) << endl;
+	PP->printLOG(msg.str());
+  msg.clear();
 	/// for each delta, run a classifier on the best attributes according
 	/// to the free energy and update best temperature
 	vector<double>::const_iterator deltaIt = deltas.begin();
@@ -752,44 +748,48 @@ double EvaporativeCooling::OptimizeTemperature(vector<double> deltas) {
 	for(; deltaIt != deltas.end(); ++deltaIt) {
 		double thisTemp = optimalTemperature + *deltaIt;
 		ComputeFreeEnergy(thisTemp);
-		double thisClassificationError = ComputeClassificationErrorRJ();
-		cout << Timestamp()
+		double thisClassificationError = ComputeClassificationErrorRandomForest();
+		msg << Timestamp()
 				<< "OPTIMIZER: Trying temperature: " << thisTemp
-				<< " => Classification Error: " << thisClassificationError
-				<< endl;
+				<< " => Classification Error: " << thisClassificationError << endl;
+    PP->printLOG(msg.str());
+    msg.clear();
 		/// if classification error is lower at this delta, update best temperature
 		/// and best classification error
 		if(thisClassificationError < bestClassificationError) {
-			cout << Timestamp() << "--- OPTIMIZER: found better temperature: "
+			msg << Timestamp() << "--- OPTIMIZER: found better temperature: "
 					<< thisTemp << endl;
+      PP->printLOG(msg.str());
+      msg.clear();
 			bestClassificationError = thisClassificationError;
 			optimalTemperature = thisTemp;
 			bestFreeEnergyScores = freeEnergyScores;
 		}
 	}
-
-	cout << Timestamp() << "--- OPTIMIZER RESULTS: "
+	msg << Timestamp() << "--- OPTIMIZER RESULTS: "
 			<< "Temperature: " << optimalTemperature
 			<< ", Classification error: " << bestClassificationError << endl;
-
+  PP->printLOG(msg.str());
 	freeEnergyScores = bestFreeEnergyScores;
 
 	return optimalTemperature;
 }
 
-double EvaporativeCooling::ComputeClassificationErrorRJ() {
+double EvaporativeCooling::ComputeClassificationErrorRandomForest() {
+  stringstream msg;
 	/// get the best attribute names based on free energy score
 	unsigned int numBest = freeEnergyScores.size() - numToRemoveNextIteration;
 	if(!numBest) {
-		cerr << "ERROR: Best results calculation results in zero attributes" << endl;
-		cerr << "Number of best to use in classifier: " << numBest << endl;
-		cerr << "Free energy scores: " << freeEnergyScores.size() << endl;
-		cerr << "Number to remove next iteration: " << numToRemoveNextIteration << endl;
-		exit(EXIT_FAILURE);
+		msg << "ERROR: Best results calculation results in zero attributes" << endl;
+		msg << "Number of best to use in classifier: " << numBest << endl;
+		msg << "Free energy scores: " << freeEnergyScores.size() << endl;
+		msg << "Number to remove next iteration: " << numToRemoveNextIteration << endl;
+		error(msg.str());
 	}
-	cout << Timestamp() << "Getting best " << numBest
-			<< " attributes for temporary CSV file" << endl;
-	vector<string> bestAttributes;
+  
+  // ---------------------------------------------------------------------------
+  PP->printLOG(Timestamp() + "Getting best free energy attribute scores for RandomForest\n");
+  vector<string> bestAttributes;
 	unsigned int numCopied = 0;
 	AttributeScoresCIt scoreIt = freeEnergyScores.begin();
 	for(; numCopied < numBest && scoreIt != freeEnergyScores.end();
@@ -797,53 +797,22 @@ double EvaporativeCooling::ComputeClassificationErrorRJ() {
 		bestAttributes.push_back(scoreIt->second);
 	}
 	if(!bestAttributes.size() || (bestAttributes.size() != numBest)) {
-		cerr << "ERROR: could not get " << numBest << " attributes, got: "
-				<< bestAttributes.size() << endl;
-		exit(EXIT_FAILURE);
-	}
-	/// write new data set with worst attributes removed
-	string newDatasetFilename = par::output_file_name + "_CE.csv";
-	bool newDatasetSuccess = dataset->WriteNewDataset(newDatasetFilename,
-			bestAttributes, CSV_DELIMITED_DATASET);
-	if(!newDatasetSuccess) {
-		cerr << "ERROR: Could not write new data set: " << newDatasetFilename
-				<< endl;
-		exit(EXIT_FAILURE);
+		msg << "ERROR: could not get " << numBest << " attributes, got: "
+				<< bestAttributes.size();
+		error(msg.str());
 	}
 
-	/// create a configuration map for RandomJungle constructor
-//	ConfigMap configMap;
-//	stringstream ss;
-//	if(par::ntree) {
-//		unsigned int numTrees = par::ntree;
-//		configMap.insert(make_pair("rj-num-trees", ss.str()));
-//	}
-//	else {
-//		configMap.insert(make_pair("rj-num-trees", "1000"));
-//	}
-//	if(paramsMap.count("verbose")) {
-//		configMap.insert(make_pair("verbose", "true"));
-//	}
-//	configMap.insert(make_pair("out-files-prefix", outFilesPrefix));
-//	ss.str("");
-//	ss << omp_get_num_procs();
-//	configMap.insert(make_pair("num-threads", ss.str()));
-//
-//	/// run Random Jungle classifier and read classification error
+  // ---------------------------------------------------------------------------
+  PP->printLOG(Timestamp() + "Running RandomForest on [ " + int2str(bestAttributes.size()) + " ] attributes\n");
 	double classifierError = 1.0;
-//	bool rjSuccess = RandomJungle::RunClassifier(newDatasetFilename,
-//			configMap, dataset->DetermineTreeType().first, classifierError);
-//
-//	/// remove the temporary file
-//	cout << Timestamp() << "Removing temporary file for RJ: "
-//			<< newDatasetFilename << endl;
-//	unlink(newDatasetFilename.c_str());
-//
-//	if(!rjSuccess) {
-//		cerr << "Error running Random Jungle classifier" << endl;
-//		exit(EXIT_FAILURE);
+  RandomForest* forest = new RandomForest(dataset, bestAttributes);
+  forest->ComputeScores();
+  classifierError = forest->GetClassificationError();
+  if(par::verbose) {
+    PP->printLOG(Timestamp() + "EvaporativeCooling::ComputeClassificationErrorRandomForest => " + dbl2str(classifierError) + "\n");
+  }
+  delete forest;
+ 
 	/// return the classification error on this data
 	return classifierError;
 }
-
-

@@ -45,6 +45,8 @@
 #include "DistanceMetrics.h"
 #include "ReliefF.h"
 
+#include "helper.h"
+
 using namespace std;
 using namespace insilico;
 using namespace boost;
@@ -1719,14 +1721,12 @@ void Dataset::PrintAttributeLevelsSeen() {
 
 bool Dataset::MaskRemoveVariable(string variableName) {
 	if (MaskSearchVariableType(variableName, DISCRETE_TYPE)) {
-		MaskRemoveVariableType(variableName, DISCRETE_TYPE);
-		return true;
+		return MaskRemoveVariableType(variableName, DISCRETE_TYPE);
 	}
 	if (MaskSearchVariableType(variableName, NUMERIC_TYPE)) {
-		MaskRemoveVariableType(variableName, NUMERIC_TYPE);
-		return true;
+		return MaskRemoveVariableType(variableName, NUMERIC_TYPE);
 	}
-	return false;
+  error("variableName: " + variableName + "\n");
 }
 
 bool Dataset::MaskRemoveVariableType(string variableName,
@@ -2856,59 +2856,6 @@ pair<unsigned int, unsigned int> Dataset::GetAttributeTiTvCounts() {
 	}
 
 	return make_pair(tiCount, tvCount);
-}
-
-pair<RandomJungleTreeType, string> Dataset::DetermineTreeType() {
-	pair<RandomJungleTreeType, string> returnValue;
-	// base classifier: classification or regression trees?
-	string treeTypeDesc = "";
-	RandomJungleTreeType treeType = UNKNOWN_TREE_TYPE;
-	if (HasContinuousPhenotypes()) {
-		// regression
-		if (HasNumerics() && HasGenotypes()) {
-			// integrated/numeric
-			treeType = NUMERIC_NUMERIC_TREE;
-			treeTypeDesc = "Regression trees: integrated/continuous";
-		} else {
-			if (HasGenotypes()) {
-				// nominal/numeric
-				treeType = NUMERIC_NOMINAL_TREE;
-				treeTypeDesc = "Regression trees: discrete/continuous";
-			} else {
-				// numeric/numeric
-				if (HasNumerics()) {
-					treeType = NUMERIC_NUMERIC_TREE;
-					treeTypeDesc = "Regression trees: integrated/continuous";
-				}
-			}
-		}
-	} else {
-		// classification
-		if (HasNumerics() && HasGenotypes()) {
-			// mixed/nominal
-			treeType = NOMINAL_NUMERIC_TREE;
-			treeTypeDesc = "Classification trees: integrated/discrete";
-		} else {
-			if (HasGenotypes()) {
-				// nominal/nominal
-				treeType = NOMINAL_NOMINAL_TREE;
-				treeTypeDesc = "Classification trees: discrete/discrete";
-			} else {
-				// numeric/nominal
-				if (HasNumerics()) {
-					// treeType = 5;
-					// changed to tree type 1 to see if it performs better
-					treeType = NOMINAL_NUMERIC_TREE;
-					treeTypeDesc = "Classification trees: continuous/discrete";
-				}
-			}
-		}
-	}
-
-	returnValue.first = treeType;
-	returnValue.second = treeTypeDesc;
-
-	return returnValue;
 }
 
 bool Dataset::WriteSnpTiTvInfo(string titvFilename) {

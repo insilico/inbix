@@ -23,7 +23,6 @@
 #include "AttributeRanker.h"
 
 #include "plink.h"
-#include "Data.h"
 #include "Forest.h"
 
 class RandomForest: public AttributeRanker
@@ -32,24 +31,30 @@ public:
   /*************************************************************************//**
    * Construct an RandomForest algorithm object.
    * \param [in] ds pointer to a Dataset object
-   * \param [in] vm reference to a Boost map of command line options
+   * \param [in] plinkPtr pointer to a PLINK environment
    ****************************************************************************/
   RandomForest(Dataset* ds, Plink* plinkPtr);
   /*************************************************************************//**
    * Construct an RandomForest algorithm object.
    * \param [in] ds pointer to a Dataset object
-   * \param [in] configMap reference ConfigMap (map<string, string>)
+   * \param [in] bestAttributeNames best attribute names in the data set to use
+   ****************************************************************************/
+  RandomForest(Dataset* ds, std::vector<std::string> bestAttributeNames);
+  /*************************************************************************//**
+   * Deconstruct an RandomForest algorithm object.
    ****************************************************************************/
   virtual ~RandomForest();
+  bool CreateDefaultForestForPheno();
   AttributeScores ComputeScores() override;
   double GetClassificationError() override;
   void WriteScores(std::string baseFilename) override;
   void WriteScoresInternal();
+  // bcw 10/12/16
+  bool InitializeData(bool useMask=false) override;
 private:
-  Data* data;
   Forest* forest;
+  unsigned int minNodeSize;
   Plink* PP;
 };
 
 #endif	/* RANDOMFOREST_H */
-

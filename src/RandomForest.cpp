@@ -12,6 +12,7 @@
 #include <string.h>
 #include <math.h>
 #include <omp.h>
+#include <sstream>
 
 #include "Insilico.h"
 
@@ -22,7 +23,6 @@
 #include "RandomForest.h"
 #include "AttributeRanker.h"
 // Ranger random forest project integration - bcw - 9/26/16
-#include "Data.h"
 #include "DataDouble.h"
 #include "Forest.h"
 #include "ForestClassification.h"
@@ -33,37 +33,83 @@ using namespace std;
 RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr):
 	AttributeRanker::AttributeRanker(ds) {
 	dataset = ds;
-	cout << Timestamp()	<< "Random Forest constructor" << endl;
-  data = 0;
+	PP->printLOG(Timestamp() + "Random Forest constructor\n");
   forest = 0;
   PP = plinkPtr;
   try {
-    PP->printLOG("Creating RandomForest object\n");
-    if(par::bt) {
-      PP->printLOG("Creating ForestClassification\n");
-      forest = new ForestClassification;
-    } else {
-      PP->printLOG("Creating ForestRegression\n");
-      forest = new ForestRegression;
+    CreateDefaultForestForPheno();
+  } catch (std::exception& e) {
+    cerr << "RandomForest constructor Error: " << e.what() 
+         << " inbix will EXIT now." << std::endl;
+    if(forest) {
+      delete forest;
+      forest = 0;
     }
-    forest->setVerboseOutput(&cout);
-    PP->printLOG("Loading data object from inbix internal data structures\n");
-    if(ds->HasNumerics()) {
-      data = new DataDouble();
-    } else {
-      //data = new DataChar();
-      error("RandomForest only  supports numeric attributes");
+    shutdown();
+  }
+
+  InitializeData(false);
+}
+
+RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames):
+	AttributeRanker::AttributeRanker(ds) {
+	dataset = ds;
+	PP->printLOG(Timestamp() + "Random Forest constructor\n");
+  forest = 0;
+  try {
+    CreateDefaultForestForPheno();
+  } catch (std::exception& e) {
+    cerr << "RandomForest constructor Error: " << e.what() 
+         << " inbix will EXIT now." << std::endl;
+    if(forest) {
+      delete forest;
+      forest = 0;
     }
+    shutdown();
+  }
+  
+  InitializeData(true);
+}
+
+bool RandomForest::CreateDefaultForestForPheno() {
+  if(forest) delete forest;
+  if(par::bt) {
+    PP->printLOG(Timestamp() + "Creating ForestClassification\n");
+    forest = new ForestClassification;
+  } else {
+    PP->printLOG(Timestamp() + "Creating ForestRegression\n");
+    forest = new ForestRegression;
+  }
+  PP->printLOG(Timestamp() + "Initializing forest with inbix data\n");
+  if(par::bt) {
+    minNodeSize = DEFAULT_MIN_NODE_SIZE_CLASSIFICATION;
+  } else {
+    minNodeSize = DEFAULT_MIN_NODE_SIZE_REGRESSION;
+  }
+  forest->setVerboseOutput(&cout);
+  
+  return true;
+}
+
+bool RandomForest::InitializeData(bool useMask) {
+  // set class variables for reserving memory and other operations
+  PP->printLOG(Timestamp() + "Loading data object from inbix internal data structures\n");
+  if(!dataset->HasNumerics()) {
+    //data = new DataChar();
+    error("RandomForest only supports numeric attributes at this time");
+  }
+  CreateDefaultForestForPheno();
+  DataDouble* data = new DataDouble();
+  if(useMask) {
+    if(data->loadFromDatasetMask(dataset, dataset->GetVariableNames())) {
+      error("RandomForest loadFromDatasetMask(&P)");
+    }
+  } else {
     if(data->loadFromPlink(PP)) {
-      error("loadFromPlink(&P)");
+      error("RandomForest loadFromPlink(&P)");
     }
-    PP->printLOG("Initializing forest with inbix data\n");
-    unsigned int minNodeSize = 0;
-    if(par::bt) {
-      minNodeSize = DEFAULT_MIN_NODE_SIZE_CLASSIFICATION;
-    } else {
-      minNodeSize = DEFAULT_MIN_NODE_SIZE_REGRESSION;
-    }
+  }
+  try {
     forest->init(par::depvarname, 
             par::memmode, 
             data, 
@@ -86,29 +132,31 @@ RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr):
             par::minprop, 
             par::holdout);
   } catch (std::exception& e) {
-    std::cerr << "RandomForest constructor Error: " << e.what() 
-            << " inbix will EXIT now." << std::endl;
+    stringstream msg;
+    msg << "RandomForest InitializeData exception: "
+            << e.what() << " inbix will EXIT now." << endl;
+    error(msg.str());
     if(forest) {
       delete forest;
       forest = 0;
     }
     shutdown();
   }
+  
+  return true;
 }
 
 RandomForest::~RandomForest() {
   if(forest) delete forest;
-  if(data) delete data;
 }
 
 AttributeScores RandomForest::ComputeScores() {
-	cout << Timestamp() << "Computing Random Forest variable importance scores"
-			<< endl;
+  PP->printLOG(Timestamp() + "Computing Random Forest variable importance scores\n");
   if(forest) {
-    PP->printLOG("Running random forest algorithm\n");
+    PP->printLOG(Timestamp() + "Running random forest algorithm\n");
     forest->run(par::verbose);
     const vector<double>& rfScores = forest->getVariableImportance();
-    const vector<string>& varNames = data->getVariableNames();
+    const vector<string>& varNames = dataset->GetVariableNames();
     scores.clear();
     for (size_t i=0; i < varNames.size(); ++i) {
       if(varNames[i] != "Class") {

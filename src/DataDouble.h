@@ -33,6 +33,9 @@ wright@imbs.uni-luebeck.de
 #include "utility.h"
 #include "Data.h"
 
+#include "Dataset.h"
+#include "plink.h"
+
 class DataDouble: public Data {
 public:
   DataDouble();
@@ -44,6 +47,11 @@ public:
     this->num_cols_no_sparse = num_cols;
   }
   virtual ~DataDouble();
+
+  // bcw - October 2016
+  bool loadFromPlink(Plink* PP);
+  // bcw - October 2016
+  bool loadFromDatasetMask(Dataset* ds, std::vector<std::string> bestAttributes);
 
   double get(size_t row, size_t col) const override {
     if (col < num_cols_no_sparse) {

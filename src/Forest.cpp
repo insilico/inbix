@@ -59,7 +59,6 @@ Forest::~Forest() {
   }
 }
 
-// added bcw 9/27/16
 bool Forest::setVerboseOutput(std::ostream* new_verbose_out) {
   verbose_out = new_verbose_out;
   return true;
@@ -456,7 +455,7 @@ void Forest::grow() {
   std::vector<std::thread> threads;
   threads.reserve(num_threads);
 
-// Initailize importance per thread
+// Initialize importance per thread
   std::vector<std::vector<double>> variable_importance_threads(num_threads);
 
   for (uint i = 0; i < num_threads; ++i) {

@@ -35,9 +35,6 @@
 #include "Data.h"
 #include "utility.h"
 
-#include "Insilico.h"
-#include "plink.h"
-#include "options.h"
 
 Data::Data() :
     num_rows(0), num_rows_rounded(0), num_cols(0), sparse_data(0), num_cols_no_sparse(0), externalData(true), index_data(
@@ -101,55 +98,6 @@ bool Data::loadFromFile(std::string filename) {
   externalData = false;
   input_file.close();
   return result;
-}
-
-bool Data::loadFromPlink(Plink* PP) {
-  num_cols = PP->nlistname.size() + 1;
-  num_rows = PP->sample.size();
-  num_cols_no_sparse = num_cols;
-
-  variable_names.clear();
-  for(int i=0; i < PP->nlistname.size(); i++) {
-    string numericName = PP->nlistname[i];
-    // cout << numericName << endl;
-    variable_names.push_back(numericName);
-  }
-  variable_names.push_back("Class");
-
-  reserveMemory();
-  bool error = false;
-  for(int i=0; i < PP->sample.size(); i++) {
-    string ID = PP->sample[i]->fid + PP->sample[i]->iid;
-    // cout << ID << endl;
-    if(PP->sample[i]->missing) {
-      // missing phenotype so skip this individual
-      if(par::verbose) {
-        PP->printLOG("ID: " + ID + " missing, skipping\n");
-      }
-      continue;
-    }
-    unsigned int numNumerics = PP->nlistname.size();
-    for(int j=0; j < numNumerics; j++) {
-      NumericLevel numeric = PP->sample[i]->nlist[j];
-      // cout << i << ", " << j << " => " << numeric << endl;
-      // set(j, i, numeric, error);
-      set(j, i, numeric, error);
-    }
-    double phenotype = -9;
-    if(par::bt) {
-      int intPheno = PP->sample[i]->aff? 2: 1;
-      phenotype = static_cast<double>(intPheno);
-    } else {
-      phenotype = PP->sample[i]->phenotype;
-    }
-    // cout << i << ", " << (variable_names.size() - 1) << " => " << phenotype << endl;
-    // set(variable_names.size(), i, phenotype, error);
-    set(variable_names.size() - 1, i, phenotype, error);
-  }
-
-  externalData = false;
-
-  return error;
 }
 
 bool Data::loadFromFileWhitespace(std::ifstream& input_file, std::string header_line) {

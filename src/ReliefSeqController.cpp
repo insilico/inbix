@@ -474,8 +474,10 @@ bool ReliefSeqController::RemoveWorstAttributes(unsigned int numToRemove) {
   for(unsigned int i = 0; i < numToRemoveAdj; ++i) {
     // worst score and attribute name
     pair<double, string> worst = scores[i];
-    //    cout << "\t\t\t\tRemoving: "
-    //            << worst.second << " (" << worst.first << ")" << endl;
+    if(par::verbose) {
+        cout << "\t\t\t\tReliefSeqController Removing: "
+                << worst.second << " (" << worst.first << ")" << endl;
+    }
     // save worst
     removedAttributes.push_back(worst);
     // remove the attribute from those under consideration

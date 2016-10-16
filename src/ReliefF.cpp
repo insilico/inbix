@@ -76,6 +76,7 @@ AttributeRanker::AttributeRanker(ds) {
   analysisType = anaType;
 
   m = dataset->NumInstances();
+  randomlySelect = true;
   cout << Timestamp() << "Number of samples: m = " << m << endl;
   if(m == 0 || m == ds->NumInstances()) {
     // sample deterministically unless a sample size has been set
@@ -100,19 +101,6 @@ AttributeRanker::AttributeRanker(ds) {
     //                               m       *           k
   } else {
     cout << Timestamp() << "k nearest neighbors will be optimized" << endl;
-  }
-
-  cout << Timestamp() << "Number of samples: m = " << m << endl;
-  randomlySelect = true;
-  if(m == 0 || m == ds->NumInstances()) {
-    // sample deterministically unless a sample size has been set
-    cout << Timestamp() << "Sampling all instances deterministically"
-            << endl;
-    randomlySelect = false;
-    m = ds->NumInstances();
-  } else {
-    cout << Timestamp() << "Sampling instances randomly" << endl;
-    randomlySelect = true;
   }
 
   numTarget = ds->NumVariables();
@@ -213,10 +201,7 @@ AttributeRanker::AttributeRanker(ds) {
     cout << endl;
   }
 
-  int numProcs = omp_get_num_procs();
-  int numThreads = omp_get_num_threads();
-  cout << Timestamp() << numProcs << " OpenMP processors available" << endl;
-  cout << Timestamp() << numThreads << " OpenMP threads in work team" << endl;
+	PP->printLOG(Timestamp() + "ReliefF has " + int2str(omp_get_num_procs()) + " threads\n");
 
   vector<string> atrNames = dataset->GetAttributeNames();
   vector<string> numNames = dataset->GetNumericsNames();
@@ -971,8 +956,10 @@ bool ReliefF::RemoveWorstAttributes(unsigned int numToRemove) {
   for(unsigned int i = 0; i < numToRemoveAdj; ++i) {
     // worst score and attribute name
     pair<double, string> worst = scores[i];
-    //    cout << "\t\t\t\tRemoving: "
-    //            << worst.second << " (" << worst.first << ")" << endl;
+    if(par::verbose) {
+        cout << "\t\t\t\tReliefF removing: "
+                << worst.second << " (" << worst.first << ")" << endl;
+    }
     // save worst
     removedAttributes.push_back(worst);
     // remove the attribute from those under consideration

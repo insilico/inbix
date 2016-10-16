@@ -98,8 +98,8 @@ private:
 	/// Run the ReliefF algorithm.
 	bool RunReliefF();
 	/*************************************************************************//**
-	 * Compute the attributes' free energy using the couple temperature.
-	 * \param [in] tempreatire coupling temperature T
+	 * Compute the attribute free energy using the couple temperature.
+	 * \param [in] temperature coupling temperature T
 	 * \return distance
 	 ****************************************************************************/
 	bool ComputeFreeEnergy(double temperature);
@@ -108,12 +108,12 @@ private:
 	 * \param [in] numToRemove number of attributes to remove/evaporate
 	 * \return distance
 	 ****************************************************************************/
-	bool RemoveWorstAttributes(unsigned int numToRemove = 1);
+	bool RemoveWorstAttributes(unsigned int numToRemove=1);
 	/// optimize the temperature coupling constant
 	double OptimizeTemperature(std::vector<double> deltas);
 	/// use Random Jungle to compute the classification error of the current
 	/// set of attributes with numToRemovePerIteration attributes removed
-	double ComputeClassificationErrorRJ();
+	double ComputeClassificationErrorRandomForest();
 
 	/// pointer to a Dataset object
 	Dataset* dataset;
@@ -122,6 +122,7 @@ private:
 
 	/// type of analysis to perform
 	/// \sa ReliefF
+	/// \sa RandomForest
 	AnalysisType analysisType;
 	/// algorithm steps to perform
 	EcAlgorithmType algorithmType;

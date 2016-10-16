@@ -579,8 +579,6 @@ public:
    * \return pair<number of transitions, number of transversions>
    ****************************************************************************/
   std::pair<unsigned int, unsigned int> GetAttributeTiTvCounts();
-  /// Determine the Random Jungle tree type from data set characteristics
-  std::pair<RandomJungleTreeType, std::string> DetermineTreeType();
   /// Dump the SNP transition/transversion information to file
   bool WriteSnpTiTvInfo(std::string titvFilename);
 	/// Reset instances nearest neighbor information.

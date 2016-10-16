@@ -482,6 +482,7 @@ public:
 
   // added for Evaporative Cooling support - bcw - 9/29/16
   static bool do_ec;
+  static bool do_iterative_removal_ec;
   static string ecAlgorithmSteps;
   static string ecMeAlgorithm;
   static string ecItAlgorithm;

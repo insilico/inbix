@@ -3014,14 +3014,17 @@ void setOptions(CArgs & a) {
   if(a.find("--ec-it-algorithm")) {
     par::ecItAlgorithm = a.value("--ec-it-algorithm");
   }
-  if(a.find("ec-num-target")) {
-		par::ecNumTarget = a.value_int("ec-num-target");
+  if(a.find("--ec-num-target")) {
+    par::do_iterative_removal_ec = true;
+		par::ecNumTarget = a.value_int("--ec-num-target");
   }
-  if(a.find("ec-iter-remove-n")) {
-		par::ecIterNumToRemove = a.value_int("ec-iter-remove-n");
+  if(a.find("--ec-iter-remove-n")) {
+    par::do_iterative_removal_ec = true;
+		par::ecIterNumToRemove = a.value_int("--ec-iter-remove-n");
   }
-  if(a.find("ec-iter-remove-percent")) {
-		par::ecIterPercentToRemove = a.value_int("ec-iter-remove-percent");
+  if(a.find("--ec-iter-remove-percent")) {
+    par::do_iterative_removal_ec = true;
+		par::ecIterPercentToRemove = a.value_int("--ec-iter-remove-percent");
   }
         
   // added for Relief-F family of algorithms - bcw - 8/7/16

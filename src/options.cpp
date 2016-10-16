@@ -328,6 +328,7 @@ bool par::do_relieff = false;
 bool par::do_write_best_k = false;
 bool par::do_write_each_k_scores = false;
 bool par::do_normalize_scores = false;
+bool par::do_iterative_removal = false;
 string par::distanceMatrixFilename = "";
 string par::gainMatrixFilename = "";
 string par::titvFilename = "";
@@ -386,7 +387,7 @@ bool par::writeforest = false;
 
 // added for Evaporative Cooling support - bcw - 9/29/16
 bool par::do_ec = false;
-bool par::do_iterative_removal = false;
+bool par::do_iterative_removal_ec = false;
 bool par::do_kopt = false;
 string par::ecAlgorithmSteps = "all";
 string par::ecMeAlgorithm = "randomforest";

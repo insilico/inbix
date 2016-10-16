@@ -21,6 +21,7 @@
 #include <iterator>
 #include <cassert>
 
+#include <omp.h>
 #include <armadillo>
 
 #include "plink.h"
@@ -38,8 +39,6 @@
 #include "stats.h"
 #include "idhelp.h"
 #include "zed.h"
-
-#include <omp.h>
 
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
@@ -1233,7 +1232,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// Random Forest analysis requested - bcw - 9/25/16
 	if(par::do_randomforest) {
-		P.printLOG("\nPerforming random forest analysis\n");
+		P.printLOG(Timestamp() + "Performing random forest analysis\n");
 
     // ---------------------------------------------------------------------------
     P.SNP2Ind();
@@ -1252,7 +1251,7 @@ int main(int argc, char* argv[]) {
     // write the forest in Ranger internal format for prediction
     if(par::writeforest) {
       // not implemented! wait for Ranger updates
-      P.printLOG("forest->WriteScoresInternal() is not implemented in Ranger yet!\n");
+      error("forest->WriteScoresInternal() is not implemented in Ranger, yet!");
       // forest->WriteScoresInternal();
     }
 
@@ -1337,7 +1336,7 @@ int main(int argc, char* argv[]) {
     // ---------------------------------------------------------------------------
     // write results files
     string resultsFile = par::output_file_name;
-    relieffAlgorithm->WriteAttributeScores(par::output_file_name);
+    relieffAlgorithm->WriteAttributeScores(resultsFile);
     
 		shutdown();
   }
@@ -1345,9 +1344,9 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// Evaporative Cooling analysis requested - bcw - 9/30/16
 	if(par::do_ec) {
-    // ---------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
-		P.printLOG("\nLoading data set for Evaporative Cooling analysis\n");
+		P.printLOG(Timestamp() + "Loading data set for Evaporative Cooling analysis\n");
     P.SNP2Ind();
     PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
     if(!ds->LoadDatasetPP()) {
@@ -1355,32 +1354,32 @@ int main(int argc, char* argv[]) {
     }
     P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
-    // ---------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     ds->SetDistanceMetrics(par::snpMetricWeights, par::snpMetricNN, par::numMetric);
     AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;
-  		P.printLOG("Performing INTEGRATED analysis\n");
+  		P.printLOG(Timestamp() + "Performing INTEGRATED analysis\n");
     }
     if(ds->HasGenotypes()) {
       analysisType = SNP_ONLY_ANALYSIS;
-  		P.printLOG("Performing SNP analysis\n");
+  		P.printLOG(Timestamp() + "Performing SNP analysis\n");
     }
     if(ds->HasNumerics()) {
       analysisType = NUMERIC_ONLY_ANALYSIS;
-  		P.printLOG("Performing NUMERIC analysis\n");
+  		P.printLOG(Timestamp() + "Performing NUMERIC analysis\n");
     }
     
-    // ---------------------------------------------------------------------------
-		P.printLOG("\nPerforming Evaporative Cooling analysis\n");
+    // -------------------------------------------------------------------------
+		P.printLOG(Timestamp() + "Performing Evaporative Cooling analysis\n");
     EvaporativeCooling ec(ds, &P, analysisType);
     ec.ComputeECScores();
-    cout << Timestamp() << "Evaporative Cooling algorithm done" << endl;
+		P.printLOG(Timestamp() + "Evaporative Cooling algorithm done\n");
     
-    // ---------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // write results files
     string resultsFile = par::output_file_name;
-		P.printLOG("Writing Evaporative Cooling results\n");
+		P.printLOG(Timestamp() + "Writing Evaporative Cooling results\n");
     ec.WriteAttributeScores(resultsFile);
     
 		shutdown();

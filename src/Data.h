@@ -31,10 +31,9 @@
 
 #include <vector>
 #include <iostream>
+#include <string>
 
 #include "globals.h"
-
-#include "plink.h"
 
 class Data {
 public:
@@ -50,7 +49,6 @@ public:
 
   void addSparseData(unsigned char* sparse_data, size_t num_cols_sparse);
 
-  bool loadFromPlink(Plink* PP);
   bool loadFromFile(std::string filename);
   bool loadFromFileWhitespace(std::ifstream& input_file, std::string header_line);
   bool loadFromFileOther(std::ifstream& input_file, std::string header_line, char seperator);
