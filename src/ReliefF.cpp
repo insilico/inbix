@@ -161,8 +161,7 @@ AttributeRanker::AttributeRanker(ds) {
     error("GCTA GRM metric is not allowed in weight update metric, only nearest neighbors");
   }
   if(snpMetricFunctionUnset && to_upper(snpMetric) == "KM") {
-    cerr << "ERROR: KM is not supported as a ReliefF metric" << endl;
-    exit(EXIT_FAILURE);
+    error("ERROR: KM is not supported as a ReliefF metric");
     // snpDiff = diffKM;
     // snpMetricFunctionUnset = false;
   }

@@ -95,6 +95,8 @@ public:
 	/// Print the Kendall taus between the main effects and interactions scores.
 	bool PrintKendallTaus();
 private:
+	/// Run the random forest algorithm.
+	bool RunRandomForest();
 	/// Run the ReliefF algorithm.
 	bool RunReliefF();
 	/*************************************************************************//**

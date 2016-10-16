@@ -228,15 +228,18 @@ bool EvaporativeCooling::ComputeECScores() {
 		// -------------------------------------------------------------------------
 		// run main effects algorithm and get the normalized scores for use in EC
 		if ((algorithmType == EC_ALG_ME_IT) || (algorithmType == EC_ALG_ME_ONLY)) {
+      if(!RunRandomForest()) {
+				error("In EC algorithm: Random forest failed");
+			}
+        
 			PP->printLOG(Timestamp() + "Running Random Forest\n");
-			maineffectScores = maineffectAlgorithm->ComputeScores();
 			double classificationError = maineffectAlgorithm->GetClassificationError();
       PP->printLOG(Timestamp() + "Classifier error: " + dbl2str(classificationError) + "\n");
 			if(classificationError < bestClassificationError) {
 				bestClassificationError = classificationError;
 			}
 			classificationErrors.push_back(classificationError);
-			// RJ standalone runs
+			// Random forest standalone runs
 			if ((algorithmType == EC_ALG_ME_ONLY)
 					&& (numWorkingAttributes == numTargetAttributes)) {
 				sort(maineffectScores.begin(), maineffectScores.end(), scoresSortDesc);
@@ -255,7 +258,6 @@ bool EvaporativeCooling::ComputeECScores() {
 			if (!RunReliefF()) {
 				error("In EC algorithm: ReliefF failed");
 			}
-			//cout << setprecision(1);
 			// ReliefF standalone runs
 			if ((algorithmType == EC_ALG_IT_ONLY)
 					&& (numWorkingAttributes == numTargetAttributes)) {
@@ -403,78 +405,80 @@ void EvaporativeCooling::PrintInteractionAttributeScores(ofstream& outStream) {
 }
 
 void EvaporativeCooling::WriteAttributeScores(string baseFilename) {
+  stringstream msg;
 	string resultsFilename = baseFilename;
 	ofstream outFile;
 	// added 9/26/11 for reflecting the fact that only parts of the
 	// complete EC algorithm were performed
 	switch (algorithmType) {
 	case EC_ALG_ME_IT:
-		resultsFilename = baseFilename + ".ec";
+		resultsFilename = baseFilename + ".ec.tab";
 		outFile.open(resultsFilename.c_str());
 		if (outFile.bad()) {
-			cerr << "ERROR: Could not open scores file " << resultsFilename
-					<< "for writing" << endl;
-			exit(1);
+			error("ERROR: Could not open scores file " + resultsFilename +
+					  "for writing");
 		}
-		cout << Timestamp()
+		msg << Timestamp()
 				<< "Writing EC scores to [" + resultsFilename + "]" << endl;
+    PP->printLOG(msg.str());
+    msg.str("");
 		PrintAttributeScores(outFile);
 		outFile.close();
 
-		resultsFilename = baseFilename + ".ec.me";
+		resultsFilename = baseFilename + ".ec.randomforest.tab";
 		outFile.open(resultsFilename.c_str());
 		if (outFile.bad()) {
-			cerr << "ERROR: Could not open scores file " << resultsFilename
-					<< "for writing" << endl;
-			exit(1);
+			error("ERROR: Could not open scores file " + resultsFilename + "for writing");
 		}
-		cout << Timestamp()
+		msg << Timestamp()
 				<< "Writing EC main effects scores to [" + resultsFilename + "]" << endl;
+    PP->printLOG(msg.str());
+    msg.str("");
 		PrintMainEffectAttributeScores(outFile);
 		outFile.close();
 
-		resultsFilename = baseFilename + ".ec.it";
+		resultsFilename = baseFilename + ".ec.relieff.tab";
 		outFile.open(resultsFilename.c_str());
 		if (outFile.bad()) {
-			cerr << "ERROR: Could not open scores file " << resultsFilename
-					<< "for writing" << endl;
-			exit(1);
+			error("ERROR: Could not open scores file " + resultsFilename + "for writing");
 		}
-		cout << Timestamp()
+		msg << Timestamp()
 				<< "Writing EC interaction effects scores to [" + resultsFilename + "]"
 				<< endl;
+    PP->printLOG(msg.str());
+    msg.str("");
 		PrintInteractionAttributeScores(outFile);
 		outFile.close();
 		break;
 	case EC_ALG_ME_ONLY:
-		resultsFilename += ".me";
+		resultsFilename += ".randomforest.tab";
 		outFile.open(resultsFilename.c_str());
 		if (outFile.bad()) {
-			cerr << "ERROR: Could not open scores file " << resultsFilename
-					<< "for writing" << endl;
-			exit(1);
+			error("ERROR: Could not open scores file " + resultsFilename + "for writing");
 		}
-		cout << Timestamp()
+		msg << Timestamp()
 				<< "Writing EC main effects scores to [" + resultsFilename + "]" << endl;
+    PP->printLOG(msg.str());
+    msg.str("");
 		PrintAttributeScores(outFile);
 		outFile.close();
 		break;
 	case EC_ALG_IT_ONLY:
 		if(itAlgorithmType == EC_IT_ALG_RF) {
-			resultsFilename += ".it";
+			resultsFilename += ".relieff.tab";
 		}
 		if(itAlgorithmType == EC_IT_ALG_RFSEQ) {
-			resultsFilename += ".itseq";
+			resultsFilename += ".reliefseq.tab";
 		}
 		outFile.open(resultsFilename.c_str());
 		if (outFile.bad()) {
-			cerr << "ERROR: Could not open scores file " << resultsFilename
-					<< "for writing" << endl;
-			exit(1);
+			error("ERROR: Could not open scores file " + resultsFilename + "for writing");
 		}
-		cout << Timestamp()
+		msg << Timestamp()
 				<< "Writing EC interaction effects scores to [" + resultsFilename + "]"
 				<< endl;
+    PP->printLOG(msg.str());
+    msg.str("");
 		PrintAttributeScores(outFile);
 		outFile.close();
 		break;
@@ -596,12 +600,54 @@ bool EvaporativeCooling::PrintKendallTaus() {
 	return true;
 }
 
+
+bool EvaporativeCooling::RunRandomForest() {
+	maineffectScores = maineffectAlgorithm->ComputeScores();
+	if(maineffectScores.size() == 0) {
+		error("ERROR: RunRandomForest: No scores computed");
+	}
+  
+  if(par::do_normalize_scores) {
+    cout << Timestamp() << "Normalizing ReliefF scores to 0-1" << endl;
+    pair<double, string> firstScore = maineffectScores[0];
+    double minRFScore = firstScore.first;
+    double maxRFScore = firstScore.first;
+    AttributeScoresCIt rfScoresIt = maineffectScores.begin();
+    for (; rfScoresIt != maineffectScores.end(); ++rfScoresIt) {
+      pair<double, string> thisScore = *rfScoresIt;
+      if (thisScore.first < minRFScore) {
+        minRFScore = thisScore.first;
+      }
+      if (thisScore.first > maxRFScore) {
+        maxRFScore = thisScore.first;
+      }
+    }
+    // normalize attribute scores if necessary
+    if (minRFScore == maxRFScore) {
+      cout << Timestamp() << "WARNING: random forest min and max scores are the same. "
+          << "No normalization necessary" << endl;
+      return true;
+    }
+    AttributeScores newRFScores;
+    double rfRange = maxRFScore - minRFScore;
+    for (AttributeScoresIt it = maineffectScores.begin(); it != maineffectScores.end(); ++it) {
+      pair<double, string> thisScore = *it;
+      double key = thisScore.first;
+      string val = thisScore.second;
+      newRFScores.push_back(make_pair((key - minRFScore) / rfRange, val));
+    }
+
+    maineffectScores.clear();
+    maineffectScores = newRFScores;
+  }
+  return true;
+}
+
 bool EvaporativeCooling::RunReliefF() {
 	/// postcondition: interactionScores contains the newly-computed scores
 	interactionScores = interactionAlgorithm->ComputeScores();
 	if(interactionScores.size() == 0) {
-		cerr << "ERROR: RunReliefF: No scores computed" << endl;
-		return false;
+		error("ERROR: RunReliefF: No scores computed");
 	}
 
 	// added for rnaSeq analysis - bcw - 8/21/12
