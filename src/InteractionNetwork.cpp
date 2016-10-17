@@ -281,7 +281,7 @@ bool InteractionNetwork::WriteDelimitedFile(string outFilename,
 		}
 	}
   if((matrixType == NET_MATRIX_ADJ) || (matrixType == NET_MATRIX_BOTH)) {
-    outputFileHandle << endl << setiosflags(ios::fixed) << setprecision(8);
+    outputFileHandle << endl << fixed << setprecision(8);
     for(unsigned int i=0; i < adjMatrix.n_cols; ++i) {
       for(unsigned int j=0; j < adjMatrix.n_cols; ++j) {
         if(j) {
@@ -296,7 +296,7 @@ bool InteractionNetwork::WriteDelimitedFile(string outFilename,
   }
   
   if((matrixType == NET_MATRIX_CON) || (matrixType == NET_MATRIX_BOTH)) {
-    outputFileHandle << endl << setiosflags(ios::fixed) << setprecision(8);
+    outputFileHandle << endl << fixed << setprecision(8);
     for(unsigned int i=0; i < connMatrix.n_cols; ++i) {
       for(unsigned int j=0; j < connMatrix.n_cols; ++j) {
         if(j) {

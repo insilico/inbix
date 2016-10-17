@@ -290,17 +290,19 @@ bool EvaporativeCooling::ComputeECScores() {
 		}
 
 		// write scores for each iteration
-		stringstream scoreFilename;
-		scoreFilename << "ec." << iteration << ".scores.dat";
-		ofstream outFile;
-		outFile.open(scoreFilename.str().c_str());
-		if(outFile.bad()) {
-			error("Could not open scores file " + scoreFilename.str() + "for writing");
-		}
-		PP->printLOG(Timestamp() + "Writing ALL EC scores to [" + scoreFilename.str() + "]\n");
-		PrintAllAttributeScores(outFile);
-		outFile.close();
-
+    if(par::do_iterative_write_scores) {
+      stringstream scoreFilename;
+      scoreFilename << "ec.iter." << iteration << ".scores.tab";
+      ofstream outFile;
+      outFile.open(scoreFilename.str().c_str());
+      if(outFile.bad()) {
+        error("Could not open scores file " + scoreFilename.str() + "for writing");
+      }
+      PP->printLOG(Timestamp() + "Writing ALL EC scores to [" + scoreFilename.str() + "]\n");
+      PrintAllAttributeScores(outFile);
+      outFile.close();
+    }
+    
 		// -------------------------------------------------------------------------
 		// remove the worst attributes and iterate
 		PP->printLOG(Timestamp() + "Removing the worst attributes\n");

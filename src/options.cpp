@@ -396,6 +396,7 @@ bool par::ecOptimizeTemp = false;
 unsigned int par::ecNumTarget = 0;
 unsigned int par::ecIterNumToRemove = 0;
 unsigned int par::ecIterPercentToRemove = 0;
+bool par::do_iterative_write_scores = false;
 
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;

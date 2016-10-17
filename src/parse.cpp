@@ -3026,7 +3026,10 @@ void setOptions(CArgs & a) {
     par::do_iterative_removal_ec = true;
 		par::ecIterPercentToRemove = a.value_int("--ec-iter-remove-percent");
   }
-        
+  if(a.find("--ec-iter-write-scores")) {
+    par::do_iterative_write_scores = true;
+  }
+
   // added for Relief-F family of algorithms - bcw - 8/7/16
   if(a.find("--relieff")) {
     par::do_relieff = true;
@@ -4499,6 +4502,7 @@ void setOptions(CArgs & a) {
             << "      --ec-num-target           Target number of attributes iterative removal\n"
             << "      --ec-iter-remove-n        Number to remove per iteration\n"
             << "      --ec-iter-remove-percent  Percent to remove per iteration\n"
+            << "      --ec-iter-write-scores    Write the scores of each iteration\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
