@@ -111,7 +111,8 @@ PlinkInternalsDatasetInstance.cpp EvaporativeCooling.cpp Deseq.cpp Edger.cpp \
 ArgumentHandler.cpp DataChar.cpp Data.cpp DataDouble.cpp DataFloat.cpp \
 ForestClassification.cpp Forest.cpp ForestProbability.cpp RandomForest.cpp \
 ForestRegression.cpp ForestSurvival.cpp TreeClassification.cpp \
-Tree.cpp TreeProbability.cpp TreeRegression.cpp TreeSurvival.cpp utility.cpp
+Tree.cpp TreeProbability.cpp TreeRegression.cpp TreeSurvival.cpp utility.cpp \
+EvaporativeCoolingPrivacy.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h \
 perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h	\
@@ -126,7 +127,8 @@ ReliefSeqController.h EvaporativeCooling.h Deseq.h Edger.h \
 ArgumentHandler.h DataDouble.h Data.h Forest.h ForestRegression.h \
 RandomForest.h globals.h Tree.h TreeRegression.h utility.h DataChar.h \
 DataFloat.h ForestClassification.h ForestProbability.h ForestSurvival.h \
-TreeClassification.h TreeProbability.h TreeSurvival.h version.h
+TreeClassification.h TreeProbability.h TreeSurvival.h version.h \
+EvaporativeCoolingPrivacy.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS

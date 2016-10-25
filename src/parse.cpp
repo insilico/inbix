@@ -3030,6 +3030,20 @@ void setOptions(CArgs & a) {
     par::do_iterative_write_scores = true;
   }
 
+  // added for Evaporative Cooling Privacy algorithm - bcw - 10/20/16
+  if(a.find("--ec-privacy")) {
+    par::do_ec_privacy = true;
+  }
+  if(a.find("--train-file")) {
+    par::trainFile = a.value("--train-file");
+  }
+  if(a.find("--holdout-file")) {
+    par::holdoutFile = a.value("--holdout-file");
+  }
+  if(a.find("--test-file")) {
+    par::testFile = a.value("--test-file");
+  }
+
   // added for Relief-F family of algorithms - bcw - 8/7/16
   if(a.find("--relieff")) {
     par::do_relieff = true;
@@ -4503,6 +4517,11 @@ void setOptions(CArgs & a) {
             << "      --ec-iter-remove-n        Number to remove per iteration\n"
             << "      --ec-iter-remove-percent  Percent to remove per iteration\n"
             << "      --ec-iter-write-scores    Write the scores of each iteration\n"
+            << "\n"
+            << "      --ec-privacy              Privacy-preserving Evaporative Cooling analysis\n"
+            << "      --train-file {file}       Training file for classifier\n"
+            << "      --holdout-file {file}     Holdout file for classifier\n"
+            << "      --test-file {file}        Testing file for classifier\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"

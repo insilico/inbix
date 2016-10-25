@@ -491,6 +491,12 @@ public:
   static unsigned int ecNumTarget;
   static unsigned int ecIterNumToRemove;
   static unsigned int ecIterPercentToRemove;
+
+  // added for Evaporative Cooling Privacy support - bcw - 10/20/16
+  static bool do_ec_privacy;
+  static string trainFile;
+  static string holdoutFile;
+  static string testFile;
   
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;

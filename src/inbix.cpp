@@ -65,6 +65,8 @@
 #include "Deseq.h"
 #include "Edger.h"
 
+#include "EvaporativeCoolingPrivacy.h"
+
 using namespace std;
 using namespace arma;
 using namespace boost;
@@ -1341,6 +1343,15 @@ int main(int argc, char* argv[]) {
 		shutdown();
   }
   
+	/////////////////////////////////////////////////////////////////////////////
+	// Privacy Evaporative Cooling analysis requested - bcw - 10/24/16
+	if(par::do_ec_privacy) {
+		P.printLOG(Timestamp() + "TODO: Privacy Evaporative Cooling analysis\n");
+//    EvaporativeCoolingPrivacy* ecp = new EvaporativeCoolingPrivacy();
+//    delete ecp;
+		shutdown();
+  }
+    
 	/////////////////////////////////////////////////////////////////////////////
 	// Evaporative Cooling analysis requested - bcw - 9/30/16
 	if(par::do_ec) {

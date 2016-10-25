@@ -27,6 +27,8 @@
 #include <time.h>
 
 #include <boost/lexical_cast.hpp>
+#include <armadillo>
+
 //#include <R.h>
 //#include <Rcpp.h>
 //#include <RInside.h>
@@ -50,6 +52,7 @@
 using namespace std;
 using namespace insilico;
 using namespace boost;
+using namespace arma;
 
 Dataset::Dataset() {
 	/// Set defaults.
@@ -1363,6 +1366,23 @@ unsigned int Dataset::GetNumericIndexFromName(string numericName) {
 		}
 	}
 	return INVALID_INDEX;
+}
+
+mat Dataset::GetNumericMatrix() {
+  mat returnMatrix(NumInstances(), NumNumerics());
+  returnMatrix.zeros();
+  	vector<string> instanceIds = GetInstanceIds();
+	for (unsigned int iIdx = 0; iIdx < NumInstances(); iIdx++) {
+		unsigned instanceIndex = 0;
+		GetInstanceIndexForID(instanceIds[iIdx], instanceIndex);
+		/// write continuous attribute values
+		vector<unsigned int> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
+		for (unsigned int nIdx = 0; nIdx < numIndices.size(); nIdx++) {
+			NumericLevel N = instances[instanceIndex]->GetNumeric(numIndices[nIdx]);
+      returnMatrix(iIdx, nIdx) = N;
+    }
+  }
+  return returnMatrix;
 }
 
 unsigned int Dataset::NumClasses() {

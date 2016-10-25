@@ -398,6 +398,12 @@ unsigned int par::ecIterNumToRemove = 0;
 unsigned int par::ecIterPercentToRemove = 0;
 bool par::do_iterative_write_scores = false;
 
+  // added for Evaporative Cooling Privacy support - bcw - 10/20/16
+bool par::do_ec_privacy = false;
+string par::trainFile = "";
+string par::holdoutFile = "";
+string par::testFile = "";
+
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;
 string par::thresholdType = "hard";

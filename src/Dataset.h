@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <climits>
 
+#include <armadillo>
+
 #include "DatasetInstance.h"
 #include "Insilico.h"
 
@@ -317,6 +319,7 @@ public:
    * \return attribute index or INVALID_INDEX
    ****************************************************************************/
   unsigned int GetNumericIndexFromName(std::string numericName);
+  arma::mat GetNumericMatrix();
   /// Normalize numerics by column sums.
   /// Get the number of classes in the data set.
   unsigned int NumClasses();

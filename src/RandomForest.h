@@ -44,14 +44,15 @@ public:
    * Deconstruct an RandomForest algorithm object.
    ****************************************************************************/
   virtual ~RandomForest();
-  bool CreateDefaultForestForPheno();
   AttributeScores ComputeScores() override;
   double GetClassificationError() override;
   void WriteScores(std::string baseFilename) override;
   void WriteScoresInternal();
   // bcw 10/12/16
   bool InitializeData(bool useMask=false) override;
+  double Predict(Dataset* testData);
 private:
+  bool CreateDefaultForestForPheno();
   Forest* forest;
   unsigned int minNodeSize;
   Plink* PP;

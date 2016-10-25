@@ -22,6 +22,7 @@
 
 #include "RandomForest.h"
 #include "AttributeRanker.h"
+#include "Dataset.h"
 // Ranger random forest project integration - bcw - 9/26/16
 #include "DataDouble.h"
 #include "Forest.h"
@@ -69,26 +70,6 @@ RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames):
   }
   
   InitializeData(true);
-}
-
-bool RandomForest::CreateDefaultForestForPheno() {
-  if(forest) delete forest;
-  if(par::bt) {
-    PP->printLOG(Timestamp() + "Creating ForestClassification\n");
-    forest = new ForestClassification;
-  } else {
-    PP->printLOG(Timestamp() + "Creating ForestRegression\n");
-    forest = new ForestRegression;
-  }
-  PP->printLOG(Timestamp() + "Initializing forest with inbix data\n");
-  if(par::bt) {
-    minNodeSize = DEFAULT_MIN_NODE_SIZE_CLASSIFICATION;
-  } else {
-    minNodeSize = DEFAULT_MIN_NODE_SIZE_REGRESSION;
-  }
-  forest->setVerboseOutput(&cout);
-  
-  return true;
 }
 
 bool RandomForest::InitializeData(bool useMask) {
@@ -170,6 +151,12 @@ AttributeScores RandomForest::ComputeScores() {
   return scores;
 }
 
+double RandomForest::Predict(Dataset* testData) {
+  double error = -1;
+  
+  return error;
+}
+
 double RandomForest::GetClassificationError() {
   if(forest) {
     return forest->getOverallPredictionError();
@@ -198,3 +185,22 @@ void RandomForest::WriteScoresInternal() {
   }
 }
 
+bool RandomForest::CreateDefaultForestForPheno() {
+  if(forest) delete forest;
+  if(par::bt) {
+    PP->printLOG(Timestamp() + "Creating ForestClassification\n");
+    forest = new ForestClassification;
+  } else {
+    PP->printLOG(Timestamp() + "Creating ForestRegression\n");
+    forest = new ForestRegression;
+  }
+  PP->printLOG(Timestamp() + "Initializing forest with inbix data\n");
+  if(par::bt) {
+    minNodeSize = DEFAULT_MIN_NODE_SIZE_CLASSIFICATION;
+  } else {
+    minNodeSize = DEFAULT_MIN_NODE_SIZE_REGRESSION;
+  }
+  forest->setVerboseOutput(&cout);
+  
+  return true;
+}
