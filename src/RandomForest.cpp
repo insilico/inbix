@@ -31,7 +31,8 @@
 
 using namespace std;
 
-RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr):
+RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr, bool doPrediction,
+        bool computeImportance):
 	AttributeRanker::AttributeRanker(ds) {
 	dataset = ds;
 	PP->printLOG(Timestamp() + "Random Forest constructor\n");
@@ -49,10 +50,11 @@ RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr):
     shutdown();
   }
 
-  InitializeData(false);
+  InitializeData(doPrediction, false, computeImportance);
 }
 
-RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames):
+RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames
+, bool doPrediction):
 	AttributeRanker::AttributeRanker(ds) {
 	dataset = ds;
 	PP->printLOG(Timestamp() + "Random Forest constructor\n");
@@ -69,10 +71,13 @@ RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames):
     shutdown();
   }
   
-  InitializeData(true);
+  // TODO: subset the data with bestAttributeNames - keep original data
+  
+  
+  InitializeData(doPrediction, true, true);
 }
 
-bool RandomForest::InitializeData(bool useMask) {
+bool RandomForest::InitializeData(bool doPrediction, bool useMask, bool doImportance) {
   // set class variables for reserving memory and other operations
   PP->printLOG(Timestamp() + "Loading data object from inbix internal data structures\n");
   if(!dataset->HasNumerics()) {
@@ -90,6 +95,7 @@ bool RandomForest::InitializeData(bool useMask) {
       error("RandomForest loadFromPlink(&P)");
     }
   }
+  (doImportance)? par::impmeasure = IMP_GINI: par::impmeasure = IMP_NONE;
   try {
     forest->init(par::depvarname, 
             par::memmode, 
@@ -102,7 +108,7 @@ bool RandomForest::InitializeData(bool useMask) {
             par::impmeasure,
             minNodeSize,
             par::statusvarname,
-            par::do_rfprobability, 
+            doPrediction, 
             par::rfreplace,
             par::catvars, 
             par::savemem, 
@@ -151,10 +157,10 @@ AttributeScores RandomForest::ComputeScores() {
   return scores;
 }
 
-double RandomForest::Predict(Dataset* testData) {
-  double error = -1;
-  
-  return error;
+double RandomForest::Predict() {
+  PP->printLOG(Timestamp() + "Running random forest algorithm in PREDICT mode\n");
+  forest->run(par::verbose);
+  return forest->getOverallPredictionError();
 }
 
 double RandomForest::GetClassificationError() {

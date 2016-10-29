@@ -723,13 +723,13 @@ int main(int argc, char* argv[]) {
 	// so do not exit with an error when these conditions are detected.
 	if((P.nl_all == 0) && (P.nlistname.size() == 0) &&
 					(!par::do_modularity) && (!par::do_ranking) &&
-					(!par::do_regain_post) && (!par::sifNetwork)) {
+					(!par::do_regain_post) && (!par::sifNetwork) && (!par::do_ec_privacy)) {
 		error("Stopping as there are no SNPs or numeric attributes "
 						"left for analysis\n");
 	}
 
 	if((P.n == 0) && (!par::do_modularity) && (!par::do_ranking)
-					&& (!par::do_regain_post) && (!par::sifNetwork)) {
+					&& (!par::do_regain_post) && (!par::sifNetwork) && (!par::do_ec_privacy)) {
 		error("Stopping as there are no individuals left for analysis\n");
 	}
 
@@ -1346,9 +1346,21 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// Privacy Evaporative Cooling analysis requested - bcw - 10/24/16
 	if(par::do_ec_privacy) {
-		P.printLOG(Timestamp() + "TODO: Privacy Evaporative Cooling analysis\n");
-//    EvaporativeCoolingPrivacy* ecp = new EvaporativeCoolingPrivacy();
-//    delete ecp;
+		P.printLOG(Timestamp() + "Privacy Evaporative Cooling analysis\n");
+    // load the data sets: train, holdout and test from external sims in R
+    if((par::trainFile == "") || (par::holdoutFile == "") || (par::testFile == "")) {
+      error("Privacy EC requires train, holdout and test files.");
+    }
+    Dataset trainDs;
+    trainDs.LoadPrivacySim(par::trainFile);
+    Dataset holdoutDs;
+    holdoutDs.LoadPrivacySim(par::holdoutFile);
+    Dataset testDs;
+    testDs.LoadPrivacySim(par::testFile);
+    EvaporativeCoolingPrivacy ecp(&trainDs, &holdoutDs, &testDs, PP);
+    if(!ecp.ComputeScores()) {
+      error("Could not create an EvaporativeCoolingPrivacy object");
+    }
 		shutdown();
   }
     

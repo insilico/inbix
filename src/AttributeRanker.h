@@ -53,7 +53,8 @@ public:
 	/// Reset the algorithm.
 	virtual bool ResetForNextIteration() { return true; }
     // bcw 10/12/16
-  virtual bool InitializeData(bool useMask=false) { return true; }
+  virtual bool InitializeData(bool doPrediction, bool useMask=false, 
+                      bool doImportance=true) { return true; }
 protected:
   /// The Dataset on which the ranking algorithm is working.
   Dataset* dataset;

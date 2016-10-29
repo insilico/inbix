@@ -17,40 +17,76 @@
 
 #include "Dataset.h"
 
+enum DATASET_TYPE {
+  TRAIN, 
+  HOLDOUT, 
+  TEST
+};
+
 class EvaporativeCoolingPrivacy {
 public:
   EvaporativeCoolingPrivacy(Dataset* trainset, Dataset* holdoset, 
-                            Dataset* testset, double t0, double tf,
-                            Plink* plinkPtr);
+                            Dataset* testset, Plink* plinkPtr);
   virtual ~EvaporativeCoolingPrivacy();
   bool ComputeScores();
-  bool ComputeScoresTrang();
 private:
-  Plink* PP;
-  Dataset* train;
-  Dataset* holdout;
-  Dataset* test;
-  std::vector<std::string> S_A;
-  arma::mat S_t;
-  arma::mat S_h;
-  arma::mat X_test;
-  std::pair<std::vector<double>, std::vector<double> > ComputeImportance();
-  bool ComputeImportanceInternal();
-  double T_0;
-  double T_f;
-  // max number of removed variables after each iteration
-  uint m;
-  uint d;
-  
-	AttributeScores trainImportance;    // p_t
-	AttributeScores holdoutImportance;  // p_h
-  double randomForestPredictError;
+  bool ComputeInverseImportance();
+  bool ComputeImportance();
+  double DeltaQ();
+  bool ComputeProbabilities();
+  bool GenerateUniformRands();
+  bool EvaporateWorst();
+  double ClassifyAttributeSet(std::vector<std::string> attrs, DATASET_TYPE);
+  bool ComputeBestAttributesErrors();
+  bool UpdateTemperature();
 
+  // PLINK environment Plink object
+  Plink* PP;
+
+  // CONSTANTS
   double Q_EPS;
   uint MAX_TICKS;
   
-  // random distributions
+  // classification data sets
+  Dataset* train;
+  Dataset* holdout;
+  Dataset* test;
+  std::vector<std::string> setOfAllAttributes;
+
+  // importance/quality scores
+	AttributeScores trainImportance;       // q_t
+	AttributeScores holdoutImportance;     // q_h
+	AttributeScores trainInvImportance;    // p_t
+	AttributeScores holdoutInvImportance;  // p_h
+  double delta_q;
+  
+  // temperature schedule
+  double T_0;
+  double T_t;
+  double T_f;
+
+  // algorithm constants
+  uint numAttributes;
+  double probBiological; // probability biological influence
+  uint numInstances;
+  uint maxPerIteration;
+  uint kConstant;
+
+  // evaporation variables
+  std::vector<double> probAttributeSelection;
   std::mt19937_64 engine;  // Mersenne twister random number engine
+  std::vector<double> randUniformProbs;
+  std::vector<std::string> removeAttrs;
+  std::vector<std::string> keepAttrs;
+
+  // classification/prediction errors
+  double randomForestPredictError;
+  double trainError;
+  double holdError;
+  double testError;
+  std::vector<double> trainErrors;
+  std::vector<double> holdoutErrors;
+  std::vector<double> testErrors;
 };
 
 #endif /* EVAPORATIVECOOLINGPRIVACY_H */

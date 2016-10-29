@@ -586,6 +586,12 @@ public:
   bool WriteSnpTiTvInfo(std::string titvFilename);
 	/// Reset instances nearest neighbor information.
 	bool ResetNearestNeighbors();
+  /*************************************************************************//**
+   * Load numerics (continuous attributes) with pheno from a simulation file.
+   * \param [in] filename numerics data filename in Privacy EC format
+   * \return success
+   ****************************************************************************/
+  bool LoadPrivacySim(std::string filename);
 protected:
   /*************************************************************************//**
    * Load SNPs from file using the data set filename.

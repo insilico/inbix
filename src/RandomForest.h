@@ -33,13 +33,16 @@ public:
    * \param [in] ds pointer to a Dataset object
    * \param [in] plinkPtr pointer to a PLINK environment
    ****************************************************************************/
-  RandomForest(Dataset* ds, Plink* plinkPtr);
+  RandomForest(Dataset* ds, Plink* plinkPtr, 
+               bool doPrediction=false, 
+               bool computeImportance=true);
   /*************************************************************************//**
    * Construct an RandomForest algorithm object.
    * \param [in] ds pointer to a Dataset object
    * \param [in] bestAttributeNames best attribute names in the data set to use
    ****************************************************************************/
-  RandomForest(Dataset* ds, std::vector<std::string> bestAttributeNames);
+  RandomForest(Dataset* ds, std::vector<std::string> bestAttributeNames, 
+               bool doPrediction=false);
   /*************************************************************************//**
    * Deconstruct an RandomForest algorithm object.
    ****************************************************************************/
@@ -48,11 +51,10 @@ public:
   double GetClassificationError() override;
   void WriteScores(std::string baseFilename) override;
   void WriteScoresInternal();
-  // bcw 10/12/16
-  bool InitializeData(bool useMask=false) override;
-  double Predict(Dataset* testData);
+  double Predict();
 private:
   bool CreateDefaultForestForPheno();
+  bool InitializeData(bool doPrediction, bool useMaske, bool doImportance) override;
   Forest* forest;
   unsigned int minNodeSize;
   Plink* PP;

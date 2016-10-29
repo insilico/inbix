@@ -3504,6 +3504,139 @@ bool Dataset::LoadNumerics(string filename) {
 	return true;
 }
 
+bool Dataset::LoadPrivacySim(string filename) {
+	numericsFilename = filename;
+	ifstream dataStream(numericsFilename.c_str());
+	if (!dataStream.is_open()) {
+		cerr << "ERROR: Could not open sim data file: " << numericsFilename
+				<< endl;
+		return false;
+	}
+	cout << Timestamp() << "Reading sim data from " << numericsFilename << endl;
+	//  PrintStats();
+
+	// temporary string for reading file lines
+	unsigned int lineNumber = 0;
+	string line;
+	// read the header for variable names
+	getline(dataStream, line);
+	++lineNumber;
+	vector<string> numNames;
+	split(numNames, line);
+	numericsNames.resize(numNames.size() - 1);
+	copy(numNames.begin(), numNames.end() - 1, numericsNames.begin());
+	vector<string>::const_iterator it = numericsNames.begin();
+	unsigned int numIdx = 0;
+	for (; it != numericsNames.end(); ++it) {
+		numericsMask[*it] = numIdx;
+		++numIdx;
+	}
+
+	// if no snp data then need to create instances in this loop - 6/19/11
+	// read each new set of numerics
+	map<string, bool> idsSeen;
+	unsigned int newInstanceIdx = 0;
+	DatasetInstance* tempInstance = 0;
+	unsigned int instanceIndex = 0;
+  uint phenoIdx = numericsNames.size();
+  hasContinuousPhenotypes = false;
+ 	hasNumerics = true;
+	while (getline(dataStream, line)) {
+		++lineNumber;
+		// cout << lineNumber << ": " << line << endl;
+		vector<string> numericsStringVector;
+		split(numericsStringVector, line);
+		// cout << line << endl;
+		if (numericsStringVector.size() < 2) {
+      error("ERROR: sim data file must have at least two columns: "
+            "VAR1 VAR2 ... PHENO");
+		}
+		if (numericsNames.size() != (numericsStringVector.size() - 1)) {
+			cerr
+					<< "ERROR: Number of numeric values read from the sim data file header: ["
+					<< numericsNames.size()
+					<< "] is not equal to the number of numeric"
+					<< " values read [" << (numericsStringVector.size() - 1)
+					<< "] on line: " << lineNumber << " of " << numericsFilename
+					<< endl;
+			return false;
+		}
+    stringstream IDss;
+    IDss << "ind" << lineNumber;
+    string ID = IDss.str();
+		if (!IsLoadableInstanceID(ID)) {
+			cout << Timestamp() << "WARNING: Skipping Numeric ID [" << ID
+					<< "]. "
+					<< "It does not match the data set and/or phenotype file"
+					<< endl;
+			continue;
+		}
+		if (idsSeen.find(ID) == idsSeen.end()) {
+			idsSeen[ID] = true;
+		} else {
+			cout << Timestamp() << "WARNING: Duplicate ID [" << ID
+					<< "] detected and " << "skipped on line [" << lineNumber
+					<< "]" << endl;
+			continue;
+		}
+		// cout << "Numerics ID string from file: " << thisID << endl;
+		numericsIds.push_back(ID);
+    instancesMask[ID] = newInstanceIdx++;
+    tempInstance = new DatasetInstance(this);
+
+		// read up to the last column
+		vector<string>::const_iterator it = numericsStringVector.begin();
+		// add new numeric columns to this instance
+		unsigned int numericsIndex = 0;
+		for (; it != numericsStringVector.end(); it++) {
+			//      cout << "instance " << instanceIndex << ", read from file: " << *it
+			//              << ", numeric value: " << strtod((*it).c_str(), NULL) << endl;
+			NumericLevel thisValue = 0.0;
+			if ((*it == "-9") || (*it == "?")) {
+				thisValue = MISSING_NUMERIC_VALUE;
+				missingNumericValues[ID].push_back(numericsIndex);
+			} else {
+				thisValue = lexical_cast<NumericLevel>(*it);
+			}
+      if(numericsIndex != phenoIdx) {
+        tempInstance->AddNumeric(thisValue);
+      } else {
+        tempInstance->SetClass((ClassLevel) thisValue);
+      }
+			++numericsIndex;
+		}
+		instances.push_back(tempInstance);
+		++instanceIndex;
+	}
+
+	// find the min and max values for each numeric attribute
+	// used in diff/distance calculation metrics
+	vector<NumericLevel> numericColumn;
+	for (unsigned int i = 0; i < NumNumerics(); ++i) {
+		double columnSum = 0.0;
+		GetNumericValues(i, numericColumn);
+		double minElement = *numericColumn.begin();
+		double maxElement = *numericColumn.begin();
+		for (vector<NumericLevel>::const_iterator it = numericColumn.begin();
+				it != numericColumn.end(); ++it) {
+			if ((*it != MISSING_NUMERIC_VALUE) && (*it < minElement)) {
+				minElement = *it;
+			}
+			if ((*it != MISSING_NUMERIC_VALUE) && (*it > maxElement)) {
+				maxElement = *it;
+			}
+			columnSum += *it;
+		}
+		numericsMinMax.push_back(make_pair(minElement, maxElement));
+		numericsSums.push_back(columnSum);
+	}
+
+	cout << Timestamp() << "Read " << NumNumerics() << " sim data attributes"
+			<< endl;
+
+	return true;
+}
+
 bool Dataset::GetNumericValues(unsigned int numericIndex,
 		vector<double>& numericValues) {
 	if (hasNumerics) {

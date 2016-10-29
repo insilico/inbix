@@ -90,8 +90,9 @@ AttributeRanker::AttributeRanker(ds) {
   }
 
   weightByDistanceMethod = par::weightByDistanceMethod;
-    
-  SetK(par::k);
+
+  // default k, in options.h/.cpp
+  k = par::k;
   if(k) {
     cout << Timestamp() << "Number of nearest neighbors: k = " << k << endl;
     // k nearest neighbors and m randomly selected instances

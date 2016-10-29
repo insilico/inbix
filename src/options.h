@@ -491,6 +491,8 @@ public:
   static unsigned int ecNumTarget;
   static unsigned int ecIterNumToRemove;
   static unsigned int ecIterPercentToRemove;
+  static double ecStartTemp;
+  static double ecFinalTemp;
 
   // added for Evaporative Cooling Privacy support - bcw - 10/20/16
   static bool do_ec_privacy;
