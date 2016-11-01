@@ -499,7 +499,7 @@ public:
   static string trainFile;
   static string holdoutFile;
   static string testFile;
-  
+    
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;
   static string thresholdType;

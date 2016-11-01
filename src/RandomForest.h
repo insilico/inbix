@@ -33,7 +33,8 @@ public:
    * \param [in] ds pointer to a Dataset object
    * \param [in] plinkPtr pointer to a PLINK environment
    ****************************************************************************/
-  RandomForest(Dataset* ds, Plink* plinkPtr, 
+  RandomForest(Dataset* ds, 
+               Plink* plinkPtr, 
                bool doPrediction=false, 
                bool computeImportance=true);
   /*************************************************************************//**
@@ -41,7 +42,17 @@ public:
    * \param [in] ds pointer to a Dataset object
    * \param [in] bestAttributeNames best attribute names in the data set to use
    ****************************************************************************/
-  RandomForest(Dataset* ds, std::vector<std::string> bestAttributeNames, 
+  RandomForest(Dataset* ds, 
+               std::vector<std::string> bestAttributeNames, 
+               bool doPrediction=false);
+  /*************************************************************************//**
+   * Construct an RandomForest algorithm object.
+   * \param [in] datasetFilename dataset filename
+   * \param [in] bestAttributeNames best attribute names in the data set to use
+   ****************************************************************************/
+  RandomForest(Dataset* ds, 
+               std::string datasetFilename, 
+               std::vector<std::string> bestAttributeNames, 
                bool doPrediction=false);
   /*************************************************************************//**
    * Deconstruct an RandomForest algorithm object.
@@ -50,7 +61,7 @@ public:
   AttributeScores ComputeScores() override;
   double GetClassificationError() override;
   void WriteScores(std::string baseFilename) override;
-  void WriteScoresInternal();
+  void SaveForest();
   double Predict();
 private:
   bool CreateDefaultForestForPheno();
@@ -58,6 +69,7 @@ private:
   Forest* forest;
   unsigned int minNodeSize;
   Plink* PP;
+  std::string datasetFile;
 };
 
 #endif	/* RANDOMFOREST_H */

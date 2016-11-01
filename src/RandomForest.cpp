@@ -71,53 +71,99 @@ RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames
     shutdown();
   }
   
-  // TODO: subset the data with bestAttributeNames - keep original data
-  
-  
   InitializeData(doPrediction, true, true);
 }
 
+RandomForest::RandomForest(Dataset* ds, string datasetFilename, 
+               vector<string> bestAttributeNames, 
+               bool doPrediction): AttributeRanker(ds)  {
+  dataset = ds;
+	datasetFile = datasetFilename;
+	PP->printLOG(Timestamp() + "Random Forest constructor\n");
+  forest = 0;
+  try {
+    CreateDefaultForestForPheno();
+  } catch (std::exception& e) {
+    cerr << "RandomForest constructor Error: " << e.what() 
+         << " inbix will EXIT now." << std::endl;
+    if(forest) {
+      delete forest;
+      forest = 0;
+    }
+    shutdown();
+  }
+
+  InitializeData(doPrediction, true, true);
+}
+  
 bool RandomForest::InitializeData(bool doPrediction, bool useMask, bool doImportance) {
   // set class variables for reserving memory and other operations
-  PP->printLOG(Timestamp() + "Loading data object from inbix internal data structures\n");
+  PP->printLOG(Timestamp() + "Initializing random forest\n");
   if(!dataset->HasNumerics()) {
     //data = new DataChar();
     error("RandomForest only supports numeric attributes at this time");
   }
   CreateDefaultForestForPheno();
-  DataDouble* data = new DataDouble();
-  if(useMask) {
-    if(data->loadFromDatasetMask(dataset, dataset->GetVariableNames())) {
-      error("RandomForest loadFromDatasetMask(&P)");
-    }
-  } else {
-    if(data->loadFromPlink(PP)) {
-      error("RandomForest loadFromPlink(&P)");
-    }
-  }
+//  DataDouble* data = new DataDouble();
+//  if(useMask) {
+//    if(data->loadFromDatasetMask(dataset, dataset->GetVariableNames())) {
+//      error("RandomForest loadFromDatasetMask(&P)");
+//    }
+//  } else {
+//    if(data->loadFromPlink(PP)) {
+//      error("RandomForest loadFromPlink(&P)");
+//    }
+//  }
   (doImportance)? par::impmeasure = IMP_GINI: par::impmeasure = IMP_NONE;
+  string forestFilename = (doPrediction)? par::output_file_name + ".forest": "";
+  vector<string> alwaysSplitNames;
   try {
-    forest->init(par::depvarname, 
+    forest->initCpp(par::depvarname, 
             par::memmode, 
-            data, 
+            datasetFile, 
             par::mtry, 
             par::output_file_name,
             par::ntree, 
+            &cout,
             0,
             par::nrfthreads, 
+            forestFilename,
             par::impmeasure,
             minNodeSize,
+            "", 
+            alwaysSplitNames, 
             par::statusvarname,
-            doPrediction, 
             par::rfreplace,
             par::catvars, 
             par::savemem, 
             par::splitrule,
+            "",
             par::predall, 
             par::fraction, 
             par::alpha, 
             par::minprop, 
             par::holdout);
+//    forest->init(par::depvarname, 
+//            par::memmode, 
+//            data, 
+//            par::mtry, 
+//            par::output_file_name,
+//            par::ntree, 
+//            0,
+//            par::nrfthreads, 
+//            par::impmeasure,
+//            minNodeSize,
+//            par::statusvarname,
+//            doPrediction, 
+//            par::rfreplace,
+//            par::catvars, 
+//            par::savemem, 
+//            par::splitrule,
+//            par::predall, 
+//            par::fraction, 
+//            par::alpha, 
+//            par::minprop, 
+//            par::holdout);
   } catch (std::exception& e) {
     stringstream msg;
     msg << "RandomForest InitializeData exception: "
@@ -181,11 +227,11 @@ void RandomForest::WriteScores(string baseFilename) {
   }
 }
 
-void RandomForest::WriteScoresInternal() {
+void RandomForest::SaveForest() {
   // safely ignore baseFilename in interface for AttributeRanker
   if(forest) {
     PP->printLOG("Writing forest in Ranger internal format\n");
-    forest->writeOutputInternal();
+    forest->saveToFile();
   } else {
     error("RandomForest::WriteScoresInternal object has not been constructed");
   }

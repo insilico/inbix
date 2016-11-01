@@ -61,9 +61,9 @@ private:
   double delta_q;
   
   // temperature schedule
-  double T_0;
-  double T_t;
-  double T_f;
+  double T_start;
+  double T_current;
+  double T_final;
 
   // algorithm constants
   uint numAttributes;

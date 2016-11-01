@@ -42,8 +42,8 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   numAttributes = trainset->NumVariables();
   // TODO: what is this? 'm' in Trang's code
   maxPerIteration = numAttributes;
-  T_0 = par::ecStartTemp;
-  T_f = par::ecFinalTemp;
+  T_start = par::ecStartTemp;
+  T_final = par::ecFinalTemp;
   kConstant = 1;
 }
 
@@ -57,9 +57,9 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   delta_q = DeltaQ();
   uint tick = 1;
   probAttributeSelection.clear();
-  T_t = T_0;
-  PP->printLOG(Timestamp() + "Starting temperature: " + dbl2str(T_0) + "\n");
-  while((T_t > T_f) && train->NumAttributes()) {
+  T_current = T_start;
+  PP->printLOG(Timestamp() + "Starting temperature: " + dbl2str(T_start) + "\n");
+  while((T_current > T_final) && train->NumVariables()) {
     PP->printLOG(Timestamp() + "time tick = " + int2str(tick) + "\n");
     ComputeProbabilities();
     GenerateUniformRands();
@@ -73,7 +73,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
     DeltaQ();
     // update current temperature T_t
     UpdateTemperature();
-    PP->printLOG(Timestamp() + "New temperature: " + dbl2str(T_t) + "\n");
+    PP->printLOG(Timestamp() + "New temperature: " + dbl2str(T_current) + "\n");
     // tick
     ++tick;
     if(tick > MAX_TICKS) {
@@ -81,7 +81,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
               + int2str(tick) + "\n");
     }
   } // end temperature schedule
-  PP->printLOG(Timestamp() + "Final temperature:              " + dbl2str(T_t) + "\n");
+  PP->printLOG(Timestamp() + "Final temperature:              " + dbl2str(T_current) + "\n");
   PP->printLOG(Timestamp() + "Final kept attributes set size: " + int2str(keepAttrs.size()) + "\n");
   PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy::ComputeScores() END\n");
 
@@ -101,6 +101,7 @@ bool EvaporativeCoolingPrivacy::ComputeInverseImportance() {
            [&train_relief, &train_vars](const map<double, string>::value_type& p) 
            { train_relief.push_back(p.first); train_vars.push_back(p.second); });
   double min_train = *(min_element(train_relief.begin(), train_relief.end()));
+  trainInvImportance.clear();
   for(uint idx=0; idx < train_relief.size(); ++idx) {
     double x = train_relief[idx];
     trainInvImportance.push_back(make_pair(1 / (x - min_train + Q_EPS), 
@@ -117,6 +118,7 @@ bool EvaporativeCoolingPrivacy::ComputeInverseImportance() {
            [&holdo_relief, &holdo_vars](const map<double, string>::value_type& p) 
            { holdo_relief.push_back(p.first); holdo_vars.push_back(p.second); });
   double min_holdo = *min_element(holdo_relief.begin(), holdo_relief.end());
+  holdoutInvImportance.clear();
   for(uint idx=0; idx < holdo_relief.size(); ++idx) {
     double x = holdo_relief[idx];
     holdoutInvImportance.push_back(make_pair(1 / (x - min_holdo + Q_EPS), 
@@ -131,34 +133,33 @@ double EvaporativeCoolingPrivacy::DeltaQ() {
                 "holdout inverse importance scores\n");
   AttributeScoresCIt trainIt = trainInvImportance.begin();
   AttributeScoresCIt holdoIt = holdoutInvImportance.begin();
-  vector<double> diff_scores(trainInvImportance.size());
-  uint idx = 0;
-  for(idx=0; trainIt != trainInvImportance.end(); ++trainIt, ++holdoIt, ++idx) {
+  vector<double> diffScores;
+  for(; trainIt != trainInvImportance.end(); ++trainIt, ++holdoIt) {
     // FIXME! use key of iterator to lookup in other map
-    double abs_diff = abs((*trainIt).first - (*holdoIt).first);
-    diff_scores[idx] = abs_diff;
+    double absDiff = fabs((*trainIt).first - (*holdoIt).first);
+    diffScores.push_back(absDiff);
   }
-  return *max_element(diff_scores.begin(), diff_scores.end());
+  return *max_element(diffScores.begin(), diffScores.end());
 }
 
 bool EvaporativeCoolingPrivacy::ComputeProbabilities() {
     PP->printLOG(Timestamp() + "Computing probabilities of attributes P(a)\n");
     probAttributeSelection.clear();
-    probAttributeSelection.resize((trainImportance.size()));
-    AttributeScoresCIt trainIt = trainImportance.begin();
-    for(uint idx=0; trainIt != trainImportance.end(); ++trainIt, ++idx) {
+    AttributeScoresCIt trainIt = trainInvImportance.begin();
+    for(; trainIt != trainInvImportance.end(); ++trainIt) {
       double PA = (*trainIt).first;
-      probAttributeSelection[idx] = exp(-(PA * PA) / (2 * delta_q * kConstant * T_t));
+      probAttributeSelection.push_back(exp(-(PA * PA) / 
+        (2 * delta_q * kConstant * T_current)));
     }
     return true;
 }
 
 bool EvaporativeCoolingPrivacy::GenerateUniformRands() {
+  PP->printLOG(Timestamp() + "Generating uniform probabilities in (0, 1)\n");
   uniform_real_distribution<double> runif(0, 1);
-      // generate random uniform probabilities
+  // generate random uniform probabilities
   randUniformProbs.clear();
-  randUniformProbs.resize(trainImportance.size());
-  for(uint prIdx=0; prIdx <- trainImportance.size(); ++ prIdx) {
+  for(uint prIdx=0; prIdx < trainInvImportance.size(); ++prIdx) {
     randUniformProbs.push_back(runif(engine));
   }
   return true;
@@ -168,12 +169,15 @@ bool EvaporativeCoolingPrivacy::EvaporateWorst() {
   PP->printLOG(Timestamp() + "Evaporating the worst attributes\n");
   for(uint pIdx=0; pIdx < probAttributeSelection.size(); ++pIdx) {
     string thisVar = setOfAllAttributes[pIdx];
+    if(par::verbose) PP->printLOG(Timestamp() + thisVar);
     if(probAttributeSelection[pIdx] > randUniformProbs[pIdx]) {
+      if(par::verbose) PP->printLOG(Timestamp() + " => remove\n");
       train->MaskRemoveVariable(thisVar);
       holdout->MaskRemoveVariable(thisVar);
       test->MaskRemoveVariable(thisVar);
       removeAttrs.push_back(thisVar);
     } else {
+      if(par::verbose) PP->printLOG(Timestamp() + " => keep\n");
       keepAttrs.push_back(thisVar);
     }
   }
@@ -183,14 +187,14 @@ bool EvaporativeCoolingPrivacy::EvaporateWorst() {
 bool EvaporativeCoolingPrivacy::UpdateTemperature() {
   PP->printLOG(Timestamp() + "Updating temperature\n");
   double T_t_sum = 0;
-    AttributeScoresCIt trainIt = trainInvImportance.begin();
-    for(uint idx=0; trainIt != trainInvImportance.end(); ++trainIt, ++idx) {
-      double PA = (*trainIt).first;
-      T_t_sum += ((PA * PA) / ( kConstant * delta_q));
-    }
-    T_t = (T_t_sum / trainInvImportance.size());
-    
-    return true;
+  AttributeScoresCIt trainIt = trainInvImportance.begin();
+  for(uint idx=0; trainIt != trainInvImportance.end(); ++trainIt, ++idx) {
+    double PA = (*trainIt).first;
+    T_t_sum += ((PA * PA) / ( kConstant * delta_q));
+  }
+  T_current = (T_t_sum / trainInvImportance.size());
+
+  return true;
 }
 
 bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
@@ -215,18 +219,19 @@ double EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
   switch(dataType) {
     case TRAIN:
       PP->printLOG(Timestamp() + "Classify best attributes for TRAINING data\n");
-      randomForest = new RandomForest(train, attrs, false);
+      randomForest = new RandomForest(train, par::trainFile, attrs, false);
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
+      randomForest->SaveForest();
       break;
     case HOLDOUT:
       PP->printLOG(Timestamp() + "Classify best attributes for HOLDOUT data\n");
-      randomForest = new RandomForest(train, attrs, false);
+      randomForest = new RandomForest(holdout, par::holdoutFile, attrs, false);
       retError = randomForest->GetClassificationError();
       break;
     case TEST:
       PP->printLOG(Timestamp() + "Predicting best attributes for TESTING data\n");
-      randomForest = new RandomForest(test, attrs, true);
+      randomForest = new RandomForest(test, par::testFile, attrs, true);
       retError = randomForest->Predict();
       break;
     default:

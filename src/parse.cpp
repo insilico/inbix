@@ -2997,6 +2997,9 @@ void setOptions(CArgs & a) {
   if(a.find("--rfthreads")) {
 		par::nrfthreads = a.value_int("--rfthreads");
   }
+  if(a.find("--depvarname")) {
+		par::depvarname = a.value("--depvarname");
+  }
 
   // added for Evaporative Cooling algorithm - bcw - 9/29/16
   if(a.find("--ec")) {
@@ -4507,6 +4510,7 @@ void setOptions(CArgs & a) {
             << "      --dump-titv-file          File for dumping SNP transition/transversion information\n"
             << "\n"
             << "      --randomforest            Perform a random forest classification/regression\n"
+            << "      --depvarname              Dependent variable name (default=Class)\n"
             << "      --ntree                   Number of trees in the forest (500)\n"
             << "      --mtry                    Number of variables to possibly split at in each node (sqrt(N))\n"
             << "      --memmode                 Memory mode (0=double/default, 1=float, 2=char)\n"
