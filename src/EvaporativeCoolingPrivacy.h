@@ -59,19 +59,19 @@ private:
 	AttributeScores holdoutImportance;     // q_h
 	AttributeScores trainInvImportance;    // p_t
 	AttributeScores holdoutInvImportance;  // p_h
-  double delta_q;
+  double deltaQ;
   
   // temperature schedule
-  double T_start;
-  double T_current;
-  double T_final;
+  double startTemp;
+  double currentTemp;
+  double finalTemp;
 
   // algorithm constants
   uint numAttributes;
-  double probBiological; // probability biological influence
+  uint minRemainAttributes;
   uint numInstances;
-  uint maxPerIteration;
   uint kConstant;
+  double probBiological; // probability biological influence
 
   // evaporation variables
   std::vector<double> selectProbabilty;
