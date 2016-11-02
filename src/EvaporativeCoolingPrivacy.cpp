@@ -38,7 +38,8 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   train = trainset;
   holdout = holdoset;
   test = testset;
-  setOfAllAttributes = trainset->GetVariableNames();
+  curVarNames = trainset->GetVariableNames();
+  curVarMap = trainset->MaskGetAttributeMask(NUMERIC_TYPE);
   numAttributes = trainset->NumVariables();
   // TODO: what is this? 'm' in Trang's code
   maxPerIteration = numAttributes;
@@ -56,21 +57,25 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   ComputeInverseImportance();
   delta_q = DeltaQ();
   uint tick = 1;
-  probAttributeSelection.clear();
+  selectProbabilty.clear();
   T_current = T_start;
   PP->printLOG(Timestamp() + "Starting temperature: " + dbl2str(T_start) + "\n");
-  while((T_current > T_final) && train->NumVariables()) {
+  while((T_current > T_final) && (train->NumVariables() > 1)) {
+    PP->printLOG(Timestamp() + "--------------------------------------------\n");
     PP->printLOG(Timestamp() + "time tick = " + int2str(tick) + "\n");
+    curVarNames = train->GetVariableNames();
+    curVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
     ComputeProbabilities();
     GenerateUniformRands();
     EvaporateWorst();
     PP->printLOG(Timestamp() + "Keeping : " + int2str(keepAttrs.size()) + "\n");
     PP->printLOG(Timestamp() + "Removing: " + int2str(removeAttrs.size()) + "\n");
+    PP->printLOG(Timestamp() + "Dataset : " + int2str(train->NumVariables()) + "\n");
     ComputeBestAttributesErrors();
     // recompute p_t, p_h and delta_t
     PP->printLOG(Timestamp() + "Recomputing p_t, p_h and delta_t\n");
     ComputeInverseImportance();
-    DeltaQ();
+    delta_q = DeltaQ();
     // update current temperature T_t
     UpdateTemperature();
     PP->printLOG(Timestamp() + "New temperature: " + dbl2str(T_current) + "\n");
@@ -144,12 +149,12 @@ double EvaporativeCoolingPrivacy::DeltaQ() {
 
 bool EvaporativeCoolingPrivacy::ComputeProbabilities() {
     PP->printLOG(Timestamp() + "Computing probabilities of attributes P(a)\n");
-    probAttributeSelection.clear();
+    selectProbabilty.clear();
     AttributeScoresCIt trainIt = trainInvImportance.begin();
+    double denom = 2.0 * delta_q * kConstant * T_current;
     for(; trainIt != trainInvImportance.end(); ++trainIt) {
       double PA = (*trainIt).first;
-      probAttributeSelection.push_back(exp(-(PA * PA) / 
-        (2 * delta_q * kConstant * T_current)));
+      selectProbabilty.push_back(exp(-(PA * PA) / denom));
     }
     return true;
 }
@@ -166,11 +171,15 @@ bool EvaporativeCoolingPrivacy::GenerateUniformRands() {
 }
 
 bool EvaporativeCoolingPrivacy::EvaporateWorst() {
+  removeAttrs.clear();
+  keepAttrs.clear();
   PP->printLOG(Timestamp() + "Evaporating the worst attributes\n");
-  for(uint pIdx=0; pIdx < probAttributeSelection.size(); ++pIdx) {
-    string thisVar = setOfAllAttributes[pIdx];
-    if(par::verbose) PP->printLOG(Timestamp() + thisVar);
-    if(probAttributeSelection[pIdx] > randUniformProbs[pIdx]) {
+  for(uint pIdx=0; pIdx < selectProbabilty.size(); ++pIdx) {
+    string thisVar = curVarNames[pIdx];
+    uint thisVarIdx = curVarMap[thisVar];
+    //if(par::verbose) PP->printLOG(Timestamp() + thisVar + " (" + int2str(thisVarIdx) + ")\n");
+    PP->printLOG(Timestamp() + thisVar + " (" + int2str(thisVarIdx) + ")\n");
+    if(selectProbabilty[pIdx] > randUniformProbs[pIdx]) {
       if(par::verbose) PP->printLOG(Timestamp() + " => remove\n");
       train->MaskRemoveVariable(thisVar);
       holdout->MaskRemoveVariable(thisVar);
@@ -206,9 +215,9 @@ bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
   holdoutErrors.push_back(holdError);
   testError = ClassifyAttributeSet(keepAttrs, TEST);
   testErrors.push_back(testError);
-  PP->printLOG("train:   " + dbl2str(trainError) + "\n" +
-               "holdout: " + dbl2str(holdError) + "\n" +
-               "test:    " + dbl2str(testError) + "\n");
+  PP->printLOG(Timestamp() + "* train:   " + dbl2str(trainError) + "\n" +
+               Timestamp() + "* holdout: " + dbl2str(holdError) + "\n" +
+               Timestamp() + "* test:    " + dbl2str(testError) + "\n");
 }
 
 double EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs, 
@@ -227,6 +236,7 @@ double EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
     case HOLDOUT:
       PP->printLOG(Timestamp() + "Classify best attributes for HOLDOUT data\n");
       randomForest = new RandomForest(holdout, par::holdoutFile, attrs, false);
+      randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
       break;
     case TEST:
@@ -237,7 +247,6 @@ double EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
     default:
       error("EvaporativeCoolingPrivacy::ClassifyAttributeSet Dataset type no recognized");
   }
-  
   delete randomForest;
   
   return retError;

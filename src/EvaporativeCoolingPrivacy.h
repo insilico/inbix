@@ -51,8 +51,9 @@ private:
   Dataset* train;
   Dataset* holdout;
   Dataset* test;
-  std::vector<std::string> setOfAllAttributes;
-
+  std::vector<std::string> curVarNames;
+  std::map<std::string, unsigned int> curVarMap;
+  
   // importance/quality scores
 	AttributeScores trainImportance;       // q_t
 	AttributeScores holdoutImportance;     // q_h
@@ -73,7 +74,7 @@ private:
   uint kConstant;
 
   // evaporation variables
-  std::vector<double> probAttributeSelection;
+  std::vector<double> selectProbabilty;
   std::mt19937_64 engine;  // Mersenne twister random number engine
   std::vector<double> randUniformProbs;
   std::vector<std::string> removeAttrs;

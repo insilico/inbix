@@ -1351,6 +1351,7 @@ int main(int argc, char* argv[]) {
     if((par::trainFile == "") || (par::holdoutFile == "") || (par::testFile == "")) {
       error("Privacy EC requires train, holdout and test files.");
     }
+    P.SNP2Ind();
     Dataset trainDs;
     trainDs.LoadPrivacySim(par::trainFile);
     Dataset holdoutDs;
