@@ -3038,6 +3038,9 @@ void setOptions(CArgs & a) {
   if(a.find("--ec-final-temp")) {
     par::ecFinalTemp = a.value_double("--ec-final-temp");
   }
+  if(a.find("--ec-tau")) {
+    par::ecTau = a.value_double("--ec-tau");
+  }
 
   // added for Evaporative Cooling Privacy algorithm - bcw - 10/20/16
   if(a.find("--ec-privacy")) {
@@ -4529,6 +4532,7 @@ void setOptions(CArgs & a) {
             << "      --ec-iter-write-scores    Write the scores of each iteration\n"
             << "      --ec-start-temp           Starting temperature\n"
             << "      --ec-final-temp           Final temperature\n"
+            << "      --ec-tau                  Tau\n"
             << "\n"
             << "      --ec-privacy              Privacy-preserving Evaporative Cooling analysis\n"
             << "      --train-file {file}       Training file for classifier\n"

@@ -493,6 +493,7 @@ public:
   static unsigned int ecIterPercentToRemove;
   static double ecStartTemp;
   static double ecFinalTemp;
+  static double ecTau;
 
   // added for Evaporative Cooling Privacy support - bcw - 10/20/16
   static bool do_ec_privacy;

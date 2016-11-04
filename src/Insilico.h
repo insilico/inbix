@@ -50,6 +50,14 @@ typedef std::vector<std::pair<double, std::string> > AttributeScores;
 typedef AttributeScores::iterator AttributeScoresIt;
 /// attribute scores constant iterator - sorted by score key
 typedef AttributeScores::const_iterator AttributeScoresCIt;
+// functions for STL container sort comparisons
+bool scoresSortAsc(const std::pair<double, std::string>& p1,
+                   const std::pair<double, std::string>& p2);
+bool scoresSortAscByName(const std::pair<double, std::string>& p1,
+                         const std::pair<double, std::string>& p2);
+bool scoresSortDesc(const std::pair<double, std::string>& p1,
+                    const std::pair<double, std::string>& p2);
+
 
 /// C O N S T A N T S
 
@@ -323,13 +331,5 @@ template <class T> void PrintVector(std::vector<T> vec, std::string title) {
 
 /// protected log function returns 0 for 0
 double ProtectedLog(double x);
-
-// functions for STL container sort comparisons
-bool scoresSortAsc(const std::pair<double, std::string>& p1,
-                   const std::pair<double, std::string>& p2);
-bool scoresSortAscByName(const std::pair<double, std::string>& p1,
-                         const std::pair<double, std::string>& p2);
-bool scoresSortDesc(const std::pair<double, std::string>& p1,
-                    const std::pair<double, std::string>& p2);
 
 #endif	/* INSILICO_H */

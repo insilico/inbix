@@ -403,8 +403,9 @@ bool par::do_ec_privacy = false;
 string par::trainFile = "";
 string par::holdoutFile = "";
 string par::testFile = "";
-double par::ecStartTemp = 10;
+double par::ecStartTemp = 1000;
 double par::ecFinalTemp = 1;
+double par::ecTau = 100;
 
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;

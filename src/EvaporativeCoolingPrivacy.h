@@ -29,23 +29,28 @@ public:
                             Dataset* testset, Plink* plinkPtr);
   virtual ~EvaporativeCoolingPrivacy();
   bool ComputeScores();
+  void PrintState();
 private:
   bool ComputeInverseImportance();
   bool ComputeImportance();
-  double DeltaQ();
-  bool ComputeProbabilities();
-  bool GenerateUniformRands();
-  bool EvaporateWorst();
+  bool ComputeDeltaQ();
+  bool ComputeAttributeProbabilities();
+  bool GenerateRandomUniformProbabilities();
+  bool EvaporateWorstAttributes();
+  bool EvaporateWorstAttribute();
   double ClassifyAttributeSet(std::vector<std::string> attrs, DATASET_TYPE);
   bool ComputeBestAttributesErrors();
   bool UpdateTemperature();
 
+  // Mersenne twister random number engine - based Mersenne prime 2^19937 − 1
+  std::mt19937_64 engine;  
   // PLINK environment Plink object
   Plink* PP;
-
   // CONSTANTS
   double Q_EPS;
-  uint MAX_TICKS;
+  uint MAX_ITERATIONS;
+  
+  uint iteration;
   
   // classification data sets
   Dataset* train;
@@ -60,13 +65,17 @@ private:
 	AttributeScores trainInvImportance;    // p_t
 	AttributeScores holdoutInvImportance;  // p_h
   double deltaQ;
+  double threshold;
+  double tolerance;
   
   // temperature schedule
+  uint numToRemovePerIteration;
   double startTemp;
   double currentTemp;
   double finalTemp;
-
-  // algorithm constants
+  double tau;
+  
+  // algorithm
   uint numAttributes;
   uint minRemainAttributes;
   uint numInstances;
@@ -74,8 +83,10 @@ private:
   double probBiological; // probability biological influence
 
   // evaporation variables
-  std::vector<double> selectProbabilty;
-  std::mt19937_64 engine;  // Mersenne twister random number engine
+  std::vector<double> attributeProbabilty;
+  std::vector<double> summedProbabilities;
+  std::vector<double> scaledSummedProbabilities;
+  std::vector<double> cummulativeProbabilities;
   std::vector<double> randUniformProbs;
   std::vector<std::string> removeAttrs;
   std::vector<std::string> keepAttrs;
