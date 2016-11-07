@@ -235,6 +235,24 @@ void ForestClassification::writeConfusionFile() {
   *verbose_out << "Saved confusion matrix to file " << filename << "." << std::endl;
 }
 
+std::vector<double> ForestClassification::getPredictionValues() {
+  // Open prediction file for reading
+  std::string filename = output_prefix + ".prediction";
+  std::ifstream infile;
+  infile.open(filename, std::ios::in);
+  if (!infile.good()) {
+    throw std::runtime_error("Could not read prediction file: " + filename + ".");
+  }
+  std::vector<double> retVals;
+  std::string line;
+  // remove header
+  getline(infile, line);
+  while(getline(infile, line)) {
+    retVals.push_back(stoi(line, nullptr, 0));
+  }
+  return retVals;
+}
+
 void ForestClassification::writePredictionFile() {
 
   // Open prediction file for writing

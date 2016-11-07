@@ -26,6 +26,7 @@
 #include "ArmadilloFuncs.h"
 
 using namespace std;
+using namespace arma;
 
 EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset, 
         Dataset* holdoset, Dataset* testset, Plink* plinkPtr) {
@@ -288,6 +289,7 @@ bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
   
   testError = ClassifyAttributeSet(keepAttrs, TEST);
   testErrors.push_back(testError);
+  
   PP->printLOG(Timestamp() + "* train:   " + dbl2str(trainError) + "\n" +
                Timestamp() + "* holdout: " + dbl2str(holdError) + "\n" +
                Timestamp() + "* test:    " + dbl2str(testError) + "\n");
@@ -298,6 +300,9 @@ double EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
 
   double retError = 1.0;
   RandomForest* randomForest = 0;
+  mat confusion(2, 2);
+  vector<double> predictions;
+  vector<ClassLevel> classes;
   switch(dataType) {
     case TRAIN:
       PP->printLOG(Timestamp() + "Classify best attributes for TRAINING data\n");
@@ -315,8 +320,7 @@ double EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
     case TEST:
       PP->printLOG(Timestamp() + "Predicting best attributes for TESTING data\n");
       randomForest = new RandomForest(test, par::testFile, attrs, true);
-      randomForest->Predict();
-      retError = randomForest->GetClassificationError();
+      retError = randomForest->Predict();
       break;
     default:
       error("EvaporativeCoolingPrivacy::ClassifyAttributeSet Dataset type no recognized");

@@ -50,7 +50,7 @@ public:
   const std::vector<double>& getClassValues() const {
     return class_values;
   }
-
+  std::vector<double> getPredictionValues() override;
 protected:
   void initInternal(std::string status_variable_name) override;
   void growInternal() override;

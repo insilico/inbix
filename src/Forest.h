@@ -115,6 +115,15 @@ public:
   const std::vector<std::vector<double> >& getPredictions() const {
     return predictions;
   }
+  virtual std::vector<double> getPredictionValues() {
+    std::vector<double> retVals;
+    for (size_t i = 0; i < predictions.size(); ++i) {
+      for (size_t j = 0; j < predictions[i].size(); ++j) {
+        retVals.push_back(predictions[i][j]);
+      }
+    }
+    return retVals;
+  }
   size_t getDependentVarId() const {
     return dependent_varID;
   }
