@@ -51,10 +51,11 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   kConstant = 1;
   // Trang: larger tau takes longer to get to Tmin (finalTemp)
   // > tau <- d^2/2 # larger tau takes longer to get to Tmin
-  tau = (numAttributes * numAttributes) / 2.0; 
+  // tau = (numAttributes * numAttributes) / 2.0; 
+  tau = par::ecTau;
   numToRemovePerIteration = 1;
-  threshold = 1 / sqrt(numInstances);
-  tolerance = 0.2 / sqrt(numInstances);
+  threshold = 4.0 / sqrt(numInstances);
+  tolerance = 1.0 / sqrt(numInstances);
   iteration = 0;
   PrintState();
 }
@@ -88,7 +89,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
     }
     PP->printLOG(Timestamp() + "--------------------------------------------\n");
     PP->printLOG(Timestamp() + "iteration = " + int2str(iteration) + "\n");
-    PrintState();
+    // PrintState();
     curVarNames = train->GetVariableNames();
     curVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
     // recompute p_t, p_h and delta_t
@@ -98,7 +99,6 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
     ComputeDeltaQ();
     ComputeAttributeProbabilities();
     GenerateRandomUniformProbabilities();
-    // EvaporateWorstAttribute();
     EvaporateWorstAttributes();
     PP->printLOG(Timestamp() + "Keeping : " + int2str(keepAttrs.size()) + "\n");
     PP->printLOG(Timestamp() + "Removing: " + int2str(removeAttrs.size()) + "\n");
@@ -128,7 +128,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 
 void EvaporativeCoolingPrivacy::PrintState() {
   cout << "CURRENT STATE" << endl;
-  cout << "Q_EPS:              " << Q_EPS << endl;
+  //cout << "Q_EPS:              " << Q_EPS << endl;
   cout << "iteration:          " << iteration << endl;
   cout << "deltaQ:             " << deltaQ << endl;
   cout << "threshold:          " << threshold << endl;
@@ -169,7 +169,6 @@ bool EvaporativeCoolingPrivacy::ComputeDeltaQ() {
 //  AttributeScoresCIt trainIt = trainInvImportance.begin();
 //  AttributeScoresCIt holdoIt = holdoutInvImportance.begin();
   vector<double> diffScores;
-//  for(; trainIt != trainInvImportance.end(); ++trainIt, ++holdoIt) {
   for(; trainIt != trainImportance.end(); ++trainIt, ++holdoIt) {
     // FIXME! use key of iterator to lookup in other map
     double absDiff = fabs((*trainIt).first - (*holdoIt).first);
@@ -342,7 +341,7 @@ bool EvaporativeCoolingPrivacy::UpdateTemperature() {
 //  currentTemp = (T_t_sum / trainInvImportance.size());
   // update 11/1/16 from Trang:
   // myT <- myT*exp(-i/tau)
-  currentTemp = currentTemp * exp(-iteration / tau);
+  currentTemp = currentTemp * exp(-1 / tau);
   
   return true;
 }
