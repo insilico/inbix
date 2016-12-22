@@ -3032,28 +3032,37 @@ void setOptions(CArgs & a) {
   if(a.find("--ec-iter-write-scores")) {
     par::do_iterative_write_scores = true;
   }
-  if(a.find("--ec-start-temp")) {
-    par::ecStartTemp = a.value_double("--ec-start-temp");
-  }
-  if(a.find("--ec-final-temp")) {
-    par::ecFinalTemp = a.value_double("--ec-final-temp");
-  }
-  if(a.find("--ec-tau")) {
-    par::ecTau = a.value_double("--ec-tau");
-  }
 
   // added for Evaporative Cooling Privacy algorithm - bcw - 10/20/16
   if(a.find("--ec-privacy")) {
     par::do_ec_privacy = true;
   }
-  if(a.find("--train-file")) {
-    par::trainFile = a.value("--train-file");
+  if(a.find("--ec-privacy-train-file")) {
+    par::ecPrivacyTrainFile = a.value("--ec-privacy-train-file");
   }
-  if(a.find("--holdout-file")) {
-    par::holdoutFile = a.value("--holdout-file");
+  if(a.find("--ec-privacy-holdout-file")) {
+    par::ecPrivacyHoldoutFile = a.value("--ec-privacy-holdout-file");
   }
-  if(a.find("--test-file")) {
-    par::testFile = a.value("--test-file");
+  if(a.find("--ec-privacy-test-file")) {
+    par::ecPrivacyTestFile = a.value("--ec-privacy-test-file");
+  }
+  if(a.find("--ec-privacy-start-temp")) {
+    par::ecPrivacyStartTemp = a.value_double("--ec-privacy-start-temp");
+  }
+  if(a.find("--ec-privacy-final-temp")) {
+    par::ecPrivacyFinalTemp = a.value_double("--ec-privacy-final-temp");
+  }
+  if(a.find("--ec-privacy-tau")) {
+    par::ecPrivacyTau = a.value_double("--ec-privacy-tau");
+  }
+  if(a.find("--ec-privacy-update-frequency")) {
+		par::ecPrivacyUpdateFrequency = a.value_int("--ec-privacy-update-frequency");
+  }
+  if(a.find("--ec-privacy-remove-per-iter")) {
+		par::ecPrivacyRemovePerIteration = a.value_int("--ec-privacy-remove-per-iter");
+  }
+  if(a.find("--ec-privacy-min-vars")) {
+		par::ecPrivacyMinVars = a.value_int("--ec-privacy-min-vars");
   }
 
   // added for Relief-F family of algorithms - bcw - 8/7/16
@@ -4530,14 +4539,17 @@ void setOptions(CArgs & a) {
             << "      --ec-iter-remove-n        Number to remove per iteration\n"
             << "      --ec-iter-remove-percent  Percent to remove per iteration\n"
             << "      --ec-iter-write-scores    Write the scores of each iteration\n"
-            << "      --ec-start-temp           Starting temperature\n"
-            << "      --ec-final-temp           Final temperature\n"
-            << "      --ec-tau                  Tau\n"
             << "\n"
             << "      --ec-privacy              Privacy-preserving Evaporative Cooling analysis\n"
-            << "      --train-file {file}       Training file for classifier\n"
-            << "      --holdout-file {file}     Holdout file for classifier\n"
-            << "      --test-file {file}        Testing file for classifier\n"
+            << "      --ec-privacy-train-file   Privacy EC training file for classifier\n"
+            << "      --ec-privacy-holdout-file Privacy EC holdout file for classifier\n"
+            << "      --ec-privacy-test-file    Privacy EC testing file for classifier\n"
+            << "      --ec-privacy-start-temp   Privacy EC starting temperature\n"
+            << "      --ec-privacy-final-temp   Privacy EC final temperature\n"
+            << "      --ec-privacy-tau          Privacy EC tau\n"
+            << "      --ec-privacy-update-frequency Privacy EC scores updated every frequency iterations\n"
+            << "      --ec-privacy-remove-per-iter  Privacy EC  number of variables to remove per iteration\n"
+            << "      --ec-privacy-min-vars     Privacy EC minimum number of variables to continue iterations\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"

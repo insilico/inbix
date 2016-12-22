@@ -18,11 +18,10 @@
 #include "stats.h"
 
 #include "ArmadilloFuncs.h"
+#include "Insilico.h"
 
 using namespace arma;
 using namespace std;
-
-extern Plink* PP;
 
 // differential coexpression
 bool armaDcgain(mat& results, mat& pvals) {

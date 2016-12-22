@@ -23,7 +23,12 @@
 #include <cfloat>
 #include <climits>
 
+// forward reference to the Dataset class; avoid large inclusion here
 class Dataset;
+
+// PLINK interface pointer
+#include "plink.h"
+extern Plink* PP;
 
 /// T Y P E D E F S
 
@@ -34,30 +39,29 @@ typedef double NumericLevel;
 /// type of instance class labels
 typedef int ClassLevel;
 
+typedef std::pair<double, std::string> ScoreVarPair;
+typedef std::pair<std::string, double> VarScorePair;
+
 /// distance pair type: distance, instance ID
-typedef std::pair<double, std::string> DistancePair;
+typedef ScoreVarPair DistancePair;
 /// vector of distance pairs represents distances to nearest neighbors
 typedef std::vector<DistancePair> DistancePairs;
 /// distance pairs iterator
 typedef DistancePairs::const_iterator DistancePairsIt;
 
-/// Configuration map as an alternative to Boost::program_options
+/// Configuration map as an alternative to inbix parse.cpp
 typedef std::map<std::string, std::string> ConfigMap;
 
 /// attribute scores - sorted by score key
-typedef std::vector<std::pair<double, std::string> > AttributeScores;
+typedef std::vector<ScoreVarPair > AttributeScores;
 /// attribute scores iterator - sorted by score key
 typedef AttributeScores::iterator AttributeScoresIt;
 /// attribute scores constant iterator - sorted by score key
 typedef AttributeScores::const_iterator AttributeScoresCIt;
 // functions for STL container sort comparisons
-bool scoresSortAsc(const std::pair<double, std::string>& p1,
-                   const std::pair<double, std::string>& p2);
-bool scoresSortAscByName(const std::pair<double, std::string>& p1,
-                         const std::pair<double, std::string>& p2);
-bool scoresSortDesc(const std::pair<double, std::string>& p1,
-                    const std::pair<double, std::string>& p2);
-
+bool scoresSortAsc(const ScoreVarPair& p1, const ScoreVarPair& p2);
+bool scoresSortAscByName(const ScoreVarPair& p1, const ScoreVarPair& p2);
+bool scoresSortDesc(const ScoreVarPair& p1, const ScoreVarPair& p2);
 
 /// C O N S T A N T S
 

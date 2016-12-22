@@ -400,12 +400,15 @@ bool par::do_iterative_write_scores = false;
 
   // added for Evaporative Cooling Privacy support - bcw - 10/20/16
 bool par::do_ec_privacy = false;
-string par::trainFile = "";
-string par::holdoutFile = "";
-string par::testFile = "";
-double par::ecStartTemp = 0.01;
-double par::ecFinalTemp = 0.000001;
-double par::ecTau = 100;
+string par::ecPrivacyTrainFile = "";
+string par::ecPrivacyHoldoutFile = "";
+string par::ecPrivacyTestFile = "";
+double par::ecPrivacyStartTemp = 0.01;
+double par::ecPrivacyFinalTemp = 0.000001;
+double par::ecPrivacyTau = 100;
+uint par::ecPrivacyUpdateFrequency = 50;
+unsigned int par::ecPrivacyRemovePerIteration = 1;
+unsigned int par::ecPrivacyMinVars = 2;
 
 // added for recursive indirect path modularity support - bcw - 5/31/16
 bool par::do_ripm = false;

@@ -27,10 +27,10 @@ public:
   /// Destruct all dynamically allocated memory.
   virtual ~AttributeRanker();
 
-  /// Compute the attribute scores for the current set of attributes.
-  virtual AttributeScores ComputeScores() = 0;
   /// Set k nearest neighbors, with bounds checking
   virtual bool SetK(unsigned int newK);
+  /// Compute the attribute scores for the current set of attributes.
+  virtual AttributeScores ComputeScores() = 0;
   /*************************************************************************//**
    * Get the (importance) scores as a vector of pairs: score, attribute name
    * \return vector of pairs
@@ -48,13 +48,15 @@ public:
 	virtual void PrintScores(std::ofstream& outStream);
   /// Error from using ranked attributes in a classifier.
 	virtual double GetClassificationError();
-	/// Should ReliefF scores be normalized.
-	bool DoNormalize();
+  void SetNormalize(bool switchTF=true);
+	/// Will scores be normalized after computing scores.
+	bool GetNormalizeFlag();
+  bool NormalizeScores();
 	/// Reset the algorithm.
 	virtual bool ResetForNextIteration() { return true; }
     // bcw 10/12/16
   virtual bool InitializeData(bool doPrediction, bool useMask=false, 
-                      bool doImportance=true) { return true; }
+                              bool doImportance=true) { return true; }
 protected:
   /// The Dataset on which the ranking algorithm is working.
   Dataset* dataset;
@@ -64,7 +66,7 @@ protected:
   std::vector<std::string> scoreNames;
   /// Error from using ranked attributes in a classifier.
   double classificationAccuracy;
-	/// Normalize scores 0-1?
+	/// Normalize scores 0-1 flag?
 	bool normalizeScores;
   /// k nearest neighbors
   unsigned int k;

@@ -548,9 +548,9 @@ bool EvaporativeCooling::PrintAllScoresTabular() {
 	cout << "\t\t\tE (RF)\t\tS (RJ)\t\tF (free energy)\n";
 	unsigned int numScores = freeEnergyScores.size();
 	for (unsigned int i = 0; i < numScores; ++i) {
-		pair<double, string> thisRJScores = maineffectScores[i];
-		pair<double, string> thisRFScores = interactionScores[i];
-		pair<double, string> thisFEScores = freeEnergyScores[i];
+		ScoreVarPair thisRJScores = maineffectScores[i];
+		ScoreVarPair thisRFScores = interactionScores[i];
+		ScoreVarPair thisFEScores = freeEnergyScores[i];
 		printf("\t\t\t%s\t%6.4f\t%s\t%6.4f\t%s\t%6.4f\n",
 				thisRFScores.second.c_str(), thisRFScores.first,
 				thisRJScores.second.c_str(), thisRJScores.first,
@@ -584,9 +584,9 @@ bool EvaporativeCooling::PrintKendallTaus() {
 	vector<string> feNames;
 	unsigned int numScores = freeEnergyScores.size();
 	for (unsigned int i = 0; i < numScores; ++i) {
-		pair<double, string> thisRJScores = maineffectScores[i];
-		pair<double, string> thisRFScores = interactionScores[i];
-		pair<double, string> thisFEScores = freeEnergyScores[i];
+		ScoreVarPair thisRJScores = maineffectScores[i];
+		ScoreVarPair thisRFScores = interactionScores[i];
+		ScoreVarPair thisFEScores = freeEnergyScores[i];
 		rjNames.push_back(thisRJScores.second);
 		rfNames.push_back(thisRFScores.second);
 		feNames.push_back(thisFEScores.second);
@@ -611,12 +611,12 @@ bool EvaporativeCooling::RunRandomForest() {
   
   if(par::do_normalize_scores) {
     cout << Timestamp() << "Normalizing ReliefF scores to 0-1" << endl;
-    pair<double, string> firstScore = maineffectScores[0];
+    ScoreVarPair firstScore = maineffectScores[0];
     double minRFScore = firstScore.first;
     double maxRFScore = firstScore.first;
     AttributeScoresCIt rfScoresIt = maineffectScores.begin();
     for (; rfScoresIt != maineffectScores.end(); ++rfScoresIt) {
-      pair<double, string> thisScore = *rfScoresIt;
+      ScoreVarPair thisScore = *rfScoresIt;
       if (thisScore.first < minRFScore) {
         minRFScore = thisScore.first;
       }
@@ -633,7 +633,7 @@ bool EvaporativeCooling::RunRandomForest() {
     AttributeScores newRFScores;
     double rfRange = maxRFScore - minRFScore;
     for (AttributeScoresIt it = maineffectScores.begin(); it != maineffectScores.end(); ++it) {
-      pair<double, string> thisScore = *it;
+      ScoreVarPair thisScore = *it;
       double key = thisScore.first;
       string val = thisScore.second;
       newRFScores.push_back(make_pair((key - minRFScore) / rfRange, val));
@@ -662,12 +662,12 @@ bool EvaporativeCooling::RunReliefF() {
 
   if(par::do_normalize_scores) {
     cout << Timestamp() << "Normalizing ReliefF scores to 0-1" << endl;
-    pair<double, string> firstScore = interactionScores[0];
+    ScoreVarPair firstScore = interactionScores[0];
     double minRFScore = firstScore.first;
     double maxRFScore = firstScore.first;
     AttributeScoresCIt rfScoresIt = interactionScores.begin();
     for (; rfScoresIt != interactionScores.end(); ++rfScoresIt) {
-      pair<double, string> thisScore = *rfScoresIt;
+      ScoreVarPair thisScore = *rfScoresIt;
       if (thisScore.first < minRFScore) {
         minRFScore = thisScore.first;
       }
@@ -684,7 +684,7 @@ bool EvaporativeCooling::RunReliefF() {
     AttributeScores newRFScores;
     double rfRange = maxRFScore - minRFScore;
     for (AttributeScoresIt it = interactionScores.begin(); it != interactionScores.end(); ++it) {
-      pair<double, string> thisScore = *it;
+      ScoreVarPair thisScore = *it;
       double key = thisScore.first;
       string val = thisScore.second;
       newRFScores.push_back(make_pair((key - minRFScore) / rfRange, val));
@@ -762,7 +762,7 @@ bool EvaporativeCooling::RemoveWorstAttributes(unsigned int numToRemove) {
 	sort(freeEnergyScores.begin(), freeEnergyScores.end(), scoresSortAsc);
 	for (unsigned int i=0; i < numToRemoveAdj; ++i) {
 		// worst score and attribute name
-		pair<double, string> worst = freeEnergyScores[i];
+		ScoreVarPair worst = freeEnergyScores[i];
     if(par::verbose) {
       msg << Timestamp() << "current worst attribute" << i << ": " 
               << worst.second << " (" << worst.first << ")" << endl;

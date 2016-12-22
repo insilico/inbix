@@ -20,13 +20,11 @@
 
 #include "StringUtils.h"
 #include "CentralityRanker.h"
+#include "Insilico.h"
 
 using namespace std;
 using namespace insilico;
 using namespace arma;
-
-// Plink object
-extern Plink* PP;
 
 CentralityRanker::CentralityRanker(string gainFileParam, bool isUpperTriangular)
 {

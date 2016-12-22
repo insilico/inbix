@@ -31,16 +31,15 @@ public:
   bool ComputeScores();
   void PrintState();
 private:
-  bool ComputeInverseImportance();
   bool ComputeImportance();
-  bool ComputeDeltaQ();
   bool ComputeAttributeProbabilities();
   bool GenerateRandomUniformProbabilities();
-  bool EvaporateWorstAttributes();
+  bool EvaporateWorstAttributes(uint numToRemove);
   bool EvaporateWorstAttribute();
   double ClassifyAttributeSet(std::vector<std::string> attrs, DATASET_TYPE);
   bool ComputeBestAttributesErrors();
   bool UpdateTemperature();
+  bool ComputeInverseImportance();
 
   // Mersenne twister random number engine - based Mersenne prime 2^19937 − 1
   std::mt19937_64 engine;  
@@ -56,6 +55,11 @@ private:
   Dataset* train;
   Dataset* holdout;
   Dataset* test;
+  uint numInstances;
+  // track original and current set of variables and their indices
+  // into the original data set
+  std::vector<std::string> origVarNames;
+  std::map<std::string, unsigned int> origVarMap;
   std::vector<std::string> curVarNames;
   std::map<std::string, unsigned int> curVarMap;
   
@@ -64,9 +68,15 @@ private:
 	AttributeScores holdoutImportance;     // q_h
 	AttributeScores trainInvImportance;    // p_t
 	AttributeScores holdoutInvImportance;  // p_h
+
+  // computing importance
+  std::map<std::string, double> diffImportance;
+  std::vector<double> diffScores;
+  std::vector<double> diff;
   double deltaQ;
   double threshold;
   double tolerance;
+  uint curDeleteImportanceIndex;
   
   // temperature schedule
   uint numToRemovePerIteration;
@@ -76,16 +86,15 @@ private:
   double tau;
   
   // algorithm
-  uint numAttributes;
   uint minRemainAttributes;
-  uint numInstances;
-  uint kConstant;
-  double probBiological; // probability biological influence
+  uint updateInterval;
+//  uint kConstant;
+//  double probBiological; // probability biological influence
 
   // evaporation variables
   std::vector<double> attributeProbabilty;
-  std::vector<double> summedProbabilities;
-  std::vector<double> scaledSummedProbabilities;
+  double summedProbabilities;
+  std::vector<double> scaledProbabilities;
   std::vector<double> cummulativeProbabilities;
   std::vector<double> randUniformProbs;
   std::vector<std::string> removeAttrs;

@@ -14,6 +14,7 @@
 #include <armadillo>
 
 #include "plink.h"
+#include "Insilico.h"
 
 const double DEFAULT_CONNECTIVITY_THRESHOLD = 0;
 const double MODULARITY_THRESHOLD = 0; 
@@ -46,8 +47,6 @@ enum NetworkMatrixType {
 	NET_MATRIX_CON,
 	NET_MATRIX_BOTH
 };
-
-extern Plink* PP;
 
 class InteractionNetwork {
 public:

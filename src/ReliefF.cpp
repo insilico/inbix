@@ -42,7 +42,7 @@ typedef vector<pair<unsigned int, double> > AttributeIndex;
 typedef vector<pair<unsigned int, double> >::const_iterator AttributeIndexIt;
 
 /// attribute score sorting functor
-bool scoreSort(const pair<double, string>& p1, const pair<double, string>& p2) {
+bool scoreSort(const ScoreVarPair& p1, const ScoreVarPair& p2) {
   return p1.first < p2.first;
 }
 
@@ -54,10 +54,8 @@ bool attributeSort(const pair<unsigned int, double>& p1,
 
 /// functor for T comparison
 typedef pair<unsigned int, DatasetInstance*> T;
-
 class deref_less : public std::binary_function<T, T, bool> {
 public:
-
   bool operator()(const T a, const T b) const {
     return(a.first < b.first);
   }
@@ -65,27 +63,25 @@ public:
 
 ReliefF::ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType):
 AttributeRanker::AttributeRanker(ds) {
-  cout << Timestamp() << "ReliefF initialization from Plink parameters" << endl;
+  PP->printLOG(Timestamp() + "ReliefF initialization from Plink parameters\n");
   PP = plinkPtr;
   if(ds) {
     dataset = ds;
   } else {
-    cerr << "ERROR: dataset is not initialized" << endl;
-    exit(-1);
+    error("ReliefF constructor dataset pointer is not initialized\n");
   }
   analysisType = anaType;
 
   m = dataset->NumInstances();
   randomlySelect = true;
-  cout << Timestamp() << "Number of samples: m = " << m << endl;
+  PP->printLOG(Timestamp() + "Number of samples: m = " + int2str(m) + "\n");
   if(m == 0 || m == ds->NumInstances()) {
     // sample deterministically unless a sample size has been set
-    cout << Timestamp() << "Sampling all instances deterministically"
-            << endl;
+    PP->printLOG(Timestamp() + "Sampling all instances deterministically\n");
     randomlySelect = false;
     m = ds->NumInstances();
   } else {
-    cout << Timestamp() << "Sampling instances randomly" << endl;
+    PP->printLOG(Timestamp() + "Sampling instances randomly\n");
     randomlySelect = true;
   }
 
@@ -94,14 +90,14 @@ AttributeRanker::AttributeRanker(ds) {
   // default k, in options.h/.cpp
   k = par::k;
   if(k) {
-    cout << Timestamp() << "Number of nearest neighbors: k = " << k << endl;
+    PP->printLOG(Timestamp() + "Number of nearest neighbors: k = " + int2str(k) + "\n");
     // k nearest neighbors and m randomly selected instances
     // spread differences and thus weight updates
     // over (m x k) iterations
     // double one_over_m_times_k = 1.0 / (((double) m) * ((double) k));
     //                               m       *           k
   } else {
-    cout << Timestamp() << "k nearest neighbors will be optimized" << endl;
+    PP->printLOG(Timestamp() + "k nearest neighbors will be optimized\n");
   }
 
   numTarget = ds->NumVariables();
@@ -112,28 +108,28 @@ AttributeRanker::AttributeRanker(ds) {
       if(numTarget == 0) {
         numTarget = numPredictors;
       } else {
-            error("Target number of variables out of range: " + int2str(numTarget));
+            error("Target number of variables out of range: " + int2str(numTarget) + "\n");
       }
     }
   
     if(par::relieffIterNumToRemove) {
       removePerIteration = par::relieffIterNumToRemove;
-      cout << Timestamp() << "Iteratively removing " << removePerIteration << endl;
+      PP->printLOG(Timestamp() + "Iteratively removing " + int2str(removePerIteration) + "\n");
       doRemovePercent = false;
     } else {
       removePercentage = ((double) par::relieffIterPercentToRemove) / 100.0;
       removePerIteration =
                (unsigned int) ((double) dataset->NumAttributes()
                * removePercentage + 0.5);
-      cout << Timestamp() << "Iteratively removing "
-              << (removePercentage * 100) << "% = " << removePerIteration
-              << endl;
+      PP->printLOG(Timestamp() + "Iteratively removing " + 
+              int2str(removePercentage * 100) + "% = " + 
+              int2str(removePerIteration) + "\n");
       doRemovePercent = true;
     }
     if((removePerIteration < 1)
             || (removePerIteration >= numPredictors)) {
-      error("Number to remove per iteration [" + int2str(removePerIteration) 
-        + "] not in valid range 1 < n < " + int2str(numPredictors));
+      error("Number to remove per iteration [" + int2str(removePerIteration) +
+            "] not in valid range 1 < n < " + int2str(numPredictors));
     }
   }
 
@@ -159,16 +155,15 @@ AttributeRanker::AttributeRanker(ds) {
   }
   if(snpMetricFunctionUnset && to_upper(snpMetric) == "GRM") {
     // no need to set a function pointer here for GRM
-    error("GCTA GRM metric is not allowed in weight update metric, only nearest neighbors");
+    error("GCTA GRM metric is not allowed in weight update metric, only nearest neighbors\n");
   }
   if(snpMetricFunctionUnset && to_upper(snpMetric) == "KM") {
-    error("ERROR: KM is not supported as a ReliefF metric");
+    error("ERROR: KM is not supported as a ReliefF metric\n");
     // snpDiff = diffKM;
     // snpMetricFunctionUnset = false;
   }
   if(snpMetricFunctionUnset) {
-    cerr << "ERROR: Cannot set SNP metric to [" << snpMetric << "]" << endl;
-    exit(EXIT_FAILURE);
+    error("Cannot set SNP metric to [" + snpMetric + "]\n");
   }
   if(to_upper(numMetric) == "MANHATTAN") {
     numDiff = diffManhattan;
@@ -176,15 +171,12 @@ AttributeRanker::AttributeRanker(ds) {
     if(to_upper(numMetric) == "EUCLIDEAN") {
       numDiff = diffEuclidean;
     } else {
-      cerr << "ERROR: [" << numMetric
-              << "] is not a valid numeric metric type" << endl;
-      exit(EXIT_FAILURE);
+      error("[" + numMetric + "] is not a valid numeric metric type\n");
     }
   }
 
-  cout << Timestamp() << "ReliefF SNP distance metric: " << snpMetric << endl;
-  cout << Timestamp() << "ReliefF continuous distance metric: " << numMetric
-          << endl;
+  PP->printLOG(Timestamp() + "ReliefF SNP distance metric: " + snpMetric + "\n");
+  PP->printLOG(Timestamp() + "ReliefF continuous distance metric: " + numMetric + "\n");
   
   weightByDistanceMethod = par::weightByDistanceMethod;
   if((weightByDistanceMethod != "exponential")
@@ -192,13 +184,11 @@ AttributeRanker::AttributeRanker(ds) {
     error("ERROR: Invalid --weight-by-distance-method: " + weightByDistanceMethod);
   }
   weightByDistanceSigma = static_cast<double>(par::weightByDistanceSigma);
-  cout << Timestamp() << "Weight by distance method: "
-          << weightByDistanceMethod;
+  PP->printLOG(Timestamp() + "Weight by distance method: " + weightByDistanceMethod);
   if(weightByDistanceMethod == "exponential") {
-    cout << Timestamp() << ", using sigma = " << weightByDistanceSigma
-            << endl;
+    PP->printLOG(", using sigma = " + dbl2str(weightByDistanceSigma) + "\n");
   } else {
-    cout << endl;
+    PP->printLOG("\n");
   }
 
 	PP->printLOG(Timestamp() + "ReliefF has " + int2str(omp_get_num_procs()) + " threads\n");
@@ -207,8 +197,7 @@ AttributeRanker::AttributeRanker(ds) {
   vector<string> numNames = dataset->GetNumericsNames();
   scoreNames.resize(atrNames.size() + numNames.size());
   copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
-  copy(numNames.begin(), numNames.end(),
-          scoreNames.begin() + atrNames.size());
+  copy(numNames.begin(), numNames.end(), scoreNames.begin() + atrNames.size());
 }
 
 ReliefF::~ReliefF() {
@@ -226,14 +215,13 @@ bool ReliefF::ComputeAttributeScores() {
   // pointer to the instance being sampled
   DatasetInstance* R_i;
   int i = 0;
-  cout << Timestamp() << "Running Relief-F algorithm" << endl;
+  PP->printLOG(Timestamp() + "Running Relief-F algorithm\n");
   double one_over_m_times_k = 1.0 / (((double) m) * ((double) k));
-  cout << Timestamp() << "Averaging factor 1/(m*k): "  
-          << one_over_m_times_k << endl;
+  PP->printLOG(Timestamp() + "Averaging factor 1/(m*k): "  + dbl2str(one_over_m_times_k) + "\n");
 
   vector<string> instanceIds = dataset->GetInstanceIds();
 //  for(i = 0; i < (int) m; i++) {
-//    cout << instanceIds[i] << endl;
+//    cout << instanceIds[i] + "\n");
 //  }
   /// algorithm line 2
   for(i = 0; i < (int) m; i++) {
@@ -249,10 +237,7 @@ bool ReliefF::ComputeAttributeScores() {
       R_i = dataset->GetInstance(instanceIndex);
     }
     if(!R_i) {
-      cerr
-              << "ERROR: Random or indexed instance count not be found for index: ["
-              << i << "]" << endl;
-      return false;
+      error("Random or indexed instance count not be found for index: [" + int2str(i) + "]\n");
     }
     ClassLevel class_R_i = R_i->GetClass();
 
@@ -266,7 +251,7 @@ bool ReliefF::ComputeAttributeScores() {
     //    for(unsigned int ii = 0; ii < hits.size(); ++ii) {
     //      cout << hits[ii] << " ";
     //    }
-    //    cout << endl << "Misses:" << endl;
+    //    cout + "\n") << "Misses:\n");
     //    map<ClassLevel, vector<unsigned int> >::const_iterator iit;
     //    for(iit = misses.begin(); iit != misses.end(); ++iit) {
     //      cout << "Class: " << iit->first << ", misses: ";
@@ -274,42 +259,32 @@ bool ReliefF::ComputeAttributeScores() {
     //      for(unsigned int jj = 0; jj < ids.size(); ++jj) {
     //        cout << ids[jj] << " ";
     //      }
-    //      cout << endl;
+    //      cout + "\n");
     //    }
 
     if(!canGetNeighbors) {
-      cerr << "ERROR: relieff cannot get " << k << " nearest neighbors"
-              << endl;
-      return false;
+      error("relieff cannot get " + int2str(k) + " nearest neighbors\n");
     }
 
     // check algorithm preconditions
     if(hits.size() < 1) {
-      cerr << "ERROR: No nearest hits found" << endl;
-      return false;
+      error("No nearest hits found\n");
     }
     if(hits.size() < k) {
-      cerr << "ERROR: Could not find enough neighbors that are hits"
-              << endl;
-      exit(1);
+      error("Could not find enough neighbors that are hits\n");
     }
     map<ClassLevel, vector<unsigned int> >::const_iterator it;
     for(it = misses.begin(); it != misses.end(); ++it) {
       vector<unsigned int> missIds = it->second;
       if(missIds.size() < 1) {
-        cerr << "ERROR: No nearest misses found" << endl;
-        return false;
+        error("No nearest misses found\n");
       }
       if(missIds.size() < k) {
-        cerr << "ERROR: Could not find enough neighbors that are misses"
-                << endl;
-        return false;
+        error("Could not find enough neighbors that are misses\n");
       }
       if(missIds.size() != hits.size()) {
-        cerr
-                << "ERROR: Could not find equal number of neighbors for hits and misses:"
-                << hits.size() << " vs. " << misses.size() << endl;
-        return false;
+        error("Could not find equal number of neighbors for hits and misses:" +
+                int2str(hits.size()) + " vs. " + int2str(misses.size()) + "\n");
       }
     }
 
@@ -388,11 +363,23 @@ bool ReliefF::ComputeAttributeScores() {
 
     // happy lights
     if(i && ((i % 100) == 0)) {
-      cout << Timestamp() << i << "/" << m << endl;
+      PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m) + "\n");
     }
 
   } // number to randomly select
-  cout << Timestamp() << i << "/" << m << " done" << endl;
+  PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m) + " done\n");
+
+  // superclass variable scores is what gets returned to callers of 
+  // AttributeRanker and subclasses
+  scores.clear();
+  for(auto i=0; i < W.size(); ++i) {
+    scores.push_back(make_pair(W[i], scoreNames[i]));
+  }
+  // normalize scores is flag set
+  if(normalizeScores) {
+    PP->printLOG(Timestamp() + "Normalizing scores\n");
+    NormalizeScores();
+  }
 
   return true;
 }
@@ -408,14 +395,14 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
   unsigned int iterations = 1;
   while(dataset->NumVariables() > 0) {
 
-    cout << Timestamp()
-            << "------------------------------------------------------------"
-            << "-----------------------------------------" << endl;
-    cout << Timestamp() << "[" << iterations << "] Working attributes: "
-            << dataset->NumVariables() << endl;
+    PP->printLOG(Timestamp() +
+            "------------------------------------------------------------" +
+            "-----------------------------------------\n");
+    PP->printLOG(Timestamp() + "[" + int2str(iterations) + "] Working attributes: " +
+            int2str(dataset->NumVariables()) + "\n");
 
     ComputeAttributeScores();
-    vector<pair<double, string> > attributeScores = GetScores();
+    vector<ScoreVarPair > attributeScores = GetScores();
 
     // save worst attributes and remove from consideration on next iteration
     sort(attributeScores.begin(), attributeScores.end(), scoreSort);
@@ -433,13 +420,12 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
     }
     for(unsigned int i = 0; i < removeThisIteration; ++i) {
       string attributeToDelete = attributeScores[i].second;
-      // cout << "\t\t\tremoving attribute: " << attributeToDelete << endl;
+      // cout << "\t\t\tremoving attribute: " << attributeToDelete + "\n");
 
       if(!dataset->MaskRemoveVariable(attributeToDelete)) {
-        cerr << "ERROR: ReliefF::ComputeAttributeScoresIteratively: "
-                << "could not find attribute name in data set: "
-                << attributeToDelete << endl;
-        return false;
+        error(string("ERROR: ReliefF::ComputeAttributeScoresIteratively: ") +
+              string("could not find attribute name in data set: ") + 
+              attributeToDelete + "\n");
       }
       finalScores[attributeToDelete] = attributeScores[i].first;
     }
@@ -450,26 +436,27 @@ bool ReliefF::ComputeAttributeScoresIteratively() {
 
   // populate finalScores with remaining scores
   vector<double>::const_iterator scoresIt;
-  vector<string> attrNames = dataset->GetAttributeNames();
-  //  cout << "Scores: " << scores.size()
-  //          << ", Attribute names: " << attrNames.size()
-  //          << ", Final Scores: " << finalScores.size() << endl;
-  for(unsigned int i = 0; i < attrNames.size(); ++i) {
-    cout << attrNames[i] << " => " << scoresIt[i] << endl;
-    finalScores[attrNames[i]] = W[i];
+  vector<string> varNames = dataset->GetVariableNames();
+  for(unsigned int i = 0; i < varNames.size(); ++i) {
+    if(par::verbose) PP->printLOG(varNames[i] + " => " + dbl2str(scoresIt[i]) + "\n");
+    finalScores[varNames[i]] = W[i];
   }
 
   W.resize(scoreNames.size());
   for(unsigned int i = 0; i < scoreNames.size(); ++i) {
     if(finalScores.find(scoreNames[i]) == finalScores.end()) {
-      cerr << "ERROR: Logic error. See Bill" << endl;
-      exit(1);
+      error("Variable name " + scoreNames[i] + " could not be looked up");
     }
     W[i] = finalScores[scoreNames[i]];
   }
 
   // restore the dataset attribute mask
   dataset->MaskPopAll();
+
+  scores.clear();
+  for(auto i=0; i < W.size(); ++i) {
+    scores.push_back(make_pair(W[i], scoreNames[i]));
+  }
 
   return true;
 }
@@ -489,8 +476,8 @@ bool ReliefF::ComputeAttributeScoresKopt() {
 	vector<string> scoreNames;
   for(unsigned int thisK = koptBegin; thisK <= koptEnd; thisK += koptStep) {
     // run ReliefF on this k
-    cout << Timestamp() << "--------------------------" << endl;
-    cout << Timestamp() << "Running ReliefSeq for k=" << thisK << endl;
+    PP->printLOG(Timestamp() + "--------------------------\n");
+    PP->printLOG(Timestamp() + "Running ReliefSeq for k=" + int2str(thisK) + "\n");
     k =thisK;
     koptValues.push_back(thisK);
     scores.clear();
@@ -522,7 +509,7 @@ bool ReliefF::ComputeAttributeScoresKopt() {
 //		for(unsigned int j=0; j < scoreNames.size(); ++j) {
 //      cout << allScores[i][j] << " ";
 //    }
-//    cout << endl;
+//    cout + "\n");
 //  }
   
   // pick best scores and k's for each attribute
@@ -540,12 +527,13 @@ bool ReliefF::ComputeAttributeScoresKopt() {
         bestK = thisK;
       }
     }
-    // cout << "\t" << bestScore << " (" << bestK << ")" << endl;
+    // cout << "\t" << bestScore << " (" << bestK << ")\n");
     scores.push_back(make_pair(bestScore, thisVar));
     bestKs[thisVar] = bestK;
   }
 
-  sort(scores.begin(), scores.end(), scoresSortDesc);
+  // removed sort bcw 12/21/16
+  //sort(scores.begin(), scores.end(), scoresSortDesc);
   
   if(par::do_write_best_k) {
     WriteBestKs(par::output_file_name);
@@ -601,7 +589,7 @@ bool ReliefF::PreComputeDistances() {
   int numInstances = instanceIds.size();
 
   // create a distance matrix
-  PP->printLOG(Timestamp() + "Allocating distance matrix");
+  PP->printLOG(Timestamp() + "Allocating distance matrix...");
   double** distanceMatrix;
   distanceMatrix = new double*[numInstances];
   for(int i = 0; i < numInstances; ++i) {
@@ -617,10 +605,8 @@ bool ReliefF::PreComputeDistances() {
     if(dataset->NumNumerics()) {
       error("GRM distance metric is not available for numeric data");
     }
-    cout << Timestamp() 
-            << "1) Computing instance-to-instance distances with GCTA " 
-            << "genetic relationship matrix (GRM)"
-            << endl;
+    PP->printLOG(Timestamp() + "1) Computing instance-to-instance distances " +
+      "with GCTA genetic relationship matrix (GRM)\n");
     vector<double> p = dataset->GetMAFs();
     unsigned int N = dataset->NumAttributes();
     double A_jk = 0;
@@ -659,14 +645,13 @@ bool ReliefF::PreComputeDistances() {
         }
       }
       if(j && (j % 100 == 0)) {
-        cout << Timestamp() << j << "/" << numInstances << endl;
+        PP->printLOG(Timestamp() + int2str(j) + "/" + int2str(numInstances) + "\n");
       }
     }
-    cout << Timestamp() << numInstances << "/" << numInstances << " done"
-            << endl;
+    PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
     
     // write GRM matrix to file with output prefix
-    cout << Timestamp() << "[ " << par::output_file_name << ".grm.tab ]" << endl;
+    PP->printLOG(Timestamp() + "[ " + par::output_file_name + ".grm.tab ]\n");
     ofstream outFile(par::output_file_name + ".grm.tab");
     for(int i=0; i < numInstances; ++i) {
       for(int j=0; j < numInstances; ++j) {
@@ -685,7 +670,7 @@ bool ReliefF::PreComputeDistances() {
     PP->printLOG(Timestamp() + "1) Computing instance-to-instance distances\n");
 #pragma omp parallel for schedule(dynamic,1)
     for(int i=0; i < numInstances; ++i) {
-      //cout << "Computing instance to instance distances. Row: " << i << endl;
+      //cout << "Computing instance to instance distances. Row: " << i + "\n");
       // #pragma omp parallel for
       for(int j = i + 1; j < numInstances; ++j) {
         unsigned int dsi1Index;
@@ -697,14 +682,13 @@ bool ReliefF::PreComputeDistances() {
                 dataset->ComputeInstanceToInstanceDistance(
                 dataset->GetInstance(dsi1Index),
                 dataset->GetInstance(dsi2Index));
-        //cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
+        //cout << i << ", " << j << " => " << distanceMatrix[i][j] + "\n");
       }
       if(i && (i % 100 == 0)) {
-        cout << Timestamp() << i << "/" << numInstances << endl;
+        PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(numInstances) + "\n");
       }
     }
-    cout << Timestamp() << numInstances << "/" << numInstances << " done"
-            << endl;
+    PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
   }
   //  DEBUG
 //    ofstream outFile;
@@ -716,7 +700,7 @@ bool ReliefF::PreComputeDistances() {
 //        else
 //          outFile << distanceMatrix[i][j];
 //      }
-//      outFile << endl;
+//      outFile + "\n");
 //    }
 //    outFile.close();
   //  DEBUG
@@ -725,19 +709,16 @@ bool ReliefF::PreComputeDistances() {
   // and different classes, else store distances to all other instances
   // (regression ReliefF)
   if(dataset->HasContinuousPhenotypes()) {
-    cout << Timestamp()
-            << "2) Calculating continuous phenotype nearest neighbors... ";
+    PP->printLOG(Timestamp() + "2) Calculating continuous phenotype nearest neighbors... ");
   } else {
     // multiclass - 12/1/11
     if(dataset->NumClasses() > 2) {
-      cout << Timestamp()
-              << "2) Calculating same and different classes nearest neighbors... ";
+      PP->printLOG(Timestamp() + "2) Calculating same and different classes nearest neighbors... ");
     } else {
-      cout << Timestamp()
-              << "2) Calculating same and different class nearest neighbors... ";
+      PP->printLOG(Timestamp() + "2) Calculating same and different class nearest neighbors... ");
     }
   }
-  cout << endl;
+  PP->printLOG("\n");
 
   DistancePair nnInfo;
   for(int i = 0; i < numInstances; ++i) {
@@ -780,55 +761,37 @@ bool ReliefF::PreComputeDistances() {
     }
 
     if(i && (i % 100 == 0)) {
-      cout << Timestamp() << i << "/" << numInstances << endl;
+      PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(numInstances) + "\n");
     }
   }
-  cout << Timestamp() << numInstances << "/" << numInstances << " done"
-          << endl;
+  PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
 
-  cout << Timestamp() << "3) Calculating weight by distance factors for "
-          << "nearest neighbors... " << endl;
+  PP->printLOG(Timestamp() + "3) Calculating weight by distance factors for nearest neighbors... \n");
   ComputeWeightByDistanceFactors();
 
   // release the dynamically-allocated distance matrix
-  cout << Timestamp() << "Freeing distance matrix memory";
+  PP->printLOG(Timestamp() + "Freeing distance matrix memory...");
   for(int i = 0; i < numInstances; ++i) {
     delete[] distanceMatrix[i];
   }
   delete[] distanceMatrix;
-  cout << " done" << endl;
+  PP->printLOG(" done\n");
 
   return true;
 }
 
-AttributeScores ReliefF::GetScores() {
-
-  AttributeScores returnScores;
-  vector<double>::const_iterator scoresIt = W.begin();
-  unsigned int nameIdx = 0;
-  vector<string> maskNames = dataset->MaskGetAllVariableNames();
-  for(; scoresIt != W.end(); ++scoresIt) {
-    returnScores.push_back(make_pair(*scoresIt, maskNames[nameIdx]));
-    ++nameIdx;
-  }
-  return returnScores;
-}
-
 AttributeScores ReliefF::ComputeScores() {
   ComputeAttributeScores();
-  return GetScores();
+  return scores;
 }
 
 bool ReliefF::ComputeWeightByDistanceFactors() {
-
   vector<string> instanceIds = dataset->GetInstanceIds();
   for(unsigned int i = 0; i < dataset->NumInstances(); ++i) {
-
     // this instance
     unsigned int instanceIndex;
     dataset->GetInstanceIndexForID(instanceIds[i], instanceIndex);
     DatasetInstance* dsi = dataset->GetInstance(instanceIndex);
-
     vector<double> d1_ij;
     double d1_ij_sum = 0.0;
     for(unsigned int rank_j = 1; rank_j <= k; ++rank_j) {
@@ -847,17 +810,16 @@ bool ReliefF::ComputeWeightByDistanceFactors() {
       d1_ij.push_back(d1_ij_value);
       d1_ij_sum += d1_ij_value;
     }
-
     // "normalize" the factors - divide through by the total/sum
     dsi->ClearInfluenceFactors();
     for(unsigned int neighborIdx = 0; neighborIdx < k; ++neighborIdx) {
       double influenceFactorD = d1_ij[neighborIdx] / d1_ij_sum;
       //      cout << "d_ij: " << d1_ij[neighborIdx]
       //              << ", cummulative sum: " << d1_ij_sum
-      //              << ", normalized value: " << influenceFactorD << endl;
+      //              << ", normalized value: " << influenceFactorD + "\n");
       dsi->AddInfluenceFactorD(influenceFactorD);
     }
-    //    cout << "---------------------------------------------------------" << endl;
+    //    cout << "---------------------------------------------------------\n");
   } // end all instances
 
   return true;
@@ -873,19 +835,19 @@ bool ReliefF::SetKoptParameters() {
 
   // error conditions
   if(tempKoptBegin > tempKoptEnd) {
-    cerr << "ERROR: k optimization begin [" << tempKoptBegin
-            << "] is greater than end [" << tempKoptEnd << "]" << endl;
+    error("k optimization begin [" + int2str(tempKoptBegin)
+            + "] is greater than end [" + int2str(tempKoptEnd) + "]\n");
     return false;
   }
   if(tempKoptEnd > kmax) {
-    cerr << "ERROR: k optimization end [" << tempKoptEnd
-            << "] is greater than maximum k [" << kmax << "]" << endl;
+    error("k optimization end [" + int2str(tempKoptEnd) +
+          "] is greater than maximum k [" + int2str(kmax) + "]\n");
     return false;
   }
   if((tempKoptBegin == tempKoptEnd) == tempKoptStep) {
-    cerr << "ERROR: k optimization specified but the range "
-            << "and step values do not specify any iterations"
-            << endl;
+    error("k optimization specified but the range "
+            "and step values do not specify any iterations"
+            "\n");
     return false;
   }
 
@@ -893,8 +855,8 @@ bool ReliefF::SetKoptParameters() {
   koptBegin = tempKoptBegin;
   koptEnd = tempKoptEnd;
   koptStep = tempKoptStep;
-  cout << Timestamp() << "k optimization parameters: begin: " << koptBegin
-          << ", kopt end: " << koptEnd << ", step: " << koptStep << endl;
+  PP->printLOG(Timestamp() + "k optimization parameters: begin: " + int2str(koptBegin)
+          + ", kopt end: " + int2str(koptEnd) + ", step: " + int2str(koptStep) + "\n");
 
   return true;
 }
@@ -917,7 +879,7 @@ unsigned int ReliefF::GetKmax() {
 void ReliefF::PrintBestKs() {
   for(map<string, unsigned int>::const_iterator kIt = bestKs.begin();
       kIt != bestKs.end(); ++kIt) {
-    cout << kIt->first << "\t" << kIt->second << endl;
+    PP->printLOG(kIt->first + "\t" + int2str(kIt->second) + "\n");
   }
 }
 
@@ -927,12 +889,10 @@ void ReliefF::WriteBestKs(string baseFilename) {
   resultsFilename = baseFilename + ".bestk";
   outFile.open(resultsFilename.c_str());
   if(outFile.bad()) {
-    cerr << "ERROR: Could not open scores file " << resultsFilename
-            << "for writing" << endl;
+    error("Could not open scores file " + resultsFilename + "for writing\n");
     exit(1);
   }
-  cout << Timestamp()
-          << "Writing reliefseq best k's to [" + resultsFilename + "]" << endl;
+  PP->printLOG(Timestamp() + "Writing Relief-F best k's to [" + resultsFilename + "]\n");
   for(map<string, unsigned int>::const_iterator kIt = bestKs.begin();
     kIt != bestKs.end(); ++kIt) {
     outFile << kIt->first << "\t" << kIt->second << endl;
@@ -945,28 +905,25 @@ bool ReliefF::RemoveWorstAttributes(unsigned int numToRemove) {
   unsigned int numToRemoveAdj = numToRemove;
   unsigned int numAttr = dataset->NumAttributes();
   if((numAttr - numToRemove) < numTarget) {
-    cout << Timestamp() << "WARNING: attempt to remove " << numToRemove
-            << " attributes which will remove more than target "
-            << "number of attributes " << numTarget << ". Adjusting"
-            << endl;
+    PP->printLOG(Timestamp() + "WARNING: attempt to remove " + 
+      int2str(numToRemove) + " attributes which will remove more than target " + 
+      "number of attributes " + int2str(numTarget) + ". Adjusting\n");
     numToRemoveAdj = numAttr - numTarget;
   }
-  cout << Timestamp() << "Removing " << numToRemoveAdj << " attributes" << endl;
+  PP->printLOG(Timestamp() + "Removing " + int2str(numToRemoveAdj) + " attributes\n");
   sort(scores.begin(), scores.end(), scoresSortAsc);
   for(unsigned int i = 0; i < numToRemoveAdj; ++i) {
     // worst score and attribute name
-    pair<double, string> worst = scores[i];
+    ScoreVarPair worst = scores[i];
     if(par::verbose) {
-        cout << "\t\t\t\tReliefF removing: "
-                << worst.second << " (" << worst.first << ")" << endl;
+        PP->printLOG("\t\t\t\tReliefF removing: " + worst.second + 
+          " (" + dbl2str(worst.first) + ")\n");
     }
     // save worst
     removedAttributes.push_back(worst);
     // remove the attribute from those under consideration
     if(!dataset->MaskRemoveVariableType(worst.second, DISCRETE_TYPE)) {
-      cerr << "ERROR: Could not remove worst attribute: " << worst.second
-              << endl;
-      return false;
+      error("Could not remove worst attribute: " + worst.second + "\n");
     }
   }
 

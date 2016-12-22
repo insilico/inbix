@@ -1348,16 +1348,16 @@ int main(int argc, char* argv[]) {
 	if(par::do_ec_privacy) {
 		P.printLOG(Timestamp() + "Privacy Evaporative Cooling analysis\n");
     // load the data sets: train, holdout and test from external sims in R
-    if((par::trainFile == "") || (par::holdoutFile == "") || (par::testFile == "")) {
+    if((par::ecPrivacyTrainFile == "") || (par::ecPrivacyHoldoutFile == "") || (par::ecPrivacyTestFile == "")) {
       error("Privacy EC requires train, holdout and test files.");
     }
     P.SNP2Ind();
     Dataset trainDs;
-    trainDs.LoadPrivacySim(par::trainFile);
+    trainDs.LoadPrivacySim(par::ecPrivacyTrainFile);
     Dataset holdoutDs;
-    holdoutDs.LoadPrivacySim(par::holdoutFile);
+    holdoutDs.LoadPrivacySim(par::ecPrivacyHoldoutFile);
     Dataset testDs;
-    testDs.LoadPrivacySim(par::testFile);
+    testDs.LoadPrivacySim(par::ecPrivacyTestFile);
     EvaporativeCoolingPrivacy ecp(&trainDs, &holdoutDs, &testDs, PP);
     if(!ecp.ComputeScores()) {
       error("Could not create an EvaporativeCoolingPrivacy object");

@@ -62,8 +62,6 @@ public:
   void WriteAttributeScores(std::string baseFilename);
   /// Pre-compute all pairwise instance-to-instance distances.
   bool PreComputeDistances();
-  /// Overrides base class method.
-  AttributeScores GetScores() override;
   /// Implements AttributeRanker interface.
   AttributeScores ComputeScores() override;
   void PrintBestKs();
@@ -125,7 +123,7 @@ protected:
   std::string weightByDistanceMethod;
   /// sigma value used in exponential decay weight-by-distance
   double weightByDistanceSigma;
-  /// attribute scores/weights
+  /// RAW attribute scores/weights - ie, no normalization
   std::vector<double> W;
 
   // --------------------------------------------------------------------------

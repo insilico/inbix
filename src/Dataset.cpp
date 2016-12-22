@@ -1746,7 +1746,7 @@ bool Dataset::MaskRemoveVariable(string variableName) {
 	if (MaskSearchVariableType(variableName, NUMERIC_TYPE)) {
 		return MaskRemoveVariableType(variableName, NUMERIC_TYPE);
 	}
-  error("variableName: " + variableName + "\n");
+  error("Dataset::MaskRemoveVariable variableName: " + variableName + "\n");
 }
 
 bool Dataset::MaskRemoveVariableType(string variableName,
@@ -1757,9 +1757,8 @@ bool Dataset::MaskRemoveVariableType(string variableName,
 		if (pos != attributesMask.end()) {
 			attributesMask.erase(pos);
 		} else {
-			cerr
-					<< "ERROR: Dataset::MaskRemoveVariable failed for SNP attribute name: "
-					<< variableName << ". name not found" << endl;
+			error("Dataset::MaskRemoveVariable failed for SNP attribute name: "
+					  + variableName + " name not found\n");
 			return false;
 		}
 	} else {
@@ -1767,9 +1766,8 @@ bool Dataset::MaskRemoveVariableType(string variableName,
 		if (pos != numericsMask.end()) {
 			numericsMask.erase(pos);
 		} else {
-			cerr << "ERROR: Dataset::MaskRemoveVariable failed for numerics"
-					<< " attribute name: " << variableName << ". name not found"
-					<< endl;
+			error("Dataset::MaskRemoveVariable failed for numerics attribute name: " 
+            + variableName + " name not found\n");
 			return false;
 		}
 	}

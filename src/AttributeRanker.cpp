@@ -13,49 +13,19 @@
 #include "AttributeRanker.h"
 #include "Dataset.h"
 #include "Insilico.h"
+#include "options.h"
+#include "helper.h"
 
 using namespace std;
 
 AttributeRanker::AttributeRanker(Dataset* ds) {
 	dataset = ds;
 	classificationAccuracy = 1.0;
-  k = 10;
   normalizeScores = false;
+  k = 10;
 }
 
 AttributeRanker::~AttributeRanker() {
-}
-
-AttributeScores AttributeRanker::GetScores() {
-	return scores;
-}
-
-void AttributeRanker::WriteScores(string baseFilename) {
-	string resultsFilename = baseFilename + ".relieff.tab";
-	ofstream outFile;
-	outFile.open(resultsFilename.c_str());
-	if (outFile.bad()) {
-		cerr << "ERROR: Could not open scores file " << resultsFilename
-				<< "for writing" << endl;
-		exit(1);
-	}
-	PrintScores(outFile);
-	outFile.close();
-}
-
-void AttributeRanker::PrintScores(ofstream& outStream) {
-	for (AttributeScoresCIt scoresIt = scores.begin(); scoresIt != scores.end();
-			++scoresIt) {
-		outStream << scoresIt->first << "\t" << scoresIt->second << endl;
-	}
-}
-
-double AttributeRanker::GetClassificationError() {
-	return classificationAccuracy;
-}
-
-bool AttributeRanker::DoNormalize() {
-	return normalizeScores;
 }
 
 bool AttributeRanker::SetK(unsigned int newK) {
@@ -101,5 +71,85 @@ bool AttributeRanker::SetK(unsigned int newK) {
     }
   }
 
+  return true;
+}
+
+AttributeScores AttributeRanker::GetScores() {
+//  AttributeScores returnScores;
+////  unsigned int nameIdx = 0;
+////  vector<string> maskNames = dataset->MaskGetAllVariableNames();
+//  AttributeScoresCIt scoresIt = scores.begin();
+//  for(; scoresIt != scores.end(); ++scoresIt) {
+//    returnScores.push_back(make_pair((*scoresIt).first, (*scoresIt).second));
+//  }
+  return scores;
+}
+
+
+void AttributeRanker::WriteScores(string baseFilename) {
+	string resultsFilename = baseFilename + ".relieff.tab";
+	ofstream outFile;
+	outFile.open(resultsFilename.c_str());
+	if (outFile.bad()) {
+		cerr << "ERROR: Could not open scores file " << resultsFilename
+				<< "for writing" << endl;
+		exit(1);
+	}
+	PrintScores(outFile);
+	outFile.close();
+}
+
+void AttributeRanker::PrintScores(ofstream& outStream) {
+	for (AttributeScoresCIt scoresIt = scores.begin(); scoresIt != scores.end();
+			++scoresIt) {
+		outStream << scoresIt->first << "\t" << scoresIt->second << endl;
+	}
+}
+
+double AttributeRanker::GetClassificationError() {
+	return classificationAccuracy;
+}
+
+void AttributeRanker::SetNormalize(bool switchTF) {
+  normalizeScores = switchTF;
+}
+
+bool AttributeRanker::GetNormalizeFlag() {
+	return normalizeScores;
+}
+
+bool AttributeRanker::NormalizeScores() {
+  PP->printLOG(Timestamp() + "Normalizing ReliefF scores to 0-1\n");
+  if(!scores.size()) {
+    error("AttributeRanker::NormalizeScores() Cannot normalize zero-length scores\n");
+  }
+  ScoreVarPair firstScore = scores[0];
+  double minScore = firstScore.first;
+  double maxScore = firstScore.first;
+  AttributeScoresCIt scoresIt = scores.begin();
+  for(; scoresIt != scores.end(); ++scoresIt) {
+    ScoreVarPair thisScore = *scoresIt;
+    if(thisScore.first < minScore) {
+      minScore = thisScore.first;
+    }
+    if(thisScore.first > maxScore) {
+      maxScore = thisScore.first;
+    }
+  }
+  // with min and max scores, scale values to min=0, max=1
+  AttributeScores newScores;
+  double scoreRange = maxScore - minScore;
+  if(scoreRange < par::epsilon) {
+    scoreRange = par::epsilon;
+  }
+  for(AttributeScoresIt it = scores.begin(); it != scores.end(); ++it) {
+    ScoreVarPair thisScore = *it;
+    double key = thisScore.first;
+    string val = thisScore.second;
+    newScores.push_back(make_pair((key - minScore) / scoreRange, val));
+  }
+  scores.clear();
+  scores = newScores;
+  
   return true;
 }

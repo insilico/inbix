@@ -19,11 +19,9 @@
 #include "helper.h"
 
 #include "EpistasisEQtl.h"
+#include "Insilico.h"
 
 using namespace std;
-
-// Plink object
-extern Plink* PP;
 
 EpistasisEQtl::EpistasisEQtl() {
   radius = -1;
