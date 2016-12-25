@@ -18,8 +18,6 @@ using namespace std;
 PlinkInternalsDataset::PlinkInternalsDataset(Plink* plinkPtr): 
   Dataset::Dataset() {
   PP = plinkPtr;
-  	// create and seed a random number generator for random sampling
-	rng = new GSLRandomFlat(getpid() * time((time_t*) 0), 0.0, NumInstances());
 }
 
 PlinkInternalsDataset::~PlinkInternalsDataset() {
@@ -28,9 +26,6 @@ PlinkInternalsDataset::~PlinkInternalsDataset() {
 		if (*it) {
 			delete *it;
 		}
-	}
-	if (rng) {
-		delete rng;
 	}
 }
 
