@@ -23,6 +23,11 @@ on most Unix systems.  In MinGW libz is installed via mingw-get.
 * LAPACK is a soft dependency:  not explicitly required, but highly encouraged
 to take advantage of linear algebra routines that have decades of optimization.
 
+* [Boost][http://www.boost.org/] Mostly header extensions to the standard 
+  C++ libraries.
+
+* [Armadillo][http://arma.sourceforge.net/] Linear algebra header library.
+
 * Finally, OpenMP is required to take advantage of the parallelized epistasis
 analysis code.  This is another library typically installed alongside the 
 compiler toolchain.
@@ -46,3 +51,6 @@ Purcell S, Neale B, Todd-Brown K, Thomas L, Ferreira MAR,
 Bender D, Maller J, Sklar P, de Bakker PIW, Daly MJ & Sham PC (2007) 
 inbix: a toolset for whole-genome association and population-based 
 linkage analysis. American Journal of Human Genetics, 81.
+
+[In Silico Lab Publications][http://insilico.utulsa.edu/index.php/publications/] 
+document the algorithms added to PLINK to make inbix.
