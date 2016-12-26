@@ -19,6 +19,7 @@
 #include <numeric>
 #include <sstream>
 #include <utility> 
+#include <random>
 
 #include <limits.h>
 #include <sys/types.h>
@@ -27,14 +28,12 @@
 #include <time.h>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
 #include <armadillo>
 
 //#include <R.h>
 //#include <Rcpp.h>
 //#include <RInside.h>
-
-#include "gsl/gsl_cdf.h"
-#include "GSLRandomFlat.h"
 
 #include "ChiSquared.h"
 #include "Dataset.h"
@@ -47,14 +46,19 @@
 #include "DistanceMetrics.h"
 #include "ReliefF.h"
 
+#include "Insilico.h"
 #include "helper.h"
+
+extern Plink* PP;
 
 using namespace std;
 using namespace insilico;
 using namespace boost;
+using namespace boost::math;
 using namespace arma;
 
 Dataset::Dataset() {
+	cout << Timestamp() << "Dataset: Default constructor" << endl;
 	/// Set defaults.
 	snpsFilename = "";
 	hasGenotypes = false;
@@ -101,10 +105,8 @@ Dataset::Dataset() {
 			<< snpMetric << endl;
 	cout << Timestamp() << "Default SNP nearest neighbors distance metric: "
 			<< snpMetricNN << endl;
-	cout << Timestamp() << "Default continuous distance metric: " << numMetric
-			<< endl;
-
-	rng = NULL;
+	cout << Timestamp() << "Default continuous distance metric: " 
+      << numMetric << endl;
 }
 
 Dataset::~Dataset() {
@@ -114,9 +116,6 @@ Dataset::~Dataset() {
 			delete *it;
 		}
 	}
-	if (rng) {
-		delete rng;
-	}
 }
 
 bool Dataset::LoadDataset(vector<vector<int> >& dataMatrix,
@@ -124,8 +123,8 @@ bool Dataset::LoadDataset(vector<vector<int> >& dataMatrix,
 
 	cout << Timestamp() << "Loading Dataset from raw data vectors" << endl;
 
-	unsigned int numInstances = dataMatrix.size();
-	unsigned int numAttributes = dataMatrix[0].size();
+	uint numInstances = dataMatrix.size();
+	uint numAttributes = dataMatrix[0].size();
 	cout << Timestamp() << "Source data has " << numInstances << " rows and "
 			<< numAttributes << " columns" << endl;
 
@@ -155,7 +154,7 @@ bool Dataset::LoadDataset(vector<vector<int> >& dataMatrix,
 		return false;
 	}
 
-	for (unsigned int i = 0; i < numAttributes; ++i) {
+	for (uint i = 0; i < numAttributes; ++i) {
 		attributeNames.push_back(attrNames[i]);
 		attributesMask[attrNames[i]] = i;
 	}
@@ -168,7 +167,7 @@ bool Dataset::LoadDataset(vector<vector<int> >& dataMatrix,
 	attributeLevelsSeen.resize(numAttributes);
 	genotypeCounts.resize(numAttributes);
 
-	unsigned int rowIndex = 0;
+	uint rowIndex = 0;
 	vector<vector<int> >::const_iterator rowIt = dataMatrix.begin();
 	for (; rowIt != dataMatrix.end(); ++rowIt, ++rowIndex) {
 		vector<int> row(numAttributes);
@@ -192,10 +191,6 @@ bool Dataset::LoadDataset(vector<vector<int> >& dataMatrix,
 	CreateDummyAlleles();
 	PrintStatsSimple();
 	// PrintLevelCounts();
-
-	// create and seed a random number generator for random sampling
-	// TODO: need to save the seed for repeatability? used to randomly sample
-	rng = new GSLRandomFlat(getpid() * time((time_t*) 0), 0.0, NumInstances());
 
 	return true;
 }
@@ -238,14 +233,14 @@ bool Dataset::LoadDataset(string snpsFilename, string numericsFilename,
 		}
 
 		// remove the instances that don't match the covariate and/or phenotype files
-		unsigned int nextInstanceIndex = 0;
+		uint nextInstanceIndex = 0;
 		if (instanceIdsToLoad.size()) {
 			cout << Timestamp() << "Finding matching IDs" << endl;
 			vector<DatasetInstance*> tempInstances;
 			vector<string> tempInstanceIds;
-			map<string, unsigned int> tempInstancesMask;
-			for (unsigned int i = 0; i < instanceIdsToLoad.size(); ++i) {
-				unsigned int instanceIndex = 0;
+			map<string, uint> tempInstancesMask;
+			for (uint i = 0; i < instanceIdsToLoad.size(); ++i) {
+				uint instanceIndex = 0;
 				string ID = instanceIdsToLoad[i];
 				if (!GetInstanceIndexForID(ID, instanceIndex)) {
 					cerr << "ERROR: Could not find ID in data set: " << ID
@@ -286,9 +281,6 @@ bool Dataset::LoadDataset(string snpsFilename, string numericsFilename,
 	}
 
 	hasPhenotypes = true;
-
-	// create and seed a random number generator for random sampling
-	rng = new GSLRandomFlat(getpid() * time((time_t*) 0), 0.0, NumInstances());
 
 	return true;
 }
@@ -336,9 +328,6 @@ bool Dataset::LoadDataset(DgeData* dgeData) {
 
 	hasNumerics = true;
 	hasAllelicInfo = false;
-
-	// create and seed a random number generator for random sampling
-	rng = new GSLRandomFlat(getpid() * time((time_t*) 0), 0.0, NumInstances());
 
 	return true;
 }
@@ -393,7 +382,7 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 //			attributeIds.push_back(ID);
 		instancesMask[ID] = instanceIndex;
 
-		vector<unsigned int> bsMissingValues;
+		vector<uint> bsMissingValues;
 		bool hasMissingValues = birdseedData->GetMissingValues(ID,
 				bsMissingValues);
 		if (hasMissingValues) {
@@ -445,13 +434,10 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 	UpdateAllLevelCounts();
 	// PrintLevelCounts();
 
-	// create and seed a random number generator for random sampling
-	rng = new GSLRandomFlat(getpid() * time((time_t*) 0), 0.0, NumInstances());
-
 	return true;
 }
 
-bool Dataset::GetAttributeRowCol(unsigned int row, unsigned int col,
+bool Dataset::GetAttributeRowCol(uint row, uint col,
 		AttributeLevel& attrVal) {
 	unsigned long numInstances = instances.size();
 	unsigned long numAttributes = instances[0]->NumAttributes();
@@ -464,7 +450,7 @@ bool Dataset::GetAttributeRowCol(unsigned int row, unsigned int col,
 	return false;
 }
 
-bool Dataset::GetNumericRowCol(unsigned int row, unsigned int col,
+bool Dataset::GetNumericRowCol(uint row, uint col,
 		NumericLevel& numVal) {
 	unsigned long numInstances = instances.size();
 	unsigned long numNumerics = instances[0]->NumNumerics();
@@ -517,7 +503,7 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 	if (outputDatasetType == ARFF_DATASET) {
 		newDatasetStream << "@RELATION dataset" << endl << endl;
 	}
-	map<string, unsigned int>::const_iterator ait = attributesMask.begin();
+	map<string, uint>::const_iterator ait = attributesMask.begin();
 	for (; ait != attributesMask.end(); ++ait) {
 		switch (outputDatasetType) {
 		case TAB_DELIMITED_DATASET:
@@ -539,7 +525,7 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 			return false;
 		}
 	}
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
+	map<string, uint>::const_iterator nit = numericsMask.begin();
 	for (; nit != numericsMask.end(); ++nit) {
 		switch (outputDatasetType) {
 		case TAB_DELIMITED_DATASET:
@@ -590,13 +576,13 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 		newDatasetStream << endl << "@DATA" << endl;
 	}
 	vector<string> instanceIds = GetInstanceIds();
-	for (unsigned int iIdx = 0; iIdx < NumInstances(); iIdx++) {
+	for (uint iIdx = 0; iIdx < NumInstances(); iIdx++) {
 		unsigned instanceIndex = 0;
 		GetInstanceIndexForID(instanceIds[iIdx], instanceIndex);
 		// write discrete attribute values
-		vector<unsigned int> attrIndices = MaskGetAttributeIndices(
+		vector<uint> attrIndices = MaskGetAttributeIndices(
 				DISCRETE_TYPE);
-		for (unsigned int aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
+		for (uint aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
 			AttributeLevel A = instances[instanceIndex]->GetAttribute(
 					attrIndices[aIdx]);
 			switch (outputDatasetType) {
@@ -625,8 +611,8 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 			}
 		}
 		/// write continuous attribute values
-		vector<unsigned int> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
-		for (unsigned int nIdx = 0; nIdx < numIndices.size(); nIdx++) {
+		vector<uint> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
+		for (uint nIdx = 0; nIdx < numIndices.size(); nIdx++) {
 			NumericLevel N = instances[instanceIndex]->GetNumeric(
 					numIndices[nIdx]);
 			switch (outputDatasetType) {
@@ -712,7 +698,7 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 	if (outputDatasetType == ARFF_DATASET) {
 		newDatasetStream << "@RELATION dataset" << endl << endl;
 	}
-	map<string, unsigned int>::const_iterator ait = attributesMask.begin();
+	map<string, uint>::const_iterator ait = attributesMask.begin();
 	for (; ait != attributesMask.end(); ++ait) {
 		/// is this attribute in the list passed in as a parameter
 		if (find(attributes.begin(), attributes.end(), ait->first)
@@ -739,7 +725,7 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 			return false;
 		}
 	}
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
+	map<string, uint>::const_iterator nit = numericsMask.begin();
 	for (; nit != numericsMask.end(); ++nit) {
 		switch (outputDatasetType) {
 		if (find(attributes.begin(), attributes.end(), nit->first)
@@ -792,13 +778,13 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 		newDatasetStream << endl << "@DATA" << endl;
 	}
 	vector<string> instanceIds = GetInstanceIds();
-	for (unsigned int iIdx = 0; iIdx < NumInstances(); iIdx++) {
+	for (uint iIdx = 0; iIdx < NumInstances(); iIdx++) {
 		unsigned instanceIndex = 0;
 		GetInstanceIndexForID(instanceIds[iIdx], instanceIndex);
 		// write discrete attribute values
-		vector<unsigned int> attrIndices = MaskGetAttributeIndices(
+		vector<uint> attrIndices = MaskGetAttributeIndices(
 				DISCRETE_TYPE);
-		for (unsigned int aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
+		for (uint aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
 			AttributeLevel A = instances[instanceIndex]->GetAttribute(
 					attrIndices[aIdx]);
 			if (find(attributes.begin(), attributes.end(),
@@ -831,8 +817,8 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 			}
 		}
 		/// write continuous attribute values
-		vector<unsigned int> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
-		for (unsigned int nIdx = 0; nIdx < numIndices.size(); nIdx++) {
+		vector<uint> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
+		for (uint nIdx = 0; nIdx < numIndices.size(); nIdx++) {
 			NumericLevel N = instances[instanceIndex]->GetNumeric(
 					numIndices[nIdx]);
 			if (find(attributes.begin(), attributes.end(),
@@ -882,7 +868,7 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 	return true;
 }
 
-bool Dataset::ExtractAttributes(string scoresFilename, unsigned int topN,
+bool Dataset::ExtractAttributes(string scoresFilename, uint topN,
 		string newDatasetFilename) {
 	// read attribute scores from file
 	ifstream scoresStream(scoresFilename.c_str());
@@ -973,7 +959,7 @@ bool Dataset::ExtractAttributes(string scoresFilename, unsigned int topN,
 	return true;
 }
 
-bool Dataset::SwapAttributes(unsigned int a1, unsigned int a2) {
+bool Dataset::SwapAttributes(uint a1, uint a2) {
 	vector<DatasetInstance*>::const_iterator it;
 	for (it = instances.begin(); it != instances.end(); it++) {
 		(*it)->SwapAttributes(a1, a2);
@@ -982,7 +968,7 @@ bool Dataset::SwapAttributes(unsigned int a1, unsigned int a2) {
 	return true;
 }
 
-unsigned int Dataset::NumVariables() {
+uint Dataset::NumVariables() {
 	return (NumAttributes() + NumNumerics());
 }
 
@@ -998,11 +984,11 @@ vector<string> Dataset::GetVariableNames() {
 	return variableNames;
 }
 
-unsigned int Dataset::NumInstances() {
+uint Dataset::NumInstances() {
 	return instancesMask.size();
 }
 
-DatasetInstance* Dataset::GetInstance(unsigned int index) {
+DatasetInstance* Dataset::GetInstance(uint index) {
 	if (index < instances.size()) {
 		return instances[index];
 	}
@@ -1011,20 +997,20 @@ DatasetInstance* Dataset::GetInstance(unsigned int index) {
 }
 
 DatasetInstance* Dataset::GetRandomInstance() {
-	unsigned int index = (unsigned int) rng->nextRandVal();
-	return instances[index];
+  uniform_int_distribution<int> runif(0, NumInstances() - 1);
+	return instances[runif(engine)];
 }
 
 vector<string> Dataset::GetInstanceIds() {
 	vector<string> idsToReturn;
-	map<string, unsigned int>::const_iterator it = instancesMask.begin();
+	map<string, uint>::const_iterator it = instancesMask.begin();
 	for (; it != instancesMask.end(); ++it) {
 		idsToReturn.push_back(it->first);
 	}
 	return idsToReturn;
 }
 
-bool Dataset::GetInstanceIndexForID(string ID, unsigned int& instanceIndex) {
+bool Dataset::GetInstanceIndexForID(string ID, uint& instanceIndex) {
 
 	if (instancesMask.find(ID) != instancesMask.end()) {
 		instanceIndex = instancesMask[ID];
@@ -1036,13 +1022,13 @@ bool Dataset::GetInstanceIndexForID(string ID, unsigned int& instanceIndex) {
 	return false;
 }
 
-unsigned int Dataset::NumAttributes() {
+uint Dataset::NumAttributes() {
 	return attributesMask.size();
 }
 
 vector<string> Dataset::GetAttributeNames() {
 	vector<string> names;
-	map<string, unsigned int>::const_iterator it = attributesMask.begin();
+	map<string, uint>::const_iterator it = attributesMask.begin();
 	for (; it != attributesMask.end(); ++it) {
 		names.push_back(it->first);
 	}
@@ -1060,7 +1046,7 @@ vector<string> Dataset::GetFileAttributeNames() {
 	return names;
 }
 
-bool Dataset::GetAttributeValues(unsigned int attributeIndex,
+bool Dataset::GetAttributeValues(uint attributeIndex,
 		vector<AttributeLevel>& attributeValues) {
 	if (attributeIndex > attributeNames.size()) {
 		cerr
@@ -1070,7 +1056,7 @@ bool Dataset::GetAttributeValues(unsigned int attributeIndex,
 	}
 	if (hasGenotypes) {
 		attributeValues.clear();
-		map<string, unsigned int>::const_iterator it;
+		map<string, uint>::const_iterator it;
 		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
 			AttributeLevel thisAttribute = instances[it->second]->GetAttribute(
 					attributeIndex);
@@ -1118,7 +1104,7 @@ AttributeLevel Dataset::GetAttribute(unsigned instanceIndex, string name) {
 				<< " out of range" << endl;
 		exit(1);
 	}
-	map<string, unsigned int>::iterator pos = attributesMask.find(name);
+	map<string, uint>::iterator pos = attributesMask.find(name);
 	if (pos != attributesMask.end()) {
 		return instances[instanceIndex]->GetAttribute(pos->second);
 	} else {
@@ -1129,7 +1115,7 @@ AttributeLevel Dataset::GetAttribute(unsigned instanceIndex, string name) {
 	}
 }
 
-pair<char, char> Dataset::GetAttributeAlleles(unsigned int attributeIndex) {
+pair<char, char> Dataset::GetAttributeAlleles(uint attributeIndex) {
 	if (!hasAllelicInfo) {
 		cerr << "ERROR: GetAttributeAlleles: This data set does not have "
 				<< "allelic information." << endl;
@@ -1146,7 +1132,7 @@ pair<char, char> Dataset::GetAttributeAlleles(unsigned int attributeIndex) {
 	return returnPair;
 }
 
-pair<char, double> Dataset::GetAttributeMAF(unsigned int attributeIndex) {
+pair<char, double> Dataset::GetAttributeMAF(uint attributeIndex) {
 	/// An Introduction to Genetic Analysis by Griffiths, Miller, Suzuki,
 	/// Lewontin and Gelbart, 2000, page 715.
 	pair<char, double> returnPair = make_pair(' ', 0.0);
@@ -1157,7 +1143,7 @@ pair<char, double> Dataset::GetAttributeMAF(unsigned int attributeIndex) {
 	if (attributeIndex < NumAttributes()) {
 		vector<AttributeLevel> thisAttrCol;
 		GetAttributeValues(attributeIndex, thisAttrCol);
-		for (unsigned int i = 0; i < thisAttrCol.size(); ++i) {
+		for (uint i = 0; i < thisAttrCol.size(); ++i) {
 			++genoCounts[thisAttrCol[i]];
 		}
 		if (genoCounts.size() == 3) {
@@ -1186,7 +1172,7 @@ bool Dataset::ProcessExclusionFile(string exclusionFilename) {
 
 	// temporary string for reading file lines
 	string line;
-	unsigned int lineNumber = 0;
+	uint lineNumber = 0;
 	while (getline(dataStream, line)) {
 		++lineNumber;
 		string attributeName = trim(line);
@@ -1204,7 +1190,7 @@ bool Dataset::ProcessExclusionFile(string exclusionFilename) {
 }
 
 AttributeMutationType Dataset::GetAttributeMutationType(
-		unsigned int attributeIndex) {
+		uint attributeIndex) {
 	if (attributeIndex < attributeMutationTypes.size()) {
 		return attributeMutationTypes[attributeIndex];
 	}
@@ -1216,9 +1202,9 @@ double Dataset::GetJukesCantorDistance(DatasetInstance* dsi1,
 	double returnValue = 0.0;
 
 	double d = 0.0;
-	vector<unsigned int> attributeIndicies = MaskGetAttributeIndices(
+	vector<uint> attributeIndicies = MaskGetAttributeIndices(
 			DISCRETE_TYPE);
-	for (unsigned int attrIdx = 0; attrIdx < attributeIndicies.size();
+	for (uint attrIdx = 0; attrIdx < attributeIndicies.size();
 			++attrIdx) {
 		AttributeLevel dsi1Al = dsi1->GetAttribute(attributeIndicies[attrIdx]);
 		AttributeLevel dsi2Al = dsi2->GetAttribute(attributeIndicies[attrIdx]);
@@ -1232,10 +1218,10 @@ double Dataset::GetJukesCantorDistance(DatasetInstance* dsi1,
 
 double Dataset::GetKimuraDistance(DatasetInstance* dsi1,
 		DatasetInstance* dsi2) {
-	vector<unsigned int> attributeIndicies = MaskGetAttributeIndices(
+	vector<uint> attributeIndicies = MaskGetAttributeIndices(
 			DISCRETE_TYPE);
 	double p = 0, q = 0;
-	for (unsigned int attrIdx = 0; attrIdx < attributeIndicies.size();
+	for (uint attrIdx = 0; attrIdx < attributeIndicies.size();
 			++attrIdx) {
 		AttributeLevel dsi1Al = dsi1->GetAttribute(attributeIndicies[attrIdx]);
 		AttributeLevel dsi2Al = dsi2->GetAttribute(attributeIndicies[attrIdx]);
@@ -1260,7 +1246,7 @@ double Dataset::GetKimuraDistance(DatasetInstance* dsi1,
 	return kimuraDistance;
 }
 
-unsigned int Dataset::NumLevels(unsigned int index) {
+uint Dataset::NumLevels(uint index) {
 	if (index < attributeLevelsSeen.size()) {
 		return attributeLevelsSeen[index].size();
 	}
@@ -1270,8 +1256,8 @@ unsigned int Dataset::NumLevels(unsigned int index) {
 	return 0;
 }
 
-unsigned int Dataset::GetAttributeIndexFromName(string attributeName) {
-	for (unsigned int i = 0; i < attributeNames.size(); i++) {
+uint Dataset::GetAttributeIndexFromName(string attributeName) {
+	for (uint i = 0; i < attributeNames.size(); i++) {
 		if (attributeNames[i] == attributeName) {
 			return i;
 		}
@@ -1279,13 +1265,13 @@ unsigned int Dataset::GetAttributeIndexFromName(string attributeName) {
 	return INVALID_INDEX;
 }
 
-unsigned int Dataset::NumNumerics() {
+uint Dataset::NumNumerics() {
 	return numericsMask.size();
 }
 
 vector<string> Dataset::GetNumericsNames() {
 	vector<string> names;
-	map<string, unsigned int>::const_iterator it = numericsMask.begin();
+	map<string, uint>::const_iterator it = numericsMask.begin();
 	for (; it != numericsMask.end(); ++it) {
 		names.push_back(it->first);
 	}
@@ -1304,14 +1290,14 @@ vector<string> Dataset::GetFileNumericsNames() {
 }
 
 pair<NumericLevel, NumericLevel> Dataset::GetMinMaxForNumeric(
-		unsigned int numericIdx) {
+		uint numericIdx) {
 	return numericsMinMax[numericIdx];
 }
 
-double Dataset::GetMeanForNumeric(unsigned int numericIdx) {
+double Dataset::GetMeanForNumeric(uint numericIdx) {
 	double sum = 0.0;
-	vector<unsigned int> instanceIndicies = MaskGetInstanceIndices();
-	for (unsigned int i = 0; i < instanceIndicies.size(); ++i) {
+	vector<uint> instanceIndicies = MaskGetInstanceIndices();
+	for (uint i = 0; i < instanceIndicies.size(); ++i) {
 		sum += instances[instanceIndicies[i]]->GetNumeric(numericIdx);
 	}
 
@@ -1332,7 +1318,7 @@ NumericLevel Dataset::GetNumeric(unsigned instanceIndex, string name) {
 				<< " out of range" << endl;
 		exit(1);
 	}
-	map<string, unsigned int>::iterator pos = numericsMask.find(name);
+	map<string, uint>::iterator pos = numericsMask.find(name);
 	if (pos != numericsMask.end()) {
 		return instances[instanceIndex]->GetNumeric(pos->second);
 	} else {
@@ -1359,25 +1345,26 @@ std::string Dataset::GetNumericsFilename() {
 	return numericsFilename;
 }
 
-unsigned int Dataset::GetNumericIndexFromName(string numericName) {
-	for (unsigned int i = 0; i < numericsNames.size(); i++) {
-		if (numericsNames[i] == numericName) {
-			return i;
-		}
-	}
-	return INVALID_INDEX;
+uint Dataset::GetNumericIndexFromName(string numericName) {
+  return numericsMask[numericName];
+//	for (uint i = 0; i < numericsNames.size(); i++) {
+//		if (numericsNames[i] == numericName) {
+//			return i;
+//		}
+//	}
+//	return INVALID_INDEX;
 }
 
 mat Dataset::GetNumericMatrix() {
   mat returnMatrix(NumInstances(), NumNumerics());
   returnMatrix.zeros();
   	vector<string> instanceIds = GetInstanceIds();
-	for (unsigned int iIdx = 0; iIdx < NumInstances(); iIdx++) {
+	for (uint iIdx = 0; iIdx < NumInstances(); iIdx++) {
 		unsigned instanceIndex = 0;
 		GetInstanceIndexForID(instanceIds[iIdx], instanceIndex);
 		/// write continuous attribute values
-		vector<unsigned int> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
-		for (unsigned int nIdx = 0; nIdx < numIndices.size(); nIdx++) {
+		vector<uint> numIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
+		for (uint nIdx = 0; nIdx < numIndices.size(); nIdx++) {
 			NumericLevel N = instances[instanceIndex]->GetNumeric(numIndices[nIdx]);
       returnMatrix(iIdx, nIdx) = N;
     }
@@ -1385,14 +1372,14 @@ mat Dataset::GetNumericMatrix() {
   return returnMatrix;
 }
 
-unsigned int Dataset::NumClasses() {
+uint Dataset::NumClasses() {
 	if (hasPhenotypes) {
 		return classIndexes.size();
 	}
 	return INVALID_INT_VALUE;
 }
 
-unsigned int Dataset::GetClassColumn() {
+uint Dataset::GetClassColumn() {
 	if (hasPhenotypes) {
 		return classColumn;
 	} else {
@@ -1403,7 +1390,7 @@ unsigned int Dataset::GetClassColumn() {
 bool Dataset::GetClassValues(vector<ClassLevel>& classValues) {
 	if (hasPhenotypes) {
 		classValues.clear();
-		map<string, unsigned int>::const_iterator it;
+		map<string, uint>::const_iterator it;
 		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
 			classValues.push_back(instances[it->second]->GetClass());
 		}
@@ -1413,7 +1400,7 @@ bool Dataset::GetClassValues(vector<ClassLevel>& classValues) {
 	}
 }
 
-const std::map<ClassLevel, std::vector<unsigned int> >&
+const std::map<ClassLevel, std::vector<uint> >&
 Dataset::GetClassIndexes() {
 	return classIndexes;
 }
@@ -1445,15 +1432,15 @@ pair<double, double> Dataset::GetMinMaxForContinuousPhenotype() {
 void Dataset::Print() {
 	PrintStats();
 	cout << Timestamp() << "Data set values:" << endl << endl;
-	map<string, unsigned int>::const_iterator it;
+	map<string, uint>::const_iterator it;
 	for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
 		DatasetInstance* dsi = instances[it->second];
 		cout << instanceIds[it->second] << "\t";
-		map<string, unsigned int>::const_iterator ait = attributesMask.begin();
+		map<string, uint>::const_iterator ait = attributesMask.begin();
 		for (; ait != attributesMask.end(); ++ait) {
 			cout << dsi->GetAttribute(ait->second) << "\t";
 		}
-		map<string, unsigned int>::const_iterator nit = numericsMask.begin();
+		map<string, uint>::const_iterator nit = numericsMask.begin();
 		for (; nit != numericsMask.end(); ++nit) {
 			cout << dsi->GetNumeric(nit->second) << "\t";
 		}
@@ -1471,11 +1458,11 @@ void Dataset::Print() {
 }
 
 void Dataset::PrintStats() {
-	unsigned int numInstances = NumInstances();
-	unsigned int numClasses = NumClasses();
-	unsigned int numAttributes = NumAttributes();
-	unsigned int numNumerics = NumNumerics();
-	unsigned int numElements = (numInstances * (numAttributes + numNumerics))
+	uint numInstances = NumInstances();
+	uint numClasses = NumClasses();
+	uint numAttributes = NumAttributes();
+	uint numNumerics = NumNumerics();
+	uint numElements = (numInstances * (numAttributes + numNumerics))
 			+ numInstances;
 
 	// TODO: add class stats
@@ -1511,11 +1498,11 @@ void Dataset::PrintStats() {
 }
 
 void Dataset::PrintNumericsStats() {
-	unsigned int numInstances = NumInstances();
-	unsigned int numClasses = NumClasses();
-	unsigned int numAttributes = NumAttributes();
-	unsigned int numNumerics = NumNumerics();
-	unsigned int numElements = (numInstances * (numAttributes + numNumerics))
+	uint numInstances = NumInstances();
+	uint numClasses = NumClasses();
+	uint numAttributes = NumAttributes();
+	uint numNumerics = NumNumerics();
+	uint numElements = (numInstances * (numAttributes + numNumerics))
 			+ numInstances;
 
 	// TODO: add class stats
@@ -1528,7 +1515,7 @@ void Dataset::PrintNumericsStats() {
 		cout << Timestamp() << "numerics:       " << numNumerics << endl;
 	}
 //  vector< pair<double, double> >::const_iterator minMaxIt = numericsMinMax.begin();
-//  for(unsigned int i = 0; minMaxIt != numericsMinMax.end(); ++minMaxIt, ++i) {
+//  for(uint i = 0; minMaxIt != numericsMinMax.end(); ++minMaxIt, ++i) {
 //    cout << Timestamp()
 //            << (*minMaxIt).first << " <= "
 //            << numericsNames[i] << " <= "
@@ -1553,11 +1540,11 @@ void Dataset::PrintNumericsStats() {
 }
 
 void Dataset::PrintStatsSimple(ostream& outStream) {
-	unsigned int numInstances = NumInstances();
-	unsigned int numClasses = NumClasses();
-	unsigned int numAttributes = NumAttributes();
-	unsigned int numNumerics = NumNumerics();
-	unsigned int numElements = (numInstances * (numAttributes + numNumerics))
+	uint numInstances = NumInstances();
+	uint numClasses = NumClasses();
+	uint numAttributes = NumAttributes();
+	uint numNumerics = NumNumerics();
+	uint numElements = (numInstances * (numAttributes + numNumerics))
 			+ numInstances;
 
 	outStream << Timestamp() << "Dataset has:" << endl << Timestamp()
@@ -1593,7 +1580,7 @@ void Dataset::PrintClassIndexInfo(ostream& outStream) {
 		outStream << Timestamp() << "Data Set Class Index" << endl;
 		outStream << Timestamp() << "Index has [" << classIndexes.size()
 				<< "] entries:" << endl;
-		map<ClassLevel, vector<unsigned int> >::const_iterator mit =
+		map<ClassLevel, vector<uint> >::const_iterator mit =
 				classIndexes.begin();
 		for (; mit != classIndexes.end(); ++mit) {
 			outStream << Timestamp() << (*mit).first << ": "
@@ -1609,7 +1596,7 @@ void Dataset::PrintMissingValuesStats() {
 	if (missingValues.size()) {
 		cout << Timestamp() << "Missing Attributes Values Detected" << endl;
 		cout << Timestamp() << "Instance # Missing" << endl;
-		map<string, vector<unsigned int> >::const_iterator mit;
+		map<string, vector<uint> >::const_iterator mit;
 		for (mit = missingValues.begin(); mit != missingValues.end(); ++mit) {
 			cout << Timestamp() << mit->first << setw(10) << mit->second.size()
 					<< endl;
@@ -1626,7 +1613,7 @@ void Dataset::PrintMissingValuesStats() {
 	if (missingNumericValues.size()) {
 		cout << Timestamp() << "Missing Numeric Values Detected" << endl;
 		cout << Timestamp() << "Instance # Missing" << endl;
-		map<string, vector<unsigned int> >::const_iterator mit;
+		map<string, vector<uint> >::const_iterator mit;
 		for (mit = missingNumericValues.begin();
 				mit != missingNumericValues.end(); ++mit) {
 			cout << Timestamp() << mit->first << setw(10) << mit->second.size()
@@ -1639,12 +1626,12 @@ void Dataset::PrintMissingValuesStats() {
 
 void Dataset::PrintLevelCounts() {
 	cout << Timestamp() << "Data set attribute level counts:" << endl;
-	vector<map<AttributeLevel, unsigned int> >::const_iterator levelCountsIt =
+	vector<map<AttributeLevel, uint> >::const_iterator levelCountsIt =
 			levelCounts.begin();
-	for (unsigned int attrIdx = 0; levelCountsIt != levelCounts.end();
+	for (uint attrIdx = 0; levelCountsIt != levelCounts.end();
 			++levelCountsIt, ++attrIdx) {
 		cout << Timestamp() << "Attribute [" << attrIdx << "]" << endl;
-		map<AttributeLevel, unsigned int>::const_iterator itsIt =
+		map<AttributeLevel, uint>::const_iterator itsIt =
 				(*levelCountsIt).begin();
 		for (; itsIt != (*levelCountsIt).end(); ++itsIt) {
 			cout << Timestamp() << (*itsIt).first << "->" << (*itsIt).second
@@ -1667,9 +1654,9 @@ void Dataset::WriteLevelCounts(std::string levelsFilename) {
 
 	cout << Timestamp() << "Writing level counts to [" << levelsFilename << "]"
 			<< endl;
-	vector<map<AttributeLevel, unsigned int> >::const_iterator levelCountsIt =
+	vector<map<AttributeLevel, uint> >::const_iterator levelCountsIt =
 			levelCounts.begin();
-	for (unsigned int attrIdx = 0; levelCountsIt != levelCounts.end();
+	for (uint attrIdx = 0; levelCountsIt != levelCounts.end();
 			++levelCountsIt, ++attrIdx) {
 		outFile << attributeNames[attrIdx] << "\t";
 
@@ -1682,7 +1669,7 @@ void Dataset::WriteLevelCounts(std::string levelsFilename) {
 					<< "\t" << thisMinorAllele.second;
 		}
 
-		map<AttributeLevel, unsigned int>::const_iterator itsIt =
+		map<AttributeLevel, uint>::const_iterator itsIt =
 				(*levelCountsIt).begin();
 		outFile << "\t[";
 		bool first = true;
@@ -1728,7 +1715,7 @@ void Dataset::PrintAttributeLevelsSeen() {
 	cout << Timestamp() << "Dataset attribute levels seen:" << endl;
 	vector<set<string> >::const_iterator attributeIt =
 			attributeLevelsSeen.begin();
-	for (unsigned int i = 0; attributeIt != attributeLevelsSeen.end();
+	for (uint i = 0; attributeIt != attributeLevelsSeen.end();
 			++attributeIt, ++i) {
 		cout << Timestamp() << "Attribute [" << i << "] => [ ";
 		set<string>::const_iterator sIt = (*attributeIt).begin();
@@ -1751,7 +1738,7 @@ bool Dataset::MaskRemoveVariable(string variableName) {
 
 bool Dataset::MaskRemoveVariableType(string variableName,
 		AttributeType varType) {
-	map<string, unsigned int>::iterator pos;
+	map<string, uint>::iterator pos;
 	if (varType == DISCRETE_TYPE) {
 		pos = attributesMask.find(variableName);
 		if (pos != attributesMask.end()) {
@@ -1776,7 +1763,7 @@ bool Dataset::MaskRemoveVariableType(string variableName,
 
 bool Dataset::MaskSearchVariableType(string variableName,
 		AttributeType varType) {
-	map<string, unsigned int>::iterator pos;
+	map<string, uint>::iterator pos;
 	if (varType == DISCRETE_TYPE) {
 		pos = attributesMask.find(variableName);
 		if (pos != attributesMask.end()) {
@@ -1797,7 +1784,7 @@ bool Dataset::MaskSearchVariableType(string variableName,
 bool Dataset::MaskIncludeAllAttributes(AttributeType attrType) {
 	if (attrType == DISCRETE_TYPE) {
 		attributesMask.clear();
-		unsigned int attributeIndex = 0;
+		uint attributeIndex = 0;
 		vector<string>::const_iterator it = attributeNames.begin();
 		for (; it != attributeNames.end(); ++it) {
 			attributesMask[*it] = attributeIndex;
@@ -1806,7 +1793,7 @@ bool Dataset::MaskIncludeAllAttributes(AttributeType attrType) {
 		return true;
 	} else {
 		numericsMask.clear();
-		unsigned int attributeIndex = 0;
+		uint attributeIndex = 0;
 		vector<string>::const_iterator it = numericsNames.begin();
 		for (; it != numericsNames.end(); ++it) {
 			numericsMask[*it] = attributeIndex;
@@ -1816,15 +1803,15 @@ bool Dataset::MaskIncludeAllAttributes(AttributeType attrType) {
 	}
 }
 
-vector<unsigned int> Dataset::MaskGetAttributeIndices(AttributeType attrType) {
-	vector<unsigned int> indices;
+vector<uint> Dataset::MaskGetAttributeIndices(AttributeType attrType) {
+	vector<uint> indices;
 	if (attrType == DISCRETE_TYPE) {
-		map<string, unsigned int>::const_iterator it = attributesMask.begin();
+		map<string, uint>::const_iterator it = attributesMask.begin();
 		for (; it != attributesMask.end(); ++it) {
 			indices.push_back(it->second);
 		}
 	} else {
-		map<string, unsigned int>::const_iterator it = numericsMask.begin();
+		map<string, uint>::const_iterator it = numericsMask.begin();
 		for (; it != numericsMask.end(); ++it) {
 			indices.push_back(it->second);
 		}
@@ -1832,7 +1819,7 @@ vector<unsigned int> Dataset::MaskGetAttributeIndices(AttributeType attrType) {
 	return indices;
 }
 
-const map<string, unsigned int>&
+const map<string, uint>&
 Dataset::MaskGetAttributeMask(AttributeType attrType) {
 	if (attrType == DISCRETE_TYPE) {
 		return attributesMask;
@@ -1843,11 +1830,11 @@ Dataset::MaskGetAttributeMask(AttributeType attrType) {
 
 vector<string> Dataset::MaskGetAllVariableNames() {
 	vector<string> names;
-	map<string, unsigned int>::const_iterator ait = attributesMask.begin();
+	map<string, uint>::const_iterator ait = attributesMask.begin();
 	for (; ait != attributesMask.end(); ++ait) {
 		names.push_back(ait->first);
 	}
-	map<string, unsigned int>::const_iterator nit = numericsMask.begin();
+	map<string, uint>::const_iterator nit = numericsMask.begin();
 	for (; nit != numericsMask.end(); ++nit) {
 		names.push_back(nit->first);
 	}
@@ -1855,7 +1842,7 @@ vector<string> Dataset::MaskGetAllVariableNames() {
 }
 
 bool Dataset::MaskRemoveInstance(std::string instanceId) {
-	map<string, unsigned int>::iterator pos = instancesMask.find(instanceId);
+	map<string, uint>::iterator pos = instancesMask.find(instanceId);
 	if (pos != instancesMask.end()) {
 		instancesMask.erase(pos);
 	} else {
@@ -1867,7 +1854,7 @@ bool Dataset::MaskRemoveInstance(std::string instanceId) {
 }
 
 bool Dataset::MaskSearchInstance(string instanceId) {
-	map<string, unsigned int>::iterator pos = instancesMask.find(instanceId);
+	map<string, uint>::iterator pos = instancesMask.find(instanceId);
 	if (pos != instancesMask.end()) {
 		return true;
 	} else {
@@ -1878,7 +1865,7 @@ bool Dataset::MaskSearchInstance(string instanceId) {
 bool Dataset::MaskIncludeAllInstances() {
 	instancesMask.clear();
 	vector<string>::const_iterator it = instanceIds.begin();
-	unsigned int instanceIndex = 0;
+	uint instanceIndex = 0;
 	for (; it != instanceIds.end(); ++it) {
 		instancesMask[*it] = instanceIndex;
 		++instanceIndex;
@@ -1887,9 +1874,9 @@ bool Dataset::MaskIncludeAllInstances() {
 	return true;
 }
 
-vector<unsigned int> Dataset::MaskGetInstanceIndices() {
-	vector<unsigned int> indices;
-	map<string, unsigned int>::const_iterator it = instancesMask.begin();
+vector<uint> Dataset::MaskGetInstanceIndices() {
+	vector<uint> indices;
+	map<string, uint>::const_iterator it = instancesMask.begin();
 	for (; it != instancesMask.end(); ++it) {
 		indices.push_back(it->second);
 	}
@@ -1898,14 +1885,14 @@ vector<unsigned int> Dataset::MaskGetInstanceIndices() {
 
 vector<string> Dataset::MaskGetInstanceIds() {
 	vector<string> ids;
-	map<string, unsigned int>::const_iterator it = instancesMask.begin();
+	map<string, uint>::const_iterator it = instancesMask.begin();
 	for (; it != instancesMask.end(); ++it) {
 		ids.push_back(it->first);
 	}
 	return ids;
 }
 
-const map<string, unsigned int>& Dataset::MaskGetInstanceMask() {
+const map<string, uint>& Dataset::MaskGetInstanceMask() {
 	return instancesMask;
 }
 
@@ -1950,9 +1937,9 @@ bool Dataset::MaskWriteNewDataset(string newDatasetFilename) {
 		vector<string> numericNames = GetNumericsNames();
 		outFile << join(numericNames.begin(), numericNames.end(), "\t");
 		outFile << "Class" << endl;
-		for (unsigned int i = 0; i < NumInstances(); ++i) {
+		for (uint i = 0; i < NumInstances(); ++i) {
 			ostringstream newInstanceString;
-			for (unsigned int j = 0; j < numericNames.size() - 1; ++j) {
+			for (uint j = 0; j < numericNames.size() - 1; ++j) {
 				newInstanceString << GetNumeric(i, numericNames[j]) << "\t";
 			}
 			if (hasContinuousPhenotypes) {
@@ -1967,9 +1954,9 @@ bool Dataset::MaskWriteNewDataset(string newDatasetFilename) {
 		vector<string> attributeNames = GetAttributeNames();
 		outFile << join(attributeNames.begin(), attributeNames.end(), "\t");
 		outFile << "Class" << endl;
-		for (unsigned int i = 0; i < NumInstances(); ++i) {
+		for (uint i = 0; i < NumInstances(); ++i) {
 			ostringstream newInstanceString;
-			for (unsigned int j = 0; j < attributeNames.size() - 1; ++j) {
+			for (uint j = 0; j < attributeNames.size() - 1; ++j) {
 				newInstanceString << GetAttribute(i, attributeNames[j]) << "\t";
 			}
 			if (hasContinuousPhenotypes) {
@@ -1997,7 +1984,7 @@ void Dataset::PrintMaskStats() {
 }
 
 void Dataset::RunSnpDiagnosticTests(string logFilename,
-		double globalGenotypeThreshold, unsigned int cellThreshold) {
+		double globalGenotypeThreshold, uint cellThreshold) {
 	/// open the diagnostic log file
 	ofstream outFile;
 	outFile.open(logFilename.c_str());
@@ -2036,12 +2023,12 @@ void Dataset::RunSnpDiagnosticTests(string logFilename,
 	// check for missing data in instances (subjects) - bcw - 7/12/11
 	cout << Timestamp() << "missing values check" << endl;
 	outFile << Timestamp() << "missing values check" << endl;
-	unsigned int totalMissing = 0;
-	map<string, vector<unsigned int> >::const_iterator mit =
+	uint totalMissing = 0;
+	map<string, vector<uint> >::const_iterator mit =
 			missingValues.begin();
 	for (; mit != missingValues.end(); ++mit) {
 		outFile << mit->first << endl;
-		vector<unsigned int>::const_iterator aiIt = (mit->second).begin();
+		vector<uint>::const_iterator aiIt = (mit->second).begin();
 		for (; aiIt != (mit->second).end(); ++aiIt) {
 			outFile << *aiIt << " ";
 		}
@@ -2058,18 +2045,18 @@ void Dataset::RunSnpDiagnosticTests(string logFilename,
 	// ---------------------------------------------------------------------------
 	cout << Timestamp() << "global frequency count threshold check" << endl;
 	outFile << Timestamp() << "global frequency count threshold check" << endl;
-	unsigned int attributeIndex = 0;
-	unsigned int instanceThreshold = (unsigned int) (NumInstances()
+	uint attributeIndex = 0;
+	uint instanceThreshold = (uint) (NumInstances()
 			* globalGenotypeThreshold);
-	vector<map<AttributeLevel, unsigned int> >::const_iterator lcIt;
+	vector<map<AttributeLevel, uint> >::const_iterator lcIt;
 	// PrintLevelCounts();
-	unsigned int freqCountBad = 0;
+	uint freqCountBad = 0;
 	for (lcIt = levelCounts.begin(); lcIt != levelCounts.end();
 			++lcIt, ++attributeIndex) {
-		vector<unsigned int> ftGenotypeCounts;
-		map<AttributeLevel, unsigned int>::const_iterator countsIt =
+		vector<uint> ftGenotypeCounts;
+		map<AttributeLevel, uint>::const_iterator countsIt =
 				(*lcIt).begin();
-		for (unsigned int levelIdx = 0; countsIt != (*lcIt).end();
+		for (uint levelIdx = 0; countsIt != (*lcIt).end();
 				++countsIt, ++levelIdx) {
 			string attributeName = attributeNames[attributeIndex];
 			if ((*countsIt).second < instanceThreshold) {
@@ -2114,15 +2101,15 @@ void Dataset::RunSnpDiagnosticTests(string logFilename,
 		outFile << Timestamp() << "chi-squared cell count threshold check"
 				<< endl;
 		ChiSquared chiSq(this);
-		unsigned int chiSqBad = 0;
-		for (unsigned int attributeIndex = 0; attributeIndex < NumAttributes();
+		uint chiSqBad = 0;
+		for (uint attributeIndex = 0; attributeIndex < NumAttributes();
 				attributeIndex++) {
 			chiSq.ComputeScore(attributeIndex);
 			vector<vector<double> > frequencyCounts =
 					chiSq.GetFrequencyCounts();
-			for (unsigned int curClass = 0; curClass < NumClasses();
+			for (uint curClass = 0; curClass < NumClasses();
 					curClass++) {
-				for (unsigned int curLevel = 0;
+				for (uint curLevel = 0;
 						curLevel < NumLevels(attributeIndex); curLevel++) {
 					if (frequencyCounts[curClass][curLevel] < cellThreshold) {
 						//          cout << "Attribute [" << attributeNames[attributeIndex]
@@ -2158,13 +2145,13 @@ void Dataset::RunSnpDiagnosticTests(string logFilename,
 	// ---------------------------------------------------------------------------
 	cout << Timestamp() << "Hardy-Weinberg Equilibrium (HWE) check" << endl;
 	outFile << Timestamp() << "Hardy-Weinberg Equilibrium (HWE) check" << endl;
-	unsigned int badHWE = 0;
-	for (unsigned int attributeIndex = 0; attributeIndex < NumAttributes();
+	uint badHWE = 0;
+	for (uint attributeIndex = 0; attributeIndex < NumAttributes();
 			attributeIndex++) {
 		// get the vector of genotype counts
-		map<AttributeLevel, unsigned int> gcounts = levelCounts[attributeIndex];
-		vector<unsigned int> counts;
-		map<AttributeLevel, unsigned int>::const_iterator it = gcounts.begin();
+		map<AttributeLevel, uint> gcounts = levelCounts[attributeIndex];
+		vector<uint> counts;
+		map<AttributeLevel, uint>::const_iterator it = gcounts.begin();
 		for (; it != gcounts.end(); ++it) {
 			// cout << it->first << " " << it->second << endl;
 			counts.push_back(it->second);
@@ -2204,12 +2191,12 @@ void Dataset::RunSnpDiagnosticTests(string logFilename,
 }
 
 bool Dataset::CheckHardyWeinbergEquilibrium(
-		vector<unsigned int>& chkGenotypeCounts) {
+		vector<uint>& chkGenotypeCounts) {
 	/// observed counts
-	unsigned int AA = chkGenotypeCounts[0];
-	unsigned int Aa = chkGenotypeCounts[1];
-	unsigned int aa = chkGenotypeCounts[2];
-	unsigned int sum = AA + Aa + aa;
+	uint AA = chkGenotypeCounts[0];
+	uint Aa = chkGenotypeCounts[1];
+	uint aa = chkGenotypeCounts[2];
+	uint sum = AA + Aa + aa;
 	if (sum < 1) {
 		cout << Timestamp()
 				<< "WARNING: Hardy-Weinberg test failed to find any observed values"
@@ -2240,7 +2227,7 @@ bool Dataset::CheckHardyWeinbergEquilibrium(
 				<< "computed due to zeroes in expected counts" << endl;
 		return false;
 	}
-	unsigned int expectedSum = (unsigned int) (eAA + eAa + eaa + 0.5);
+	uint expectedSum = (uint) (eAA + eAa + eaa + 0.5);
 	if (expectedSum != NumInstances()) {
 		cerr << Timestamp() << "HWE FAIL: HWE expected genotype counts sum ["
 				<< expectedSum << "] does not add up to number of instances ["
@@ -2255,7 +2242,9 @@ bool Dataset::CheckHardyWeinbergEquilibrium(
 	//  cout << eAA << " " << eAa << " " << eaa << endl;
 
 	/// one degree of freedom (# genotypes - # alleles), 5% significance level
-	double pValue = 1.0 - gsl_cdf_chisq_Q(chiSquaredSum, 1);
+	//double pValue = 1.0 - gsl_cdf_chisq_Q(chiSquaredSum, 1);
+  chi_squared chiDist(5);
+  double pValue = cdf(chiDist, chiSquaredSum);
 	if (pValue > 0.1) {
 		cerr << Timestamp() << "HWE FAIL: x^2 p-value too high: [" << pValue
 				<< "]" << endl;
@@ -2370,11 +2359,11 @@ double Dataset::GetClassProbability(ClassLevel thisClass) {
 	return 0.0;
 }
 
-double Dataset::GetProbabilityValueGivenClass(unsigned int attributeIndex,
+double Dataset::GetProbabilityValueGivenClass(uint attributeIndex,
 		AttributeLevel A, ClassLevel classValue) {
-	map<pair<AttributeLevel, ClassLevel>, unsigned int> thisAttrLevelCounts =
+	map<pair<AttributeLevel, ClassLevel>, uint> thisAttrLevelCounts =
 			levelCountsByClass[attributeIndex];
-	unsigned int instancesInThisClass = classIndexes[classValue].size();
+	uint instancesInThisClass = classIndexes[classValue].size();
 	pair<AttributeLevel, ClassLevel> key = make_pair(A, classValue);
 	if (thisAttrLevelCounts.find(key) != thisAttrLevelCounts.end()) {
 		//    cout << attributeIndex << " [" << A << "|" << classValue << "]: "
@@ -2428,7 +2417,7 @@ void Dataset::AttributeInteractionInformation() {
 
 	/// display results detail; I(A;B|C) column as percentage
 	for (rIt = results.begin(); rIt != results.end(); rIt++) {
-		pair<unsigned int, unsigned int> thisCombo = (*rIt).first;
+		pair<uint, uint> thisCombo = (*rIt).first;
 		map<string, double> thisResults = (*rIt).second;
 		cout << thisCombo.first << "\t" << thisCombo.second << "\t";
 		for (rdIt = thisResults.begin(); rdIt != thisResults.end(); rdIt++) {
@@ -2591,7 +2580,7 @@ bool Dataset::CalculateGainMatrix(double** gainMatrix, string matrixFilename) {
 		return false;
 	}
 
-	map<string, unsigned int> attributeMask = MaskGetAttributeMask(
+	map<string, uint> attributeMask = MaskGetAttributeMask(
 			DISCRETE_TYPE);
 	vector<string> attributeNames = MaskGetAllVariableNames();
 	int numAttributes = attributeNames.size();
@@ -2658,7 +2647,7 @@ bool Dataset::CalculateRegainMatrix(double** gainMatrix,
 		return false;
 	}
 
-	map<string, unsigned int> attributeMask = MaskGetAttributeMask(
+	map<string, uint> attributeMask = MaskGetAttributeMask(
 			NUMERIC_TYPE);
 	vector<string> attributeNames = MaskGetAllVariableNames();
 	int numAttributes = attributeNames.size();
@@ -2717,8 +2706,8 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 			if (snpMetric == "JC") {
 				distance = GetJukesCantorDistance(dsi1, dsi2);
 			} else {
-				vector<unsigned int> attributeIndices = MaskGetAttributeIndices(DISCRETE_TYPE);
-				for (unsigned int i = 0; i < attributeIndices.size(); ++i) {
+				vector<uint> attributeIndices = MaskGetAttributeIndices(DISCRETE_TYPE);
+				for (uint i = 0; i < attributeIndices.size(); ++i) {
 					// DEBUG
 			  	pair<char, char> alleles =
 		  			dsi1->GetDatasetPtr()->GetAttributeAlleles(attributeIndices[i]);
@@ -2751,9 +2740,9 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 	// compute numeric distances
 	if (HasNumerics()) {
 		// cout << "Computing numeric instance-to-instance distance..." << endl;
-		vector<unsigned int> numericIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
+		vector<uint> numericIndices = MaskGetAttributeIndices(NUMERIC_TYPE);
 		// cout << "\tNumber of numerics: " << numericIndices.size() << endl;
-		for (unsigned int i = 0; i < numericIndices.size(); ++i) {
+		for (uint i = 0; i < numericIndices.size(); ++i) {
 			// cout << "\t\tNumeric index: " << numericIndices[i] << endl;
 			double numDistance = numDiff(numericIndices[i], dsi1, dsi2);
 			// cout << "Numeric distance " << i << " => " << numDistance << endl;
@@ -2862,10 +2851,10 @@ vector<string> Dataset::GetDistanceMetrics() {
 	return metrics;
 }
 
-pair<unsigned int, unsigned int> Dataset::GetAttributeTiTvCounts() {
-	vector<unsigned int> attrIndices = MaskGetAttributeIndices(DISCRETE_TYPE);
-	unsigned int tiCount = 0, tvCount = 0;
-	for (unsigned int aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
+pair<uint, uint> Dataset::GetAttributeTiTvCounts() {
+	vector<uint> attrIndices = MaskGetAttributeIndices(DISCRETE_TYPE);
+	uint tiCount = 0, tvCount = 0;
+	for (uint aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
 		if (attributeMutationTypes[aIdx] == TRANSITION_MUTATION) {
 			++tiCount;
 		} else {
@@ -2900,7 +2889,7 @@ bool Dataset::ResetNearestNeighbors() {
 //	cout << Timestamp() 
 //					<< "INFO: Dataset is clearing instance nearest neighbor
 //         	<< "information" << endl;
-	map<string, unsigned int>::const_iterator it = instancesMask.begin();
+	map<string, uint>::const_iterator it = instancesMask.begin();
 	for (; it != instancesMask.end(); ++it) {
 		instances[it->second]->ResetNearestNeighbors();
 	}	
@@ -2912,7 +2901,7 @@ bool Dataset::ResetNearestNeighbors() {
 bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 		string matrixFilename) {
 	cout << Timestamp() << "Calculating distance matrix" << endl;
-	map<string, unsigned int> instanceMask = MaskGetInstanceMask();
+	map<string, uint> instanceMask = MaskGetInstanceMask();
 	vector<string> instanceIds = MaskGetInstanceIds();
 	int numInstances = instanceIds.size();
 
@@ -2926,9 +2915,9 @@ bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 		// cout << "Computing instance to instance distances. Row: " << i << endl;
 		// #pragma omp parallel for
 		for (int j = i + 1; j < numInstances; ++j) {
-			unsigned int dsi1Index = 0;
+			uint dsi1Index = 0;
 			GetInstanceIndexForID(instanceIds[i], dsi1Index);
-			unsigned int dsi2Index = 0;
+			uint dsi2Index = 0;
 			GetInstanceIndexForID(instanceIds[j], dsi2Index);
 			distanceMatrix[i][j] = distanceMatrix[j][i] =
 					ComputeInstanceToInstanceDistance(GetInstance(dsi1Index),
@@ -2976,7 +2965,7 @@ bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 				<< "]" << endl;
 		ofstream phenoFile(phenoFilename.c_str());
 		for (int i = 0; i < numInstances; ++i) {
-			unsigned int dsiIndex = 0;
+			uint dsiIndex = 0;
 			GetInstanceIndexForID(instanceIds[i], dsiIndex);
 			if (hasContinuousPhenotypes) {
 				phenoFile << instances[dsiIndex]->GetPredictedValueTau()
@@ -2992,16 +2981,16 @@ bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 }
 
 bool Dataset::CalculateDistanceMatrix(vector<vector<double> >& distanceMatrix) {
-	map<string, unsigned int> instanceMask = MaskGetInstanceMask();
+	map<string, uint> instanceMask = MaskGetInstanceMask();
 	vector<string> instanceIds = MaskGetInstanceIds();
 	int numInstances = instanceIds.size();
 
 #pragma omp parallel for schedule(dynamic, 1)
 	for (int i = 0; i < numInstances; ++i) {
 		for (int j = i + 1; j < numInstances; ++j) {
-			unsigned int dsi1Index = 0;
+			uint dsi1Index = 0;
 			GetInstanceIndexForID(instanceIds[i], dsi1Index);
-			unsigned int dsi2Index = 0;
+			uint dsi2Index = 0;
 			GetInstanceIndexForID(instanceIds[j], dsi2Index);
 			distanceMatrix[i][j] = distanceMatrix[j][i] =
 					ComputeInstanceToInstanceDistance(GetInstance(dsi1Index),
@@ -3038,8 +3027,8 @@ bool Dataset::LoadSnps(std::string filename) {
 	vector<string> tokens;
 	split(tokens, line);
 	vector<string>::const_iterator it;
-	unsigned int numAttributes = 0;
-	unsigned int classIndex = 0;
+	uint numAttributes = 0;
+	uint classIndex = 0;
 	for (it = tokens.begin(); it != tokens.end(); ++it) {
 		if (to_upper(*it) == "CLASS") {
 			cout << Timestamp() << "Class column detect at " << classIndex
@@ -3083,9 +3072,9 @@ bool Dataset::LoadSnps(std::string filename) {
 	genotypeCounts.resize(numAttributes);
 
 	// read instance attributes from whitespace-delimited lines
-	unsigned int instanceIndex = 0;
+	uint instanceIndex = 0;
 	double minPheno = 0.0, maxPheno = 0.0;
-	unsigned int lineNumber = 0;
+	uint lineNumber = 0;
 	while (getline(dataStream, line)) {
 		++lineNumber;
 		// only load matching IDs from numerics and phenotype files
@@ -3107,7 +3096,7 @@ bool Dataset::LoadSnps(std::string filename) {
 
 		vector<string> attributesStringVector;
 		split(attributesStringVector, trimmedLine);
-		unsigned int numAttributesRead = attributesStringVector.size() - 1;
+		uint numAttributesRead = attributesStringVector.size() - 1;
 		if ((numAttributesRead == 0) || (numAttributesRead != numAttributes)) {
 			cout << Timestamp() << "WARNING: Skipping line " << lineNumber
 					<< " instance has " << numAttributesRead << " should have "
@@ -3116,7 +3105,7 @@ bool Dataset::LoadSnps(std::string filename) {
 		}
 
 		vector<AttributeLevel> attributeVector;
-		unsigned int attrIdx = 0;
+		uint attrIdx = 0;
 		vector<string>::const_iterator it = attributesStringVector.begin();
 		ClassLevel discreteClassLevel = MISSING_DISCRETE_CLASS_VALUE;
 		NumericLevel numericClassLevel = MISSING_NUMERIC_CLASS_VALUE;
@@ -3243,13 +3232,13 @@ void Dataset::UpdateAllLevelCounts() {
 		levelCountsByClass.resize(NumAttributes());
 	}
 	/// initialize level count maps to contain at least three levels
-	for (unsigned int i = 0; i < NumAttributes(); ++i) {
+	for (uint i = 0; i < NumAttributes(); ++i) {
 		levelCounts[i][0] = 0;
 		levelCounts[i][1] = 0;
 		levelCounts[i][2] = 0;
 	}
-	unsigned int instanceCount = 0;
-	map<string, unsigned int>::const_iterator it = instancesMask.begin();
+	uint instanceCount = 0;
+	map<string, uint>::const_iterator it = instancesMask.begin();
 	for (; it != instancesMask.end(); ++it) {
 		UpdateLevelCounts(instances[it->second]);
 		if (instanceCount && ((instanceCount % 100) == 0)) {
@@ -3269,9 +3258,9 @@ void Dataset::UpdateAllLevelCounts() {
 
 void Dataset::UpdateLevelCounts(DatasetInstance* dsi) {
 	ClassLevel thisClassLevel = dsi->GetClass();
-	map<string, unsigned int>::const_iterator it = attributesMask.begin();
+	map<string, uint>::const_iterator it = attributesMask.begin();
 	for (; it != attributesMask.end(); ++it) {
-		unsigned int attributeIndex = it->second;
+		uint attributeIndex = it->second;
 		AttributeLevel thisAttributeLevel = dsi->GetAttribute(attributeIndex);
 		if (thisAttributeLevel != MISSING_ATTRIBUTE_VALUE) {
 			++levelCounts[attributeIndex][thisAttributeLevel];
@@ -3284,9 +3273,9 @@ void Dataset::UpdateLevelCounts(DatasetInstance* dsi) {
 }
 
 void Dataset::ExcludeMonomorphs() {
-	unsigned int attrIdx = 0;
-	unsigned int attrsExcluded = 0;
-	vector<map<AttributeLevel, unsigned int> >::const_iterator it;
+	uint attrIdx = 0;
+	uint attrsExcluded = 0;
+	vector<map<AttributeLevel, uint> >::const_iterator it;
 	for (it = levelCounts.begin(); it != levelCounts.end(); ++it, ++attrIdx) {
 		if (it->size() == 1) {
 			cout << Timestamp() << "WARNING: attribute "
@@ -3305,13 +3294,13 @@ void Dataset::CreateDummyAlleles() {
 	attributeAlleles.clear();
 	attributeAlleleCounts.clear();
 	attributeMinorAllele.clear();
-	map<string, unsigned int>::const_iterator ait = attributesMask.begin();
+	map<string, uint>::const_iterator ait = attributesMask.begin();
 	for (; ait != attributesMask.end(); ++ait) {
-		map<string, unsigned int>::const_iterator it = instancesMask.begin();
-		map<char, unsigned int> alleleCounts;
+		map<string, uint>::const_iterator it = instancesMask.begin();
+		map<char, uint> alleleCounts;
 		for (; it != instancesMask.end(); ++it) {
 			DatasetInstance* dsi = instances[it->second];
-			unsigned int attributeIndex = ait->second;
+			uint attributeIndex = ait->second;
 			AttributeLevel thisAttributeLevel = dsi->GetAttribute(
 					attributeIndex);
 			if (thisAttributeLevel == MISSING_ATTRIBUTE_VALUE) {
@@ -3364,7 +3353,7 @@ bool Dataset::LoadNumerics(string filename) {
 	//  PrintStats();
 
 	// temporary string for reading file lines
-	unsigned int lineNumber = 0;
+	uint lineNumber = 0;
 	string line;
 	// read the header for covariate names
 	getline(dataStream, line);
@@ -3379,7 +3368,7 @@ bool Dataset::LoadNumerics(string filename) {
 	numericsNames.resize(numNames.size() - 2);
 	copy(numNames.begin() + 2, numNames.end(), numericsNames.begin());
 	vector<string>::const_iterator it = numericsNames.begin();
-	unsigned int numIdx = 0;
+	uint numIdx = 0;
 	for (; it != numericsNames.end(); ++it) {
 		numericsMask[*it] = numIdx;
 		++numIdx;
@@ -3388,9 +3377,9 @@ bool Dataset::LoadNumerics(string filename) {
 	// if no snp data then need to create instances in this loop - 6/19/11
 	// read each new set of numerics
 	map<string, bool> idsSeen;
-	unsigned int newInstanceIdx = 0;
+	uint newInstanceIdx = 0;
 	DatasetInstance* tempInstance = 0;
-	unsigned int instanceIndex = 0;
+	uint instanceIndex = 0;
 	while (getline(dataStream, line)) {
 		++lineNumber;
 
@@ -3443,7 +3432,7 @@ bool Dataset::LoadNumerics(string filename) {
 		// skip the first two columns: familiy and individual IDs
 		vector<string>::const_iterator it = numericsStringVector.begin() + 2;
 		// add new numeric columns to this instance
-		unsigned int numericsIndex = 0;
+		uint numericsIndex = 0;
 		for (; it != numericsStringVector.end(); it++) {
 			//      cout << "instance " << instanceIndex << ", read from file: " << *it
 			//              << ", numeric value: " << strtod((*it).c_str(), NULL) << endl;
@@ -3457,7 +3446,7 @@ bool Dataset::LoadNumerics(string filename) {
 			if (!hasGenotypes) {
 				tempInstance->AddNumeric(thisValue);
 			} else {
-				unsigned int lookupIdIndex = 0;
+				uint lookupIdIndex = 0;
 				if (GetInstanceIndexForID(ID, lookupIdIndex)) {
 					// cout << "ID: " << thisID << ", Lookup index: " << lookupIdIndex << ", numInstances = " << instances.size() << endl;
 					instances[lookupIdIndex]->AddNumeric(thisValue);
@@ -3477,7 +3466,7 @@ bool Dataset::LoadNumerics(string filename) {
 	// find the min and max values for each numeric attribute
 	// used in diff/distance calculation metrics
 	vector<NumericLevel> numericColumn;
-	for (unsigned int i = 0; i < NumNumerics(); ++i) {
+	for (uint i = 0; i < NumNumerics(); ++i) {
 		double columnSum = 0.0;
 		GetNumericValues(i, numericColumn);
 		double minElement = *numericColumn.begin();
@@ -3503,6 +3492,7 @@ bool Dataset::LoadNumerics(string filename) {
 }
 
 bool Dataset::LoadPrivacySim(string filename) {
+  // --------------------------------------------------------------------------
 	numericsFilename = filename;
 	ifstream dataStream(numericsFilename.c_str());
 	if (!dataStream.is_open()) {
@@ -3513,104 +3503,117 @@ bool Dataset::LoadPrivacySim(string filename) {
 	cout << Timestamp() << "Reading sim data from " << numericsFilename << endl;
 	//  PrintStats();
 
+  // --------------------------------------------------------------------------
 	// temporary string for reading file lines
-	unsigned int lineNumber = 0;
 	string line;
+	uint lineNumber = 0;
+  uint newInstanceIndex = 0;
+
+  // --------------------------------------------------------------------------
 	// read the header for variable names
 	getline(dataStream, line);
 	++lineNumber;
-	vector<string> numNames;
-	split(numNames, line);
-	numericsNames.resize(numNames.size() - 1);
-	copy(numNames.begin(), numNames.end() - 1, numericsNames.begin());
+	vector<string> parsedHeaderLine;
+	split(parsedHeaderLine, line);
+	numericsNames.resize(parsedHeaderLine.size() - 1);
+	copy(parsedHeaderLine.begin(), parsedHeaderLine.end() - 1, numericsNames.begin());
 	vector<string>::const_iterator it = numericsNames.begin();
-	unsigned int numIdx = 0;
-	for (; it != numericsNames.end(); ++it) {
+	for (uint numIdx = 0; it != numericsNames.end(); ++it, ++numIdx) {
 		numericsMask[*it] = numIdx;
-		++numIdx;
 	}
-
-	// if no snp data then need to create instances in this loop - 6/19/11
-	// read each new set of numerics
+  PP->printLOG("Read " + int2str(numericsNames.size()) + 
+    " numeric names from the file header\n");
+  
+  // --------------------------------------------------------------------------
+	// no snp data in privacy sims, so create instances in this loop - 12/23/16
 	map<string, bool> idsSeen;
-	unsigned int newInstanceIdx = 0;
 	DatasetInstance* tempInstance = 0;
-	unsigned int instanceIndex = 0;
   uint phenoIdx = numericsNames.size();
   hasContinuousPhenotypes = false;
  	hasNumerics = true;
 	while (getline(dataStream, line)) {
+    // parse line by line the matrix of expression and phenotype
 		++lineNumber;
 		// cout << lineNumber << ": " << line << endl;
-		vector<string> numericsStringVector;
-		split(numericsStringVector, line);
+		vector<string> parsedNumericsFileLine;
+		split(parsedNumericsFileLine, line);
 		// cout << line << endl;
-		if (numericsStringVector.size() < 2) {
-      error("ERROR: sim data file must have at least two columns: "
-            "VAR1 VAR2 ... PHENO");
+		if (parsedNumericsFileLine.size() < 2) {
+      error("ERROR: simulated data file must have at least two columns: "
+            "VAR1 ... PHENO");
 		}
-		if (numericsNames.size() != (numericsStringVector.size() - 1)) {
+		if (numericsNames.size() != (parsedNumericsFileLine.size() - 1)) {
 			cerr
-					<< "ERROR: Number of numeric values read from the sim data file header: ["
+					<< "ERROR: Number of numeric values read from the simulated data file header: ["
 					<< numericsNames.size()
 					<< "] is not equal to the number of numeric"
-					<< " values read [" << (numericsStringVector.size() - 1)
-					<< "] on line: " << lineNumber << " of " << numericsFilename
-					<< endl;
+					<< " values read [" << (parsedNumericsFileLine.size() - 1)
+					<< "] on line: " << lineNumber << " of " << numericsFilename << endl;
 			return false;
 		}
-    stringstream IDss;
-    IDss << "ind" << lineNumber;
-    string ID = IDss.str();
-		if (!IsLoadableInstanceID(ID)) {
-			cout << Timestamp() << "WARNING: Skipping Numeric ID [" << ID
-					<< "]. "
-					<< "It does not match the data set and/or phenotype file"
-					<< endl;
+
+    // new instance information
+    stringstream instIDss;
+    instIDss << "ind" << (lineNumber - 1);
+    string instID = instIDss.str();
+    instanceIds.push_back(instID);
+    instanceIdsToLoad.push_back(instID);
+    
+		if (!IsLoadableInstanceID(instID)) {
+			cout << Timestamp() << "WARNING: Skipping Numeric ID [" << instID	<< "]. "
+					<< "It does not match the data set and/or phenotype file"	<< endl;
 			continue;
 		}
-		if (idsSeen.find(ID) == idsSeen.end()) {
-			idsSeen[ID] = true;
+		if (idsSeen.find(instID) == idsSeen.end()) {
+			idsSeen[instID] = true;
 		} else {
-			cout << Timestamp() << "WARNING: Duplicate ID [" << ID
+			cout << Timestamp() << "WARNING: Duplicate ID [" << instID
 					<< "] detected and " << "skipped on line [" << lineNumber
 					<< "]" << endl;
 			continue;
 		}
-		// cout << "Numerics ID string from file: " << thisID << endl;
-		numericsIds.push_back(ID);
-    instancesMask[ID] = newInstanceIdx++;
-    tempInstance = new DatasetInstance(this);
 
-		// read up to the last column
-		vector<string>::const_iterator it = numericsStringVector.begin();
-		// add new numeric columns to this instance
-		unsigned int numericsIndex = 0;
-		for (; it != numericsStringVector.end(); it++) {
-			//      cout << "instance " << instanceIndex << ", read from file: " << *it
-			//              << ", numeric value: " << strtod((*it).c_str(), NULL) << endl;
-			NumericLevel thisValue = 0.0;
-			if ((*it == "-9") || (*it == "?")) {
-				thisValue = MISSING_NUMERIC_VALUE;
-				missingNumericValues[ID].push_back(numericsIndex);
-			} else {
-				thisValue = lexical_cast<NumericLevel>(*it);
-			}
+    tempInstance = new DatasetInstance(this);
+		vector<string>::const_iterator it = parsedNumericsFileLine.begin();
+    numericsIds.clear();
+		for (uint numericsIndex = 0; 
+            it != parsedNumericsFileLine.end(); 
+            it++, numericsIndex++) {
+  
       if(numericsIndex != phenoIdx) {
+        string varName = numericsNames[numericsIndex];
+        cout << "instance index|numerics index|numerics name|numerics value: " 
+                << newInstanceIndex << "|" 
+                << numericsIndex << "|"
+                << varName << "|"
+                << *it << endl;
+        numericsIds.push_back(varName);
+        NumericLevel thisValue = 0.0;
+        if ((*it == "-9") || (*it == "?")) {
+          thisValue = MISSING_NUMERIC_VALUE;
+          missingNumericValues[instID].push_back(numericsIndex);
+        } else {
+          thisValue = lexical_cast<NumericLevel>(*it);
+        }
         tempInstance->AddNumeric(thisValue);
       } else {
-        tempInstance->SetClass((ClassLevel) thisValue);
+        ClassLevel thisClass = lexical_cast<ClassLevel>(*it);
+        tempInstance->SetClass(thisClass);
       }
-			++numericsIndex;
-		}
+    
+    }
 		instances.push_back(tempInstance);
-		++instanceIndex;
-	}
+    instancesMask[instID] = newInstanceIndex;
+    ++newInstanceIndex;
+	} // end read line by line from file
+
+	cout << Timestamp() 
+          << "Read " << NumNumerics() << " simulated data attributes" << endl;
 
 	// find the min and max values for each numeric attribute
 	// used in diff/distance calculation metrics
 	vector<NumericLevel> numericColumn;
-	for (unsigned int i = 0; i < NumNumerics(); ++i) {
+	for (uint i = 0; i < NumNumerics(); ++i) {
 		double columnSum = 0.0;
 		GetNumericValues(i, numericColumn);
 		double minElement = *numericColumn.begin();
@@ -3629,33 +3632,58 @@ bool Dataset::LoadPrivacySim(string filename) {
 		numericsSums.push_back(columnSum);
 	}
 
-	cout << Timestamp() << "Read " << NumNumerics() << " sim data attributes"
-			<< endl;
-
 	return true;
 }
 
-bool Dataset::GetNumericValues(unsigned int numericIndex,
-		vector<double>& numericValues) {
-	if (hasNumerics) {
-		if (numericIndex > numericsNames.size()) {
-			cerr
-					<< "ERROR: Dataset::GetNumericValues: numeric index out of range: "
-					<< numericIndex << endl;
-			return false;
-		}
-		numericValues.clear();
-		map<string, unsigned int>::const_iterator it;
-		for (it = instancesMask.begin(); it != instancesMask.end(); it++) {
-			double thisNumeric = instances[it->second]->GetNumeric(numericIndex);
-			numericValues.push_back(thisNumeric);
-		}
-	} else {
-		cout << Timestamp()
-				<< "WARNING: attempting to access numeric data when none "
-				<< "have been loaded" << endl;
+bool Dataset::GetNumericValues(uint numericIndex,	vector<double>& numericValues) {
+	if (!hasNumerics) {
+    cout << Timestamp()
+    << "WARNING: Dataset::GetNumericValues attempting to access "
+    << "numeric data when none have been loaded" << endl;
 		return false;
 	}
+  
+  if (numericIndex > numericsNames.size()) {
+    cerr
+        << "ERROR: Dataset::GetNumericValues: numeric index out of range: "
+        << numericIndex << endl;
+    return false;
+  }
+  if (!NumInstances()) {
+    cerr << "ERROR: Dataset::GetNumericValues: no instances/subjects found" << endl;
+    return false;
+  }
+
+  // for numericIndex variable in the variables mask
+  string thisVarName = numericsNames[numericIndex];
+  uint thisVarIdx = numericsMask[thisVarName];
+
+  if(MaskSearchVariableType(thisVarName, NUMERIC_TYPE)) {
+    cout << "PUSH COL_ORD VAR_IDX VAR_NAME VAR_VAL: " 
+            << numericIndex << ", " 
+            << thisVarIdx << ". " 
+            << thisVarName << ", " 
+            << endl;
+  } else {
+    cout << "WARNING SKIPPING NUMERIC VARIABLE: " 
+            << numericIndex << ", " 
+            << thisVarName << endl;
+  }
+
+    // for all instances in the instance mask
+  numericValues.clear();
+  for (uint instOrdIdx=0; instOrdIdx < instanceIds.size(); ++instOrdIdx) {
+    string thisInstanceID = instanceIds[instOrdIdx];
+    uint thisInstanceIdx = instancesMask[thisInstanceID];
+    NumericLevel thisNumeric = instances[thisInstanceIdx]->GetNumeric(thisVarIdx);
+    cout << "INSTANCE ORDIDX INSTIDX INSTID: " 
+            << instOrdIdx << ", " 
+            << thisInstanceIdx << ", "
+            << thisInstanceID << ", "
+            << thisNumeric
+            << endl;
+    numericValues.push_back(thisNumeric);
+  }
 
 	return true;
 }
@@ -3706,7 +3734,7 @@ bool Dataset::LoadAlternatePhenotypes(string phenotypesFilename) {
 
 	// temporary string for reading file lines
 	string line;
-	unsigned int lineNumber = 0;
+	uint lineNumber = 0;
 
 	// read each new phenotype value
 	// remove header? decided we will not use a header
@@ -3718,7 +3746,7 @@ bool Dataset::LoadAlternatePhenotypes(string phenotypesFilename) {
 		classIndexes.clear();
 	}
 
-	unsigned int instancesRead = 0;
+	uint instancesRead = 0;
 	map<string, bool> idsSeen;
 	double minPheno = 0.0, maxPheno = 0.0;
 	vector<string> idsToDelete;
@@ -3756,7 +3784,7 @@ bool Dataset::LoadAlternatePhenotypes(string phenotypesFilename) {
 		}
 
 		// lookup instance index for this ID; cannot assume in same order
-		unsigned int instanceIndex = 0;
+		uint instanceIndex = 0;
 		if (!GetInstanceIndexForID(ID, instanceIndex)) {
 			cerr << "ERROR: on lookup in GetInstanceIndexForID: " << ID
 					<< " on line: " << lineNumber << endl;
@@ -3807,11 +3835,11 @@ bool Dataset::LoadAlternatePhenotypes(string phenotypesFilename) {
 				delIt != idsToDelete.end(); ++delIt) {
 
 			string delId = *delIt;
-			unsigned int delIdIndex = instancesMask[delId];
+			uint delIdIndex = instancesMask[delId];
 			ClassLevel delClass = instances[delIdIndex]->GetClass();
 
 			// remove instanceIndex from classIndexes
-			vector<unsigned int>::iterator ciIt = find(
+			vector<uint>::iterator ciIt = find(
 					classIndexes[delClass].begin(),
 					classIndexes[delClass].end(), delIdIndex);
 			if (ciIt != classIndexes[delClass].end()) {
@@ -3826,7 +3854,7 @@ bool Dataset::LoadAlternatePhenotypes(string phenotypesFilename) {
 			}
 
 			// remove from instancesMask
-			map<string, unsigned int>::iterator imIt = instancesMask.find(
+			map<string, uint>::iterator imIt = instancesMask.find(
 					delId);
 			if (imIt != instancesMask.end()) {
 				instancesMask.erase(imIt);
@@ -3884,7 +3912,7 @@ bool Dataset::WriteNewPlinkPedDataset(string baseDatasetFilename) {
 				<< ".map" << endl;
 		return false;
 	}
-	map<string, unsigned int>::const_iterator ait = attributesMask.begin();
+	map<string, uint>::const_iterator ait = attributesMask.begin();
 	for (; ait != attributesMask.end(); ++ait) {
 		newMapStream << "0 " << ait->first << " 0 0" << endl;
 	}
@@ -3899,7 +3927,7 @@ bool Dataset::WriteNewPlinkPedDataset(string baseDatasetFilename) {
 		return false;
 	}
 	vector<string> instanceIds = GetInstanceIds();
-	for (unsigned int iIdx = 0; iIdx < NumInstances(); iIdx++) {
+	for (uint iIdx = 0; iIdx < NumInstances(); iIdx++) {
 		unsigned instanceIndex = 0;
 		string instanceId = instanceIds[iIdx];
 		GetInstanceIndexForID(instanceId, instanceIndex);
@@ -3926,9 +3954,9 @@ bool Dataset::WriteNewPlinkPedDataset(string baseDatasetFilename) {
 			}
 		}
 		// write discrete attribute SNP values as pairs of alleles
-		vector<unsigned int> attrIndices = MaskGetAttributeIndices(
+		vector<uint> attrIndices = MaskGetAttributeIndices(
 				DISCRETE_TYPE);
-		for (unsigned int aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
+		for (uint aIdx = 0; aIdx < attrIndices.size(); aIdx++) {
 			AttributeLevel A = instances[instanceIndex]->GetAttribute(
 					attrIndices[aIdx]);
 			// determine alleles and genotype

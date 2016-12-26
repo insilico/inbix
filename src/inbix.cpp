@@ -1332,7 +1332,6 @@ int main(int argc, char* argv[]) {
         relieffAlgorithm->ComputeAttributeScoresKopt();
       }
     }
-    
     P.printLOG(Timestamp() + "Relief-F algorithm done\n");
     
     // ---------------------------------------------------------------------------
@@ -1352,12 +1351,16 @@ int main(int argc, char* argv[]) {
       error("Privacy EC requires train, holdout and test files.");
     }
     P.SNP2Ind();
+    P.printLOG("\n");
     Dataset trainDs;
     trainDs.LoadPrivacySim(par::ecPrivacyTrainFile);
+    P.printLOG("\n");
     Dataset holdoutDs;
     holdoutDs.LoadPrivacySim(par::ecPrivacyHoldoutFile);
+    P.printLOG("\n");
     Dataset testDs;
     testDs.LoadPrivacySim(par::ecPrivacyTestFile);
+    P.printLOG("\n");
     EvaporativeCoolingPrivacy ecp(&trainDs, &holdoutDs, &testDs, PP);
     if(!ecp.ComputeScores()) {
       error("Could not create an EvaporativeCoolingPrivacy object");

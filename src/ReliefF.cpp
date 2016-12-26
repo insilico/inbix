@@ -204,7 +204,6 @@ ReliefF::~ReliefF() {
 }
 
 bool ReliefF::ComputeAttributeScores() {
-
   // changed from matrix to map for ID matching - November 2011
   PreComputeDistances();
 
@@ -217,7 +216,8 @@ bool ReliefF::ComputeAttributeScores() {
   int i = 0;
   PP->printLOG(Timestamp() + "Running Relief-F algorithm\n");
   double one_over_m_times_k = 1.0 / (((double) m) * ((double) k));
-  PP->printLOG(Timestamp() + "Averaging factor 1/(m*k): "  + dbl2str(one_over_m_times_k) + "\n");
+  PP->printLOG(Timestamp() + "Averaging factor 1/(m*k): "  + 
+    dbl2str(one_over_m_times_k) + "\n");
 
   vector<string> instanceIds = dataset->GetInstanceIds();
 //  for(i = 0; i < (int) m; i++) {

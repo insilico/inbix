@@ -24,15 +24,15 @@
 #include <set>
 #include <algorithm>
 #include <climits>
+#include <random>
 
 #include <armadillo>
 
 #include "DatasetInstance.h"
 #include "Insilico.h"
+#include "globals.h"
 
-// GSL random number generator base class
-#include "GSLRandomFlat.h"
-
+// forward references to subclasses
 class DgeData;
 class BirdseedData;
 
@@ -85,7 +85,7 @@ public:
    * \param [out] attrVal attribute value
    * \return success
    ****************************************************************************/
-  bool GetAttributeRowCol(unsigned int row, unsigned int col,
+  bool GetAttributeRowCol(uint row, uint col,
                           AttributeLevel& attrVal);
   /*************************************************************************//**
    * Get the numeric value at row, column.
@@ -95,7 +95,7 @@ public:
    * \param [out] numVal numeric value
    * \return success
    ****************************************************************************/
-  bool GetNumericRowCol(unsigned int row, unsigned int col,
+  bool GetNumericRowCol(uint row, uint col,
                         NumericLevel& numVal);
   /*************************************************************************//**
    * Write the data set to a new filename, respecting masked attributes
@@ -129,7 +129,7 @@ public:
    *
    ****************************************************************************/
   bool ExtractAttributes(std::string scoresFilename,
-                         unsigned int topN,
+                         uint topN,
                          std::string newDatasetFilename);
   /*************************************************************************//**
    * Swap two attributes/columns in the dataset.
@@ -137,26 +137,26 @@ public:
    * \param [in] a2 attribute index 2
    * \return success
    ****************************************************************************/
-  bool SwapAttributes(unsigned int a1, unsigned int a2);
+  bool SwapAttributes(uint a1, uint a2);
   /*************************************************************************//**
    * Return the number of discrete plus continuous variables in the data set.
    * The number does not include masked variables removed.
    * \return number of discrete plus continuous variables
    ****************************************************************************/
-  unsigned int NumVariables();
+  uint NumVariables();
   /*************************************************************************//**
    * Returns the names of discrete and continuous variables in the data set.
    * \return vector of names as strings
    ****************************************************************************/
   std::vector<std::string> GetVariableNames();
   /// Returns the number of instances in the data set.
-  virtual unsigned int NumInstances();
+  virtual uint NumInstances();
   /*************************************************************************//**
    * Returns a pointer to a dataset instance selected by index.
    * \param [in] index index of instance
    * \return pointer to an instance
    ****************************************************************************/
-  DatasetInstance* GetInstance(unsigned int index);
+  DatasetInstance* GetInstance(uint index);
   /*************************************************************************//**
    * Returns a pointer to a randomly chosen data set instance.
    * The random number generator is set to give values in range
@@ -175,9 +175,9 @@ public:
    * \param [out] instanceIndex instance index
    * \return success
    ****************************************************************************/
-  bool GetInstanceIndexForID(std::string ID, unsigned int& instanceIndex);
+  bool GetInstanceIndexForID(std::string ID, uint& instanceIndex);
   /// Return the number of unmasked discrete attributes in the data set.
-  virtual unsigned int NumAttributes();
+  virtual uint NumAttributes();
   /*************************************************************************//**
    * Return the discrete (SNP) attribute names.
    * \return vector of attribute names
@@ -195,7 +195,7 @@ public:
    * \param [out] attributeValues reference to a a vector allocated by the caller
    * \return success
    ****************************************************************************/
-  bool GetAttributeValues(unsigned int attributeIndex,
+  bool GetAttributeValues(uint attributeIndex,
                           std::vector<AttributeLevel>& attributeValues);
   /*************************************************************************//**
    * Loads the referenced vector with an attribute's values (column)
@@ -213,7 +213,7 @@ public:
    * \param [in] attributeName attribute name
    * \return attribute index or INVALID_INDEX
    ****************************************************************************/
-  unsigned int GetAttributeIndexFromName(std::string attributeName);
+  uint GetAttributeIndexFromName(std::string attributeName);
   /// Does the data set have genotype variables?
   bool HasGenotypes();
   /// Does the data set have allelic information for genotypes?
@@ -230,13 +230,13 @@ public:
    * \param [in] attribute index
    * \return pair (major allele, minor allele frequency)
    ****************************************************************************/
-  std::pair<char, char> GetAttributeAlleles(unsigned int attributeIndex);
+  std::pair<char, char> GetAttributeAlleles(uint attributeIndex);
   /*************************************************************************//**
    * Get attribute minor allele and frequency.
    * \param [in] attribute index
    * \return pair (minor allele, minor allele frequency)
    ****************************************************************************/
-  virtual std::pair<char, double> GetAttributeMAF(unsigned int attributeIndex);
+  virtual std::pair<char, double> GetAttributeMAF(uint attributeIndex);
   /*************************************************************************//**
    * Remove file of attribute names from consideration in analyses.
    * \param [in] excusionFilename filename of attributes to exclude
@@ -249,7 +249,7 @@ public:
    * \return mutation type (transition, transversion, unknown)
    ****************************************************************************/
   virtual AttributeMutationType
-  GetAttributeMutationType(unsigned int attributeIndex);
+  GetAttributeMutationType(uint attributeIndex);
   std::vector<double> GetMAFs();
   /// Apply Jukes-Cantor distance
   double GetJukesCantorDistance(DatasetInstance* dsi1, DatasetInstance* dsi2);
@@ -267,9 +267,9 @@ public:
    * \param [in] index attribute index
    * \return number of levels
    ****************************************************************************/
-  unsigned int NumLevels(unsigned int index);
+  uint NumLevels(uint index);
   /// Return the number of unmasked discrete attributes in the data set.
-  unsigned int NumNumerics();
+  uint NumNumerics();
   /*************************************************************************//**
    * Return the numeric attribute names.
    * \return vector of attribute names
@@ -285,13 +285,13 @@ public:
    * \param [in] numericIdx numeric index
    * \return minimum/maximum pair
    ****************************************************************************/
-  std::pair<double, double> GetMinMaxForNumeric(unsigned int numericIdx);
+  std::pair<double, double> GetMinMaxForNumeric(uint numericIdx);
   /*************************************************************************//**
    * Get the mean/average of numeric at index.
    * \param [in] numericIdx numeric index
    * \return average value of numeric attribute at index
    ****************************************************************************/
-  double GetMeanForNumeric(unsigned int numericIdx);
+  double GetMeanForNumeric(uint numericIdx);
   /// Does the data set have numeric variables? setter/getter
   bool HasNumerics();
   void HasNumerics(bool setHasNumerics);
@@ -301,7 +301,7 @@ public:
    * \param [in] name numeric name
    * \return numeric value at index
    ****************************************************************************/
-  NumericLevel GetNumeric(unsigned int instanceIndex, std::string name);
+  NumericLevel GetNumeric(uint instanceIndex, std::string name);
   /*************************************************************************//**
    * Loads the referenced vector with a numeric's values (column)
    * from the dataset.
@@ -318,13 +318,13 @@ public:
    * \param [in] numericName numeric name
    * \return attribute index or INVALID_INDEX
    ****************************************************************************/
-  unsigned int GetNumericIndexFromName(std::string numericName);
+  uint GetNumericIndexFromName(std::string numericName);
   arma::mat GetNumericMatrix();
   /// Normalize numerics by column sums.
   /// Get the number of classes in the data set.
-  unsigned int NumClasses();
+  uint NumClasses();
   /// Get the class column as read from the file.
-  unsigned int GetClassColumn();
+  uint GetClassColumn();
   /*************************************************************************//**
    * Loads the referenced vector with the dataset's class labels.
    * \param [out] classValues reference to a a vector allocated by the caller
@@ -335,7 +335,7 @@ public:
    * Get a map from class levels to a vector of instance indices.
    * \return map of class => instance indices
    ****************************************************************************/
-  const std::map<ClassLevel, std::vector<unsigned int> >& GetClassIndexes();
+  const std::map<ClassLevel, std::vector<uint> >& GetClassIndexes();
   /// Does the data set have alternate phenotypes loaded?
   bool HasAlternatePhenotypes();
   void HasAlternatePhenotypes(bool setHasAlternatePhenotypes);
@@ -404,13 +404,13 @@ public:
    * \param attrType attribute type
    * \return vector of indices into currently considered discrete attributes
    ****************************************************************************/
-  std::vector<unsigned int> MaskGetAttributeIndices(AttributeType attrType);
+  std::vector<uint> MaskGetAttributeIndices(AttributeType attrType);
   /*************************************************************************//**
    * Return a map of attribute name to attribute index of attributes to include.
    * \param [in] attrType attribute type
    * \return attributes mask: name->index
    ****************************************************************************/
-  const std::map<std::string, unsigned int>&
+  const std::map<std::string, uint>&
   MaskGetAttributeMask(AttributeType attrType);
   /*************************************************************************//**
    * Return a vector of all the variable names under consideration.
@@ -438,7 +438,7 @@ public:
    * Return a vector of all the instance indices under consideration.
    * \retrun vector of indices into current instances
    ****************************************************************************/
-  std::vector<unsigned int> MaskGetInstanceIndices();
+  std::vector<uint> MaskGetInstanceIndices();
   /*************************************************************************//**
    * Return a vector of all the instance ids under consideration.
    * \return vector of ids of currently included instances
@@ -448,7 +448,7 @@ public:
    * Return a map of instance name to instance index of instances to include.
    * \return instances mask: instance ID=>vector of instance indices
    ****************************************************************************/
-  const std::map<std::string, unsigned int>& MaskGetInstanceMask();
+  const std::map<std::string, uint>& MaskGetInstanceMask();
   /*************************************************************************//**
    * Save the current masks for later restore.
    * \return success
@@ -475,13 +475,13 @@ public:
    ****************************************************************************/
   void RunSnpDiagnosticTests(std::string logFilename,
                              double globalGenotypeThreshold = 0.01,
-                             unsigned int cellThreshold = 5);
+                             uint cellThreshold = 5);
   /*************************************************************************//**
    * Calculate whether passed genotype counts are in HWE.
    * \param genotypeCounts vector of genotype counts: AA, Aa, aa
    * \return counts are in HWE?
    ****************************************************************************/
-  bool CheckHardyWeinbergEquilibrium(std::vector<unsigned int>& chkGenotypeCounts);
+  bool CheckHardyWeinbergEquilibrium(std::vector<uint>& chkGenotypeCounts);
   /*************************************************************************//**
    * This code implements an exact SNP test of Hardy-Weinberg Equilibrium.
    * As described in Wigginton, JE, Cutler, DJ, and Abecasis, GR (2005) A Note
@@ -506,7 +506,7 @@ public:
    * \param [in] classValue class value
    * \return probability of the value in attribute given class
    ****************************************************************************/
-  double GetProbabilityValueGivenClass(unsigned int attributeIndex,
+  double GetProbabilityValueGivenClass(uint attributeIndex,
                                        AttributeLevel A, ClassLevel classValue);
   /*************************************************************************//**
    * Calculate and display interaction information for all attribute combinations.
@@ -581,7 +581,7 @@ public:
    * Get the the mutation transition and transversion counts..
    * \return pair<number of transitions, number of transversions>
    ****************************************************************************/
-  std::pair<unsigned int, unsigned int> GetAttributeTiTvCounts();
+  std::pair<uint, uint> GetAttributeTiTvCounts();
   /// Dump the SNP transition/transversion information to file
   bool WriteSnpTiTvInfo(std::string titvFilename);
 	/// Reset instances nearest neighbor information.
@@ -625,7 +625,7 @@ protected:
    * \param [out] numericValues reference to a a vector allocated by the caller
    * \return success
    ****************************************************************************/
-  bool GetNumericValues(unsigned int numericIndex,
+  bool GetNumericValues(uint numericIndex,
                         std::vector<NumericLevel>& numericValues);
   /*************************************************************************//**
    * Load alternate phenotype/class values from a plink covariate .cov file.
@@ -665,7 +665,7 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*snpDiff)(unsigned int attributeIndex,
+  double (*snpDiff)(uint attributeIndex,
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
   /*************************************************************************//**
@@ -676,7 +676,7 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*snpDiffNN)(unsigned int attributeIndex,
+  double (*snpDiffNN)(uint attributeIndex,
                       DatasetInstance* dsi1,
                       DatasetInstance* dsi2);
   /*************************************************************************//**
@@ -686,7 +686,7 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*numDiff)(unsigned int attributeIndex,
+  double (*numDiff)(uint attributeIndex,
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
 
@@ -704,21 +704,21 @@ protected:
   /// discrete attribute names read from file
   std::vector<std::string> attributeNames;
   /// attribute values/levels counts
-  std::vector<std::map<AttributeLevel, unsigned int> > levelCounts;
+  std::vector<std::map<AttributeLevel, uint> > levelCounts;
   /// attribute values/levels counts by discrete class
-  std::vector<std::map<std::pair<AttributeLevel, ClassLevel>, unsigned int> > levelCountsByClass;
+  std::vector<std::map<std::pair<AttributeLevel, ClassLevel>, uint> > levelCountsByClass;
   /// unique attribute values/levels read from file
   std::vector<std::set<std::string> > attributeLevelsSeen;
   /// allele1, allele2
   std::vector<std::pair<char, char> > attributeAlleles;
   /// allele->count
-  std::vector<std::map<char, unsigned int> > attributeAlleleCounts;
+  std::vector<std::map<char, uint> > attributeAlleleCounts;
   /// minor allele, minor allele frequency
   std::vector<std::pair<char, double> > attributeMinorAllele;
   /// Does this data set have alellelic information?
   bool hasAllelicInfo;
   /// genotype->count
-  std::vector<std::map<std::string, unsigned int> > genotypeCounts;
+  std::vector<std::map<std::string, uint> > genotypeCounts;
   /// Keep mutation type for all attributes.
   std::vector<AttributeMutationType> attributeMutationTypes;
   /// Lookup table for mutation type.
@@ -757,31 +757,31 @@ protected:
   /// IDs of instances to load from numeric and/or phenotype files
   std::vector<std::string> instanceIdsToLoad;
   /// missing discrete values and their instance indices
-  std::map<std::string, std::vector<unsigned int> > missingValues;
+  std::map<std::string, std::vector<uint> > missingValues;
   /// missing continuous values and their instance indices
-  std::map<std::string, std::vector<unsigned int> > missingNumericValues;
+  std::map<std::string, std::vector<uint> > missingNumericValues;
 
   /// class column from the original data set
-  unsigned int classColumn;
+  uint classColumn;
   /// class values mapped to instance indices
-  std::map<ClassLevel, std::vector<unsigned int> > classIndexes;
+  std::map<ClassLevel, std::vector<uint> > classIndexes;
 
   /***
    * Masks specify the columns from the data set being considered
    * when algorithms call methods on this object:
    * key = attribute name, value = original index into all.
    */
-  std::map<std::string, unsigned int> attributesMask;
-  std::map<std::string, unsigned int> numericsMask;
-  std::map<std::string, unsigned int> instancesMask;
+  std::map<std::string, uint> attributesMask;
+  std::map<std::string, uint> numericsMask;
+  std::map<std::string, uint> instancesMask;
   /// masks can be temporarily pushed and popped
-  std::map<std::string, unsigned int> attributesMaskPushed;
-  std::map<std::string, unsigned int> numericsMaskPushed;
-  std::map<std::string, unsigned int> instancesMaskPushed;
+  std::map<std::string, uint> attributesMaskPushed;
+  std::map<std::string, uint> numericsMaskPushed;
+  std::map<std::string, uint> instancesMaskPushed;
   bool maskIsPushed;
 
-  /// random number generator classes use GNU Scientific Library (GSL)
-  GSLRandomFlat* rng;
+  // Mersenne twister random number engine - based Mersenne prime 2^19937 − 1
+  std::mt19937_64 engine;  
 };
 
 #endif // DATASET_H
