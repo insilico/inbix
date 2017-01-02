@@ -56,6 +56,9 @@ private:
   Dataset* holdout;
   Dataset* test;
   uint numInstances;
+  uint numSignalsInData;
+  vector<string> signalNames;
+  
   // track original and current set of variables and their indices
   // into the original data set
   std::vector<std::string> origVarNames;
@@ -97,6 +100,7 @@ private:
   std::vector<double> scaledProbabilities;
   std::vector<double> cummulativeProbabilities;
   std::vector<double> randUniformProbs;
+  double randUniformValue;
   std::vector<std::string> removeAttrs;
   std::vector<std::string> keepAttrs;
 

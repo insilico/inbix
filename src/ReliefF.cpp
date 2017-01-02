@@ -52,7 +52,7 @@ bool attributeSort(const pair<unsigned int, double>& p1,
   return p1.first < p2.first;
 }
 
-/// functor for T comparison
+/// functor for T comparison - instance-to-instance distance
 typedef pair<unsigned int, DatasetInstance*> T;
 class deref_less : public std::binary_function<T, T, bool> {
 public:
@@ -63,7 +63,7 @@ public:
 
 ReliefF::ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType):
 AttributeRanker::AttributeRanker(ds) {
-  PP->printLOG(Timestamp() + "ReliefF initialization from Plink parameters\n");
+  PP->printLOG(Timestamp() + "ReliefF initialization from Plink parameters and Dataset pointer\n");
   PP = plinkPtr;
   if(ds) {
     dataset = ds;
@@ -101,6 +101,8 @@ AttributeRanker::AttributeRanker(ds) {
   }
 
   numTarget = ds->NumVariables();
+  PP->printLOG(Timestamp() + "Number of attributes: " + int2str(numTarget) + "\n");
+
   if(par::do_iterative_removal) {
     numTarget = par::relieffNumTarget;
     unsigned int numPredictors = dataset->NumVariables();
@@ -204,6 +206,8 @@ ReliefF::~ReliefF() {
 }
 
 bool ReliefF::ComputeAttributeScores() {
+  PP->printLOG(Timestamp() + "Relief-F ComputeAttributeScores() START\n");
+  
   // changed from matrix to map for ID matching - November 2011
   PreComputeDistances();
 
@@ -214,7 +218,7 @@ bool ReliefF::ComputeAttributeScores() {
   // pointer to the instance being sampled
   DatasetInstance* R_i;
   int i = 0;
-  PP->printLOG(Timestamp() + "Running Relief-F algorithm\n");
+  
   double one_over_m_times_k = 1.0 / (((double) m) * ((double) k));
   PP->printLOG(Timestamp() + "Averaging factor 1/(m*k): "  + 
     dbl2str(one_over_m_times_k) + "\n");
@@ -366,20 +370,23 @@ bool ReliefF::ComputeAttributeScores() {
       PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m) + "\n");
     }
 
-  } // number to randomly select
+  } // number to randomly select -or all instances
   PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m) + " done\n");
 
   // superclass variable scores is what gets returned to callers of 
   // AttributeRanker and subclasses
   scores.clear();
-  for(auto i=0; i < W.size(); ++i) {
+  for(uint i=0; i < W.size(); ++i) {
     scores.push_back(make_pair(W[i], scoreNames[i]));
   }
+
   // normalize scores is flag set
   if(normalizeScores) {
     PP->printLOG(Timestamp() + "Normalizing scores\n");
     NormalizeScores();
   }
+
+  PP->printLOG(Timestamp() + "Relief-F ComputeAttributeScores() END\n");
 
   return true;
 }
@@ -548,7 +555,7 @@ bool ReliefF::ResetForNextIteration() {
   return true;
 }
 
-void ReliefF::PrintAttributeScores(ofstream & outFile) {
+void ReliefF::PrintAttributeScores(ofstream& outFile) {
   unsigned int nameIdx = 0;
   AttributeScores scoresMap;
   vector<double>::const_iterator scoresIt = W.begin();
@@ -720,18 +727,17 @@ bool ReliefF::PreComputeDistances() {
   }
   PP->printLOG("\n");
 
-  DistancePair nnInfo;
   for(int i = 0; i < numInstances; ++i) {
     unsigned int thisInstanceIndex = instanceMask[instanceIds[i]];
     DatasetInstance* thisInstance = dataset->GetInstance(thisInstanceIndex);
 
+    DistancePair nearestNeighborInfo;
     if(dataset->HasContinuousPhenotypes()) {
       DistancePairs instanceDistances;
       for(int j = 0; j < numInstances; ++j) {
         if(i == j)
           continue;
         double instanceToInstanceDistance = distanceMatrix[i][j];
-        DistancePair nearestNeighborInfo;
         nearestNeighborInfo = make_pair(instanceToInstanceDistance,
                 instanceIds[j]);
         instanceDistances.push_back(nearestNeighborInfo);
@@ -749,12 +755,12 @@ bool ReliefF::PreComputeDistances() {
         unsigned int otherInstanceIndex = instanceMask[instanceIds[j]];
         DatasetInstance* otherInstance = dataset->GetInstance(
                 otherInstanceIndex);
-        nnInfo = make_pair(instanceToInstanceDistance, instanceIds[j]);
+        nearestNeighborInfo = make_pair(instanceToInstanceDistance, instanceIds[j]);
         if(otherInstance->GetClass() == thisClass) {
-          sameSums.push_back(nnInfo);
+          sameSums.push_back(nearestNeighborInfo);
         } else {
           ClassLevel otherClass = otherInstance->GetClass();
-          diffSums[otherClass].push_back(nnInfo);
+          diffSums[otherClass].push_back(nearestNeighborInfo);
         }
       }
       thisInstance->SetDistanceSums(k, sameSums, diffSums);
@@ -780,6 +786,7 @@ bool ReliefF::PreComputeDistances() {
   return true;
 }
 
+// this is an adapter method that calls ComputeAttributeScores
 AttributeScores ReliefF::ComputeScores() {
   ComputeAttributeScores();
   return scores;

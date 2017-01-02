@@ -503,6 +503,7 @@ public:
   static uint ecPrivacyUpdateFrequency;
   static unsigned int ecPrivacyRemovePerIteration;
   static unsigned int ecPrivacyMinVars;
+  static double ecPrivacyPercentSignal;
     
   // added for recursive indirect path modularity support - bcw - 5/31/16
   static bool do_ripm;

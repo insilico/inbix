@@ -40,7 +40,7 @@ typedef double NumericLevel;
 typedef int ClassLevel;
 
 typedef std::pair<double, std::string> ScoreVarPair;
-typedef std::pair<std::string, double> VarScorePair;
+//typedef std::pair<std::string, double> VarScorePair;
 
 /// distance pair type: distance, instance ID
 typedef ScoreVarPair DistancePair;

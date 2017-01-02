@@ -3485,8 +3485,7 @@ bool Dataset::LoadNumerics(string filename) {
 		numericsSums.push_back(columnSum);
 	}
 
-	cout << Timestamp() << "Read " << NumNumerics() << " numeric attributes"
-			<< endl;
+  if(par::verbose) PrintStatsSimple();
 
 	return true;
 }
@@ -3500,7 +3499,7 @@ bool Dataset::LoadPrivacySim(string filename) {
 				<< endl;
 		return false;
 	}
-	cout << Timestamp() << "Reading sim data from " << numericsFilename << endl;
+	PP->printLOG(Timestamp() + "Reading sim data from " + numericsFilename + "\n");
 	//  PrintStats();
 
   // --------------------------------------------------------------------------
@@ -3521,7 +3520,7 @@ bool Dataset::LoadPrivacySim(string filename) {
 	for (uint numIdx = 0; it != numericsNames.end(); ++it, ++numIdx) {
 		numericsMask[*it] = numIdx;
 	}
-  PP->printLOG("Read " + int2str(numericsNames.size()) + 
+  PP->printLOG(Timestamp() + "Read " + int2str(numericsNames.size()) + 
     " numeric names from the file header\n");
   
   // --------------------------------------------------------------------------
@@ -3529,8 +3528,10 @@ bool Dataset::LoadPrivacySim(string filename) {
 	map<string, bool> idsSeen;
 	DatasetInstance* tempInstance = 0;
   uint phenoIdx = numericsNames.size();
+  hasPhenotypes = true;
   hasContinuousPhenotypes = false;
  	hasNumerics = true;
+  hasGenotypes = false;
 	while (getline(dataStream, line)) {
     // parse line by line the matrix of expression and phenotype
 		++lineNumber;
@@ -3582,11 +3583,11 @@ bool Dataset::LoadPrivacySim(string filename) {
   
       if(numericsIndex != phenoIdx) {
         string varName = numericsNames[numericsIndex];
-        cout << "instance index|numerics index|numerics name|numerics value: " 
-                << newInstanceIndex << "|" 
-                << numericsIndex << "|"
-                << varName << "|"
-                << *it << endl;
+//        cout << "instance index|numerics index|numerics name|numerics value: " 
+//                << newInstanceIndex << "|" 
+//                << numericsIndex << "|"
+//                << varName << "|"
+//                << *it << endl;
         numericsIds.push_back(varName);
         NumericLevel thisValue = 0.0;
         if ((*it == "-9") || (*it == "?")) {
@@ -3598,7 +3599,9 @@ bool Dataset::LoadPrivacySim(string filename) {
         tempInstance->AddNumeric(thisValue);
       } else {
         ClassLevel thisClass = lexical_cast<ClassLevel>(*it);
+        thisClass = (thisClass == -1)? 0: 1;
         tempInstance->SetClass(thisClass);
+        classIndexes[thisClass].push_back(newInstanceIndex);
       }
     
     }
@@ -3606,7 +3609,6 @@ bool Dataset::LoadPrivacySim(string filename) {
     instancesMask[instID] = newInstanceIndex;
     ++newInstanceIndex;
 	} // end read line by line from file
-
 	cout << Timestamp() 
           << "Read " << NumNumerics() << " simulated data attributes" << endl;
 
@@ -3631,7 +3633,9 @@ bool Dataset::LoadPrivacySim(string filename) {
 		numericsMinMax.push_back(make_pair(minElement, maxElement));
 		numericsSums.push_back(columnSum);
 	}
-
+  
+  if(par::verbose) PrintStatsSimple();
+  
 	return true;
 }
 
@@ -3658,13 +3662,7 @@ bool Dataset::GetNumericValues(uint numericIndex,	vector<double>& numericValues)
   string thisVarName = numericsNames[numericIndex];
   uint thisVarIdx = numericsMask[thisVarName];
 
-  if(MaskSearchVariableType(thisVarName, NUMERIC_TYPE)) {
-    cout << "PUSH COL_ORD VAR_IDX VAR_NAME VAR_VAL: " 
-            << numericIndex << ", " 
-            << thisVarIdx << ". " 
-            << thisVarName << ", " 
-            << endl;
-  } else {
+  if(!MaskSearchVariableType(thisVarName, NUMERIC_TYPE)) {
     cout << "WARNING SKIPPING NUMERIC VARIABLE: " 
             << numericIndex << ", " 
             << thisVarName << endl;
@@ -3676,12 +3674,12 @@ bool Dataset::GetNumericValues(uint numericIndex,	vector<double>& numericValues)
     string thisInstanceID = instanceIds[instOrdIdx];
     uint thisInstanceIdx = instancesMask[thisInstanceID];
     NumericLevel thisNumeric = instances[thisInstanceIdx]->GetNumeric(thisVarIdx);
-    cout << "INSTANCE ORDIDX INSTIDX INSTID: " 
-            << instOrdIdx << ", " 
-            << thisInstanceIdx << ", "
-            << thisInstanceID << ", "
-            << thisNumeric
-            << endl;
+//    cout << "INSTANCE ORDIDX INSTIDX INSTID: " 
+//            << instOrdIdx << ", " 
+//            << thisInstanceIdx << ", "
+//            << thisInstanceID << ", "
+//            << thisNumeric
+//            << endl;
     numericValues.push_back(thisNumeric);
   }
 
@@ -3816,7 +3814,7 @@ bool Dataset::LoadAlternatePhenotypes(string phenotypesFilename) {
 					}
 				}
 			} else {
-				classValue = lexical_cast<AttributeLevel>(classString);
+				classValue = lexical_cast<ClassLevel>(classString);
 				instances[instanceIndex]->SetClass(classValue);
 				classIndexes[classValue].push_back(instanceIndex);
 			}

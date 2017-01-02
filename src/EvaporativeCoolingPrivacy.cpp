@@ -5,7 +5,9 @@
  * Created on October 18, 2016, 10:57 PM
  */
 
+#include <cstdio>
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <iterator>
 #include <vector>
@@ -13,10 +15,13 @@
 #include <random>
 #include <cmath>
 
+#include <boost/format.hpp>
+
 // inbix PLINK base
 #include "plink.h"
 #include "options.h"
 #include "helper.h"
+
 // inbix additions to PLINK
 #include "Insilico.h"
 #include "ArmadilloFuncs.h"
@@ -42,13 +47,15 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   holdout = holdoset;
   test = testset;
   numInstances = trainset->NumInstances();
+  numSignalsInData = static_cast<uint>(numInstances * par::ecPrivacyPercentSignal);
   curVarNames = trainset->MaskGetAllVariableNames();
   curVarMap = trainset->MaskGetAttributeMask(NUMERIC_TYPE);
-
+  for(uint i=0; i < numSignalsInData; ++i) {
+    signalNames.push_back(curVarNames[i]);
+  }
   deltaQ = 0;
   threshold = 4.0 / sqrt(numInstances);
   tolerance = 1.0 / sqrt(numInstances);
-  
   numToRemovePerIteration = par::ecPrivacyRemovePerIteration;
   startTemp = par::ecPrivacyStartTemp;
   currentTemp = startTemp;
@@ -59,13 +66,13 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   tau = par::ecPrivacyTau;
   minRemainAttributes = par::ecPrivacyMinVars;
   updateInterval = par::ecPrivacyUpdateFrequency;
-  
   summedProbabilities = 0;
   randomForestPredictError = 0;
+  removeAttrs.clear();
+  keepAttrs.clear();
   trainError = 0;
   holdError = 0;
   trainError = 0;
-  
   iteration = 0;
   this->PrintState();
 }
@@ -87,16 +94,20 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	}
   iterationOutputStream << "Iteration\tTemperature\tKeep\tRemove\tTrain\tHoldout\tTest" << endl;
 
-  // initialize
+  // initialize all masks to contain all variables
   PP->printLOG(Timestamp() + "Initializing variable masks\n");
   train->MaskIncludeAllAttributes(NUMERIC_TYPE);
-  holdout->MaskIncludeAllAttributes(NUMERIC_TYPE);
   origVarNames = train->MaskGetAllVariableNames();
   origVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
+  holdout->MaskIncludeAllAttributes(NUMERIC_TYPE);
+  curVarNames = train->MaskGetAllVariableNames();
+  curVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
 
   // calculate importance by running Relief-F on train and holdout sets
   PP->printLOG(Timestamp() + "Calculating importance scores and delta Q\n");
   ComputeImportance();
+  PP->printLOG(Timestamp() + "\tscore count: " + int2str(trainImportance.size()) + "\n");
+  PP->printLOG(Timestamp() + "\tdelta Q: " + dbl2str(deltaQ) + "\n");
     
   // main optimization loop
   PP->printLOG(Timestamp() + "Entering EVAPORATIVE COOLING cooling schedule\n");
@@ -114,28 +125,32 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
     }
     PP->printLOG(Timestamp() + "--------------------------------------------\n");
     PP->printLOG(Timestamp() + "iteration = " + int2str(iteration) + "\n");
-    // PrintState();
-    curVarNames = train->MaskGetAllVariableNames();
-    curVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
+    train->PrintMaskStats();
+    PP->printLOG(Timestamp() + "Number of mask variables: " + 
+      int2str(curVarNames.size()) + "\n");
     // recompute p_t, p_h and delta_t
     PP->printLOG(Timestamp() + "Computing p_t, p_h and delta_t\n");
     ComputeAttributeProbabilities();
     GenerateRandomUniformProbabilities();
-    EvaporateWorstAttributes(numToRemovePerIteration);
-    PP->printLOG(Timestamp() + "Keeping : " + int2str(keepAttrs.size()) + "\n");
-    PP->printLOG(Timestamp() + "Removing: " + int2str(removeAttrs.size()) + "\n");
+    if(!EvaporateWorstAttributes(numToRemovePerIteration)) {
+      PP->printLOG("Is this an error or signal of when to end?\n");
+      break;
+    }
+    PP->printLOG(Timestamp() + "Removed : " + int2str(removeAttrs.size()) + "\n");
     PP->printLOG(Timestamp() + "Dataset : " + int2str(train->NumVariables()) + "\n");
-    if((iteration % 50) == 1) {
-      PP->printLOG(Timestamp() + "***** DEBUG: start mod 50 UPDATE\n");
+    if((iteration % par::ecPrivacyUpdateFrequency) == 1) {
+      PP->printLOG(Timestamp() + "***** UpdateFrequency condition met\n");
       // calculate importance by running Relief-F on train and holdout sets
       PP->printLOG(Timestamp() + "Calculating importance scores and delta Q\n");
       ComputeImportance();
+      PP->printLOG(Timestamp() + "\tscore count: " + int2str(trainImportance.size()) + "\n");
+      PP->printLOG(Timestamp() + "\tdelta Q: " + dbl2str(deltaQ) + "\n");
       PP->printLOG(Timestamp() + "Running classifiers on train, holdout and test\n");
       ComputeBestAttributesErrors();
-      PP->printLOG(Timestamp() + "Updating temperature\n");
+      PP->printLOG(Timestamp() + "Running temperature update\n");
       UpdateTemperature();
       PP->printLOG(Timestamp() + "New temperature: " + dbl2str(currentTemp) + "\n");
-      PP->printLOG(Timestamp() + "***** DEBUG: end mod 50 UPDATE\n");
+      PP->printLOG(Timestamp() + "***** UpdateFrequency processed\n");
     }
     // write iteration results to iterationOutputFile
     iterationOutputStream 
@@ -162,7 +177,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 
 void EvaporativeCoolingPrivacy::PrintState() {
   cout << "**********************************************************" << endl;
-  cout << "CURRENT STATE" << endl;
+  cout << "PRIVACY EC CURRENT STATE" << endl;
   //cout << "Q_EPS:              " << Q_EPS << endl;
   cout << "iteration:          " << iteration << endl;
   cout << "deltaQ:             " << deltaQ << endl;
@@ -175,6 +190,7 @@ void EvaporativeCoolingPrivacy::PrintState() {
   cout << "tau:                " << tau << endl;
   cout << "num attributes:     " << train->NumVariables() << endl;
   cout << "num instances:      " << numInstances << endl;
+  cout << "num sim signals:    " << numSignalsInData << endl;
   cout << "last train error:   " << trainError << endl;
   cout << "last holdout error: " << holdError << endl;
   cout << "last test error:    " << testError << endl;
@@ -189,6 +205,8 @@ bool EvaporativeCoolingPrivacy::ComputeImportance() {
   ReliefF* relief = new ReliefF(train, PP, NUMERIC_ONLY_ANALYSIS);
   // relief->SetNormalize(true);
   if(relief->ComputeAttributeScores()) {
+    //relief->PrintScores(std::cout);
+    trainImportance.clear();
     trainImportance = relief->GetScores();
   } else {
     error("ReliefF::ComputeAttributeScores() failed on training set\n");
@@ -202,6 +220,7 @@ bool EvaporativeCoolingPrivacy::ComputeImportance() {
   relief = new ReliefF(holdout, PP, NUMERIC_ONLY_ANALYSIS);
   // relief->SetNormalize(true);
   if(relief->ComputeAttributeScores()) {
+    holdoutImportance.clear();
     holdoutImportance = relief->GetScores();
   } else {
     error("ReliefF::ComputeAttributeScores() failed on holdout set\n");
@@ -223,9 +242,15 @@ bool EvaporativeCoolingPrivacy::ComputeImportance() {
     diffImportance[varName] = absDiff;
   }
   deltaQ = *max_element(diffScores.begin(), diffScores.end());
+  PP->printLOG(Timestamp() + "deltaQ: " + dbl2str(deltaQ) + "\n");
 
-  // increasing importance score index to remove next
+  // increasing importance score index to remove next - TODO: remove this?
   curDeleteImportanceIndex = 0;
+  
+  cout << endl
+          << "EvaporativeCoolingPrivacy::ComputeImportance "
+          << "train importance size: " 
+          << trainImportance.size() << endl << endl;
   
   return true;
 }
@@ -236,15 +261,17 @@ bool EvaporativeCoolingPrivacy::ComputeAttributeProbabilities() {
     //    >   sumPAs <- sum(PAs)
     //    >   scaled.PAs <- PAs/sum(PAs)
     //    >   cum.scaled.PAs <- cumsum(scaled.PAs)
-    diff.resize(trainImportance.size());
+    PP->printLOG(Timestamp() + "\tdiff)\n");
+    diff.clear();
     for(uint i=0; i < trainImportance.size(); ++i) {
       string key = trainImportance[i].second;
       if(diffImportance[key] > 0.001) {
-        diff[i] = diffImportance[key];
+        diff.push_back(diffImportance[key]);
       } else {
-        diff[i] = 0.001;
+        diff.push_back(0.001);
       }
     }
+    PP->printLOG(Timestamp() + "\tP(a)) and sum probs\n");
     // compute attribute probabilities and sum of probabilities
     attributeProbabilty.clear();
     summedProbabilities = 0;
@@ -255,18 +282,28 @@ bool EvaporativeCoolingPrivacy::ComputeAttributeProbabilities() {
       attributeProbabilty.push_back(prob);
       summedProbabilities += prob;
     }
+    PP->printLOG(Timestamp() + "\tscale probs\n");
     // normalize/scale to (0, 1)
     scaledProbabilities.clear();
     for(uint i=0; i < attributeProbabilty.size(); ++i) {
       scaledProbabilities.push_back(attributeProbabilty[i] / summedProbabilities);
     }
+    PP->printLOG(Timestamp() + "\tcumsum\n");
     // cumulative probabilities
     cummulativeProbabilities.clear();
     double runningProbability = 0;
     for(uint i=0; i < scaledProbabilities.size(); ++i) {
       runningProbability += scaledProbabilities[i];
-      cout << i << "\t" << scaledProbabilities[i] << "\t" << runningProbability << endl;
+//      cout << i << "\t"
+//              << curVarNames[i] << "\t"
+//              << scaledProbabilities[i] << "\t" 
+//              << runningProbability << endl;
       cummulativeProbabilities.push_back(runningProbability);
+    }
+
+    // DEBUG ASSERT
+    if(runningProbability < 0.999999) {
+      error("Bill your stats are whack bud!\n");
     }
     
     return true;
@@ -284,48 +321,57 @@ bool EvaporativeCoolingPrivacy::GenerateRandomUniformProbabilities() {
   // this sort is IMPORTANT! bcw 12/9/16
   sort(randUniformProbs.begin(), randUniformProbs.end());
   
+  // TODO: bcw - 12/31/16 - use one random value not a vector?
+  randUniformValue = runif(engine);
+          
   return true;
 }
 
 // remove worst attributes: has 's' in the method name
 bool EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
-  PP->printLOG(Timestamp() + "Evaporating the worst attributes\n");
+  PP->printLOG(Timestamp() + "Evaporating the worst " + int2str(numToRemove) + " attributes\n");
   // find which attributes to remove and those to keep
-  removeAttrs.clear();
-  keepAttrs.clear();
   uint removedSoFar = 0;
   vector<string> toRemove;
-  for(uint pIdx=0; pIdx < randUniformProbs.size(); ++pIdx) {
-    string thisVar = curVarNames[pIdx];
-    uint thisVarIdx = curVarMap[thisVar];
-    if(par::verbose) {
-      PP->printLOG(Timestamp() + thisVar + " (" + int2str(thisVarIdx) + ")\n");
-      PP->printLOG(Timestamp() + dbl2str(randUniformProbs[pIdx]) + 
-        " < "  + dbl2str(cummulativeProbabilities[pIdx]) + "?");
-    }
-    if((removedSoFar < numToRemove) && 
-       (randUniformProbs[pIdx] < cummulativeProbabilities[pIdx])) {
-      if(par::verbose) PP->printLOG(Timestamp() + " => remove\n");
+  bool found = false;
+  string thisVar;
+  if(par::verbose) PP->printLOG(Timestamp() + "Scanning probabilities\n");
+  for(uint curVarIdx=0; curVarIdx < curVarNames.size(); ++curVarIdx) {
+    thisVar = curVarNames[curVarIdx];
+//    if(par::verbose) {
+//      PP->printLOG(Timestamp() + "\t" + thisVar + " => " + 
+//        dbl2str(randUniformValue) + " < "  + 
+//        dbl2str(cummulativeProbabilities[curVarIdx]) + "?\n");
+//    }
+    if(randUniformValue < cummulativeProbabilities[curVarIdx]) {
       toRemove.push_back(thisVar);
-      removeAttrs.push_back(thisVar);
       ++removedSoFar;
-    } else {
-      if(par::verbose) PP->printLOG(Timestamp() + " => keep\n");
-      keepAttrs.push_back(thisVar);
-    }
+      found = true;
+    } 
   }
-  // remove the toRemove variables
-  if(toRemove.size()) {
-    for(uint i=0; i < toRemove.size(); ++i) {
+  // remove numToRemove of the toRemove variables
+  if(found) {
+    PP->printLOG("Found " + int2str(removedSoFar) + " candidates to remove\n");
+    if(numToRemove > toRemove.size()) {
+      PP->printLOG("WARNING: Number to remove is larger than to remove candidates\n");
+      numToRemove = toRemove.size();
+    }
+    for(uint i=0; i < numToRemove; ++i) {
       string thisVar = toRemove[i];
+      PP->printLOG(Timestamp() + "Evaporating/removing variable: " + thisVar + "\n");
       train->MaskRemoveVariable(thisVar);
       holdout->MaskRemoveVariable(thisVar);
       test->MaskRemoveVariable(thisVar);
+      removeAttrs.push_back(thisVar);
     }
+    keepAttrs = train->MaskGetAllVariableNames();
   } else {
     PP->printLOG("WARNING: Could not remove any variables in EvaporateWorstAttributes\n");
     return false;
   }
+
+  curVarNames = train->MaskGetAllVariableNames();
+  curVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
 
   return true;
 }
@@ -351,7 +397,7 @@ bool EvaporativeCoolingPrivacy::EvaporateWorstAttribute() {
   test->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
   // keep/remove accounting
   removeAttrs.push_back(thisVar);
-  keepAttrs = train->GetVariableNames();
+  keepAttrs = train->MaskGetAllVariableNames();
 
   // number of attributes removed after last modulus update step
   ++curDeleteImportanceIndex;

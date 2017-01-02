@@ -3064,6 +3064,9 @@ void setOptions(CArgs & a) {
   if(a.find("--ec-privacy-min-vars")) {
 		par::ecPrivacyMinVars = a.value_int("--ec-privacy-min-vars");
   }
+  if(a.find("--ec-privacy-percent-signal")) {
+    par::ecPrivacyPercentSignal = a.value_double("--ec-privacy-percent-signal");
+  }
 
   // added for Relief-F family of algorithms - bcw - 8/7/16
   if(a.find("--relieff")) {
@@ -4550,6 +4553,7 @@ void setOptions(CArgs & a) {
             << "      --ec-privacy-update-frequency Privacy EC scores updated every frequency iterations\n"
             << "      --ec-privacy-remove-per-iter  Privacy EC  number of variables to remove per iteration\n"
             << "      --ec-privacy-min-vars     Privacy EC minimum number of variables to continue iterations\n"
+            << "      --ec-privacy-percent-signal Privacy EC percent signal in simulation data sets\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"
             << "      --rank-top-n {top N}      Keep only top N ranked variables\n"
