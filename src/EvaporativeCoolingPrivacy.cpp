@@ -133,7 +133,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
     ComputeAttributeProbabilities();
     GenerateRandomUniformProbabilities();
     if(!EvaporateWorstAttributes(numToRemovePerIteration)) {
-      PP->printLOG("Is this an error or signal of when to end?\n");
+      PP->printLOG(Timestamp() + "Is this an error or signal of when to end?\n");
       break;
     }
     PP->printLOG(Timestamp() + "Removed : " + int2str(removeAttrs.size()) + "\n");
@@ -178,7 +178,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 void EvaporativeCoolingPrivacy::PrintState() {
   cout << "**********************************************************" << endl;
   cout << "PRIVACY EC CURRENT STATE" << endl;
-  //cout << "Q_EPS:              " << Q_EPS << endl;
+  cout << "Q_EPS:              " << Q_EPS << endl;
   cout << "iteration:          " << iteration << endl;
   cout << "deltaQ:             " << deltaQ << endl;
   cout << "threshold:          " << threshold << endl;
@@ -195,6 +195,14 @@ void EvaporativeCoolingPrivacy::PrintState() {
   cout << "last holdout error: " << holdError << endl;
   cout << "last test error:    " << testError << endl;
   cout << "**********************************************************" << endl;
+}
+
+ResultsLists EvaporativeCoolingPrivacy::GetKeptRemoved() {
+  ResultsLists returnLists;
+  returnLists.first = keepAttrs;
+  returnLists.second = removeAttrs;
+  
+  return returnLists;
 }
 
 // ----------------------------------------------------------------------------
@@ -247,10 +255,10 @@ bool EvaporativeCoolingPrivacy::ComputeImportance() {
   // increasing importance score index to remove next - TODO: remove this?
   curDeleteImportanceIndex = 0;
   
-  cout << endl
-          << "EvaporativeCoolingPrivacy::ComputeImportance "
-          << "train importance size: " 
-          << trainImportance.size() << endl << endl;
+//  cout << endl
+//          << "EvaporativeCoolingPrivacy::ComputeImportance "
+//          << "train importance size: " 
+//          << trainImportance.size() << endl << endl;
   
   return true;
 }
@@ -338,11 +346,11 @@ bool EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
   if(par::verbose) PP->printLOG(Timestamp() + "Scanning probabilities\n");
   for(uint curVarIdx=0; curVarIdx < curVarNames.size(); ++curVarIdx) {
     thisVar = curVarNames[curVarIdx];
-//    if(par::verbose) {
-//      PP->printLOG(Timestamp() + "\t" + thisVar + " => " + 
-//        dbl2str(randUniformValue) + " < "  + 
-//        dbl2str(cummulativeProbabilities[curVarIdx]) + "?\n");
-//    }
+    //    if(par::verbose) {
+    //      PP->printLOG(Timestamp() + "\t" + thisVar + " => " + 
+    //        dbl2str(randUniformValue) + " < "  + 
+    //        dbl2str(cummulativeProbabilities[curVarIdx]) + "?\n");
+    //    }
     if(randUniformValue < cummulativeProbabilities[curVarIdx]) {
       toRemove.push_back(thisVar);
       ++removedSoFar;
@@ -351,7 +359,7 @@ bool EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
   }
   // remove numToRemove of the toRemove variables
   if(found) {
-    PP->printLOG("Found " + int2str(removedSoFar) + " candidates to remove\n");
+    PP->printLOG(Timestamp() + "Found " + int2str(removedSoFar) + " candidates to remove\n");
     if(numToRemove > toRemove.size()) {
       PP->printLOG("WARNING: Number to remove is larger than to remove candidates\n");
       numToRemove = toRemove.size();
@@ -366,7 +374,7 @@ bool EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
     }
     keepAttrs = train->MaskGetAllVariableNames();
   } else {
-    PP->printLOG("WARNING: Could not remove any variables in EvaporateWorstAttributes\n");
+    PP->printLOG(Timestamp() +  "WARNING: Could not remove any variables in EvaporateWorstAttributes\n");
     return false;
   }
 

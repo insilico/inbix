@@ -1974,13 +1974,12 @@ bool Dataset::MaskWriteNewDataset(string newDatasetFilename) {
 }
 
 void Dataset::PrintMaskStats() {
-	cout << endl << Timestamp() << "Dataset Mask Statistics" << endl
-			<< Timestamp() << "Attributes mask size: " << attributesMask.size()
-			<< endl << Timestamp() << "Numerics mask size: "
-			<< numericsMask.size() << endl << Timestamp()
-			<< "Instances mask size: " << instancesMask.size() << endl
-			<< Timestamp() << "Mask is pushed? "
-			<< (maskIsPushed ? "true" : "false") << endl;
+	PP->printLOG(Timestamp() + "Dataset Mask Statistics\n");
+	PP->printLOG(Timestamp() + "Attributes mask size: " + int2str(attributesMask.size()) + "\n");
+	PP->printLOG(Timestamp() + "Numerics mask size: " + int2str(numericsMask.size()) + "\n");
+	PP->printLOG(Timestamp() + "Instances mask size: " + int2str(instancesMask.size()) + "\n");
+	PP->printLOG(Timestamp() + "Mask is pushed?\n");
+	PP->printLOG(Timestamp() + (maskIsPushed ? "true" : "false") + "\n");
 }
 
 void Dataset::RunSnpDiagnosticTests(string logFilename,

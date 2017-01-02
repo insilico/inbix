@@ -23,6 +23,8 @@ enum DATASET_TYPE {
   TEST
 };
 
+typedef std::pair<std::vector<std::string>, std::vector<std::string>> ResultsLists;
+
 class EvaporativeCoolingPrivacy {
 public:
   EvaporativeCoolingPrivacy(Dataset* trainset, Dataset* holdoset, 
@@ -30,6 +32,7 @@ public:
   virtual ~EvaporativeCoolingPrivacy();
   bool ComputeScores();
   void PrintState();
+  ResultsLists GetKeptRemoved();
 private:
   bool ComputeImportance();
   bool ComputeAttributeProbabilities();
@@ -91,8 +94,6 @@ private:
   // algorithm
   uint minRemainAttributes;
   uint updateInterval;
-//  uint kConstant;
-//  double probBiological; // probability biological influence
 
   // evaporation variables
   std::vector<double> attributeProbabilty;

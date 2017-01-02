@@ -1365,6 +1365,11 @@ int main(int argc, char* argv[]) {
     if(!ecp.ComputeScores()) {
       error("Could not create an EvaporativeCoolingPrivacy object");
     }
+    P.printLOG(Timestamp() + "Retained attributes:\n");
+    ResultsLists keptRemoved = ecp.GetKeptRemoved();
+    for(uint i=0; i < keptRemoved.first.size(); ++i) {
+      P.printLOG(Timestamp() + keptRemoved.first[i] + "\n");
+    }
 		shutdown();
   }
     

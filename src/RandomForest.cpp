@@ -211,7 +211,7 @@ double RandomForest::GetClassificationError() {
 void RandomForest::WriteScores(string baseFilename) {
   // safely ignore baseFilename in interface for AttributeRanker
   if(forest) {
-    PP->printLOG("Writing output files\n");
+    PP->printLOG(Timestamp() + "Writing output files\n");
     forest->writeOutput();
   } else {
     error("RandomForest::WriteScores object has not been constructed");
@@ -221,7 +221,7 @@ void RandomForest::WriteScores(string baseFilename) {
 void RandomForest::SaveForest() {
   // safely ignore baseFilename in interface for AttributeRanker
   if(forest) {
-    PP->printLOG("Writing forest in Ranger internal format\n");
+    PP->printLOG(Timestamp() + "Writing forest in Ranger internal format\n");
     forest->saveToFile();
   } else {
     error("RandomForest::WriteScoresInternal object has not been constructed");
