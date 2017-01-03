@@ -184,10 +184,10 @@ double RandomForest::Predict() {
   uint misclass = 0;
   for(uint i=0; i < classes.size(); ++i) {
     uint observed = classes[i];
-    uint predicted = static_cast<uint>(treeEvals[i]) == -1? 0: 1;
+    uint predicted = static_cast<uint>(treeEvals[i]);
     if(observed != predicted) { ++misclass; }
   }
-  double retError = static_cast<double>(misclass) / dataset->NumVariables();
+  double retError = static_cast<double>(misclass) / classes.size();
 
   return retError;
 }

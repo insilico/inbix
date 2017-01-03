@@ -152,6 +152,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
       UpdateTemperature();
       PP->printLOG(Timestamp() + "New temperature: " + dbl2str(currentTemp) + "\n");
       PP->printLOG(Timestamp() + "***** UpdateFrequency processed\n");
+      if(par::verbose) this->PrintState();
     }
     // write iteration results to iterationOutputFile
     iterationOutputStream 
