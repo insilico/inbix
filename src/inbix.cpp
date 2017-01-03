@@ -1346,11 +1346,14 @@ int main(int argc, char* argv[]) {
 	// Privacy Evaporative Cooling analysis requested - bcw - 10/24/16
 	if(par::do_ec_privacy) {
 		P.printLOG(Timestamp() + "Privacy Evaporative Cooling analysis\n");
-    // load the data sets: train, holdout and test from external sims in R
-    if((par::ecPrivacyTrainFile == "") || (par::ecPrivacyHoldoutFile == "") || (par::ecPrivacyTestFile == "")) {
+    // load the data sets: train, holdout and test from R simulations
+    if((par::ecPrivacyTrainFile == "") || 
+       (par::ecPrivacyHoldoutFile == "") || 
+       (par::ecPrivacyTestFile == "")) {
       error("Privacy EC requires train, holdout and test files.");
     }
     P.SNP2Ind();
+    PP->printLOG("Loading training, holdout and testing data sets.\n");
     P.printLOG("\n");
     Dataset trainDs;
     trainDs.LoadPrivacySim(par::ecPrivacyTrainFile);
@@ -1363,13 +1366,15 @@ int main(int argc, char* argv[]) {
     P.printLOG("\n");
     EvaporativeCoolingPrivacy ecp(&trainDs, &holdoutDs, &testDs, PP);
     if(!ecp.ComputeScores()) {
-      error("Could not create an EvaporativeCoolingPrivacy object");
+      error("EvaporativeCoolingPrivacy::ComputeScores failed\n");
     }
-    P.printLOG(Timestamp() + "Retained attributes:\n");
-    ResultsLists keptRemoved = ecp.GetKeptRemoved();
-    for(uint i=0; i < keptRemoved.first.size(); ++i) {
-      P.printLOG(Timestamp() + keptRemoved.first[i] + "\n");
-    }
+    pair<uint, double> detection = ecp.CheckDetectedAttributes();
+    P.printLOG(Timestamp() + "Privacy EC detected simulated signals: " + 
+               int2str(detection.first) + "\t(" + 
+               dbl2str(detection.second * 100) + "%)\n");
+    // -------------------------------------------------------------------------
+    ecp.WriteBestAttributes(par::output_file_name);
+    
 		shutdown();
   }
     

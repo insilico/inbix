@@ -195,7 +195,7 @@ void ForestRegression::writePredictionFile() {
     outfile << std::endl;
   }
 
-  *verbose_out << "Saved predictions to file " << filename << "." << std::endl;
+  PP->printLOG(Timestamp() + "Saved predictions to file " + filename + "\n");
 }
 
 void ForestRegression::saveToFileInternal(std::ofstream& outfile) {

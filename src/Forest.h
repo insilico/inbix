@@ -44,6 +44,8 @@
 #include "Tree.h"
 #include "Data.h"
 
+#include "Dataset.h"
+
 class Forest {
 public:
   Forest();
@@ -56,7 +58,8 @@ public:
       std::string split_select_weights_file, std::vector<std::string>& always_split_variable_names,
       std::string status_variable_name, bool sample_with_replacement,
       std::vector<std::string>& unordered_variable_names, bool memory_saving_splitting, SplitRule splitrule,
-      std::string case_weights_file, bool predict_all, double sample_fraction, double alpha, double minprop, bool holdout);
+      std::string case_weights_file, bool predict_all, double sample_fraction, double alpha, double minprop, 
+      bool holdout, bool useMask, Dataset* dataset);
   void initR(std::string dependent_variable_name, Data* input_data, uint mtry, uint num_trees,
       std::ostream* verbose_out, uint seed, uint num_threads, ImportanceMode importance_mode, uint min_node_size,
       std::vector<std::vector<double>>& split_select_weights, std::vector<std::string>& always_split_variable_names,

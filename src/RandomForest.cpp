@@ -104,16 +104,6 @@ bool RandomForest::InitializeData(bool doPrediction, bool useMask, bool doImport
     error("RandomForest only supports numeric attributes at this time");
   }
   CreateDefaultForestForPheno();
-//  DataDouble* data = new DataDouble();
-//  if(useMask) {
-//    if(data->loadFromDatasetMask(dataset, dataset->GetVariableNames())) {
-//      error("RandomForest loadFromDatasetMask(&P)");
-//    }
-//  } else {
-//    if(data->loadFromPlink(PP)) {
-//      error("RandomForest loadFromPlink(&P)");
-//    }
-//  }
   (doImportance)? par::impmeasure = IMP_GINI: par::impmeasure = IMP_NONE;
   string forestFilename = (doPrediction)? par::output_file_name + ".forest": "";
   vector<string> alwaysSplitNames;
@@ -142,7 +132,9 @@ bool RandomForest::InitializeData(bool doPrediction, bool useMask, bool doImport
             par::fraction, 
             par::alpha, 
             par::minprop, 
-            par::holdout);
+            par::holdout,
+            useMask, 
+            dataset);
   } catch (std::exception& e) {
     stringstream msg;
     msg << "RandomForest InitializeData exception: "

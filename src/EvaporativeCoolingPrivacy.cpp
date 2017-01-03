@@ -47,7 +47,8 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   holdout = holdoset;
   test = testset;
   numInstances = trainset->NumInstances();
-  numSignalsInData = static_cast<uint>(numInstances * par::ecPrivacyPercentSignal);
+  numSignalsInData = static_cast<uint>(train->NumVariables() * 
+          par::ecPrivacyPercentSignal);
   curVarNames = trainset->MaskGetAllVariableNames();
   curVarMap = trainset->MaskGetAttributeMask(NUMERIC_TYPE);
   for(uint i=0; i < numSignalsInData; ++i) {
@@ -171,6 +172,8 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
                "\t" + dbl2str(holdError) + "\t" + dbl2str(testError) + "\n");
 
   PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy::ComputeScores() END\n");
+
+  this->PrintState();
   
   return true;
 }
@@ -203,6 +206,44 @@ ResultsLists EvaporativeCoolingPrivacy::GetKeptRemoved() {
   returnLists.second = removeAttrs;
   
   return returnLists;
+}
+
+bool EvaporativeCoolingPrivacy::WriteBestAttributes(string fileSuffix) {
+  if(!keepAttrs.size()) {
+    PP->printLOG("WARNING EvaporativeCoolingPrivacy::WriteBestAttributes: "
+            "No attributes to write\n");
+    return false;
+  }
+  string resultsFilename = fileSuffix + ".selected.attributes.tab";
+	PP->printLOG(Timestamp() + "Writing Privacy EC results to: " + resultsFilename + "\n");
+
+  ofstream outFile;
+  outFile.open(resultsFilename.c_str());
+  if(outFile.bad()) {
+    error("ERROR: Could not open scores file " + resultsFilename + " for writing\n");
+  }
+  for(uint i=0; i < keepAttrs.size(); ++i) {
+    outFile << keepAttrs[i] << endl;
+  }
+  outFile.close();
+
+  return true;
+}
+
+pair<uint, double> EvaporativeCoolingPrivacy::CheckDetectedAttributes() {
+  pair<uint, double>  retValues;
+  uint goodCount = 0;
+  for(uint i=0; i < keepAttrs.size(); ++i) {
+    string thisAttr = keepAttrs[i];
+    if(find(signalNames.begin(), signalNames.end(), thisAttr) != signalNames.end()) {
+      ++goodCount;
+    }
+  }
+  
+  retValues.first = goodCount;
+  retValues.second = (double) goodCount / numSignalsInData;
+  
+  return retValues;
 }
 
 // ----------------------------------------------------------------------------
@@ -422,7 +463,7 @@ bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
   holdoutErrors.push_back(holdError);
   uniform_real_distribution<double> runif(0, tolerance);
   double lilBit = runif(engine);
-  if(fabs(trainError - holdError) < threshold + lilBit) {
+  if(fabs(trainError - holdError) < (threshold + lilBit)) {
     holdError = trainError;
   } else {
     PP->printLOG(Timestamp() + "adjusting small difference in holdout: " + dbl2str(lilBit) + "\n");

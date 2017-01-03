@@ -45,6 +45,9 @@
 #include "DataDouble.h"
 #include "DataFloat.h"
 
+#include "helper.h"
+#include "Dataset.h"
+
 Forest::Forest() :
     verbose_out(0), num_trees(DEFAULT_NUM_TREE), mtry(0), min_node_size(0), num_variables(0), num_independent_variables(
         0), seed(0), dependent_varID(0), num_samples(0), prediction_mode(false), memory_mode(MEM_DOUBLE), sample_with_replacement(
@@ -70,29 +73,50 @@ void Forest::initCpp(std::string dependent_variable_name, MemoryMode memory_mode
     std::string split_select_weights_file, std::vector<std::string>& always_split_variable_names,
     std::string status_variable_name, bool sample_with_replacement, std::vector<std::string>& unordered_variable_names,
     bool memory_saving_splitting, SplitRule splitrule, std::string case_weights_file, bool predict_all,
-    double sample_fraction, double alpha, double minprop, bool holdout) {
+    double sample_fraction, double alpha, double minprop, bool holdout, bool useMask,
+        Dataset* dataset) {
 
   this->verbose_out = verbose_out;
 
   // Initialize data with memmode
-  switch (memory_mode) {
-  case MEM_DOUBLE:
-    data = new DataDouble();
-    break;
-  case MEM_FLOAT:
-    data = new DataFloat();
-    break;
-  case MEM_CHAR:
-    data = new DataChar();
-    break;
+//  switch (memory_mode) {
+//  case MEM_DOUBLE:
+//    data = new DataDouble();
+//    break;
+//  case MEM_FLOAT:
+//    data = new DataFloat();
+//    break;
+//  case MEM_CHAR:
+//    data = new DataChar();
+//    break;
+//  }
+  if(memory_mode != MEM_DOUBLE) {
+    error("Memory mode restricted to MEM_DOUBLE in this version");
   }
+  data = new DataDouble();
 
-  // Load data
-  *verbose_out << "Loading input file: " << input_file << "." << std::endl;
-  bool rounding_error = data->loadFromFile(input_file);
-  if (rounding_error) {
-    *verbose_out << "Warning: Rounding or Integer overflow occurred. Use FLOAT or DOUBLE precision to avoid this."
-        << std::endl;
+  // added by bcw 1/2/17 for masked Dataset class
+  if(dataset && useMask) {
+    PP->printLOG(Timestamp() + "Loading from masked Dataset object\n");
+    if(((DataDouble*) data)->loadFromDatasetMask(dataset, dataset->GetVariableNames())) {
+      error("RandomForest loadFromDatasetMask(&P)");
+    }
+  } else {
+    if(dataset) {
+      // Load data from file- original Ranger code
+      PP->printLOG(Timestamp() + "Loading input file: " + input_file + "\n");
+      bool rounding_error = data->loadFromFile(input_file);
+      if (rounding_error) {
+        PP->printLOG(Timestamp() + 
+          "Warning: Rounding or Integer overflow occurred. "
+          "Use FLOAT or DOUBLE precision to avoid this.\n");
+      } 
+    } else {
+      PP->printLOG(Timestamp() + "Loading from internal PLINK data structures\n");
+//      if(data->loadFromPlink(PP)) {
+        error("RandomForest loadFromPlink(&P) not implemented yet");
+//      }
+    }
   }
 
   // Set prediction mode
@@ -282,24 +306,24 @@ void Forest::run(bool verbose) {
 
   if (prediction_mode) {
     if (verbose) {
-      *verbose_out << "Predicting .." << std::endl;
+      PP->printLOG(Timestamp() + "Predicting ..\n");
     }
     predict();
   } else {
     if (verbose) {
-      *verbose_out << "Growing trees .." << std::endl;
+      PP->printLOG(Timestamp() + "Growing trees ..\n");
     }
 
     grow();
 
     if (verbose) {
-      *verbose_out << "Computing prediction error .." << std::endl;
+      PP->printLOG(Timestamp() + "Computing prediction error ..\n");
     }
     computePredictionError();
 
     if (importance_mode > IMP_GINI) {
       if (verbose) {
-        *verbose_out << "Computing permutation variable importance .." << std::endl;
+        PP->printLOG(Timestamp() + "Computing permutation variable importance ..\n");
       }
       computePermutationImportance();
     }
@@ -397,7 +421,7 @@ void Forest::saveToFile() {
 
   // Close file
   outfile.close();
-  *verbose_out << "Saved forest to file " << filename << "." << std::endl;
+  PP->printLOG(Timestamp() + "Saved forest to file " + filename + "\n");
 }
 
 void Forest::grow() {
@@ -733,7 +757,7 @@ void Forest::computeTreePermutationImportanceInThread(uint thread_idx, std::vect
 #endif
 
 void Forest::loadFromFile(std::string filename) {
-  *verbose_out << "Loading forest from file " << filename << "." << std::endl;
+  PP->printLOG(Timestamp() + "Loading forest from file " + filename + ".\n");
 
 // Open file for reading
   std::ifstream infile;

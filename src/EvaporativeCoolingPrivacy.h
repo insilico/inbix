@@ -33,6 +33,8 @@ public:
   bool ComputeScores();
   void PrintState();
   ResultsLists GetKeptRemoved();
+  bool WriteBestAttributes(std::string fileSuffix);
+  std::pair<uint, double> CheckDetectedAttributes();
 private:
   bool ComputeImportance();
   bool ComputeAttributeProbabilities();

@@ -104,11 +104,11 @@ bool DataDouble::loadFromDatasetMask(Dataset* ds, vector<string> bestAttributes)
   num_cols = bestAttributes.size() + 1;
   num_rows = ds->NumInstances();
   num_cols_no_sparse = num_cols;
-  variable_names.clear();
-  variable_names = bestAttributes;
-  variable_names.push_back("Class");
-  // if(data) delete [] data;
-  reserveMemory();
+  variable_names.resize(num_cols);
+  copy(bestAttributes.begin(), bestAttributes.end(), variable_names.begin());
+  variable_names[bestAttributes.size()] = ("pheno");
+  if(data) delete [] data;
+  reserveMemory(); // allocates num_cols * num_rows double matrix
 
   // loop over all instances
   bool error = false;
@@ -129,12 +129,11 @@ bool DataDouble::loadFromDatasetMask(Dataset* ds, vector<string> bestAttributes)
     // phenotype is last column
     double phenotype = -9; 
     if(par::bt) {
-      int intPheno = ds->GetInstance(i)->GetClass() - 1;
+      int intPheno = (ds->GetInstance(i)->GetClass()) == 0? -1: 1;
       phenotype = static_cast<double>(intPheno);
     } else {
       phenotype = ds->GetInstance(i)->GetPredictedValueTau();
     }
-    //cout << i << ", " << bestAttributes.size() << " => " << phenotype << endl;
     set(bestAttributes.size(), i, phenotype, error);
   }
 
