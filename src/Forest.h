@@ -59,19 +59,20 @@ public:
       std::string status_variable_name, bool sample_with_replacement,
       std::vector<std::string>& unordered_variable_names, bool memory_saving_splitting, SplitRule splitrule,
       std::string case_weights_file, bool predict_all, double sample_fraction, double alpha, double minprop, 
-      bool holdout, bool useMask, Dataset* dataset);
+      bool holdout, PredictionType prediction_type, bool useMask, Dataset* dataset);
   void initR(std::string dependent_variable_name, Data* input_data, uint mtry, uint num_trees,
       std::ostream* verbose_out, uint seed, uint num_threads, ImportanceMode importance_mode, uint min_node_size,
       std::vector<std::vector<double>>& split_select_weights, std::vector<std::string>& always_split_variable_names,
       std::string status_variable_name, bool prediction_mode, bool sample_with_replacement,
       std::vector<std::string>& unordered_variable_names, bool memory_saving_splitting, SplitRule splitrule,
       std::vector<double>& case_weights, bool predict_all, bool keep_inbag, double sample_fraction, double alpha,
-      double minprop, bool holdout);
+      double minprop, bool holdout, PredictionType prediction_type);
   void init(std::string dependent_variable_name, MemoryMode memory_mode, Data* input_data, uint mtry,
       std::string output_prefix, uint num_trees, uint seed, uint num_threads, ImportanceMode importance_mode,
       uint min_node_size, std::string status_variable_name, bool prediction_mode, bool sample_with_replacement,
       std::vector<std::string>& unordered_variable_names, bool memory_saving_splitting, SplitRule splitrule,
-      bool predict_all, double sample_fraction, double alpha, double minprop, bool holdout);
+      bool predict_all, double sample_fraction, double alpha, double minprop, bool holdout, 
+      PredictionType prediction_type);
   virtual void initInternal(std::string status_variable_name) = 0;
 
   // Grow or predict
@@ -115,18 +116,18 @@ public:
   double getOverallPredictionError() const {
     return overall_prediction_error;
   }
-  const std::vector<std::vector<double> >& getPredictions() const {
+  const std::vector<std::vector<std::vector<double>> >& getPredictions() const {
     return predictions;
   }
-  virtual std::vector<double> getPredictionValues() {
-    std::vector<double> retVals;
-    for (size_t i = 0; i < predictions.size(); ++i) {
-      for (size_t j = 0; j < predictions[i].size(); ++j) {
-        retVals.push_back(predictions[i][j]);
-      }
-    }
-    return retVals;
-  }
+//  virtual std::vector<double> getPredictionValues() {
+//    std::vector<double> retVals;
+//    for (size_t i = 0; i < predictions.size(); ++i) {
+//      for (size_t j = 0; j < predictions[i].size(); ++j) {
+//        retVals.push_back(predictions[i][j]);
+//      }
+//    }
+//    return retVals;
+//  }
   size_t getDependentVarId() const {
     return dependent_varID;
   }
@@ -211,7 +212,8 @@ protected:
   bool keep_inbag;
   double sample_fraction;
   bool holdout;
-
+  PredictionType prediction_type;
+  
   // MAXSTAT splitrule
   double alpha;
   double minprop;
@@ -233,7 +235,7 @@ protected:
   std::vector<Tree*> trees;
   Data* data;
 
-  std::vector<std::vector<double>> predictions;
+  std::vector<std::vector<std::vector<double>>> predictions;
   double overall_prediction_error;
 
   // Weight vector for selecting possible split variables, one weight between 0 (never select) and 1 (always select) for each variable

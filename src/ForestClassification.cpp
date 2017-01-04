@@ -111,20 +111,27 @@ void ForestClassification::predictInternal() {
 
   // First dim trees, second dim samples
   size_t num_prediction_samples = data->getNumRows();
-  predictions.reserve(num_prediction_samples);
+  if (predict_all || prediction_type == TERMINALNODES) {
+    predictions = std::vector<std::vector<std::vector<double>>>(1, std::vector<std::vector<double>>(num_prediction_samples, std::vector<double>(num_trees)));
+  } else {
+    predictions = std::vector<std::vector<std::vector<double>>>(1, std::vector<std::vector<double>>(1, std::vector<double>(num_prediction_samples)));
+  }
 
   // For all samples get tree predictions
   for (size_t sample_idx = 0; sample_idx < num_prediction_samples; ++sample_idx) {
 
-    if (predict_all) {
+    if (predict_all || prediction_type == TERMINALNODES) {
       // Get all tree predictions
       std::vector<double> sample_predictions;
       sample_predictions.reserve(num_trees);
       for (size_t tree_idx = 0; tree_idx < num_trees; ++tree_idx) {
-        double value = ((TreeClassification*) trees[tree_idx])->getPrediction(sample_idx);
-        sample_predictions.push_back(value);
+        if (prediction_type == TERMINALNODES) {
+          predictions[0][sample_idx][tree_idx] = ((TreeClassification*) trees[tree_idx])->getPredictionTerminalNodeID(
+              sample_idx);
+        } else {
+          predictions[0][sample_idx][tree_idx] = ((TreeClassification*) trees[tree_idx])->getPrediction(sample_idx);
+        }
       }
-      predictions.push_back(sample_predictions);
     } else {
       // Count classes over trees and save class with maximum count
       std::unordered_map<double, size_t> class_count;
@@ -132,10 +139,7 @@ void ForestClassification::predictInternal() {
         double value = ((TreeClassification*) trees[tree_idx])->getPrediction(sample_idx);
         ++class_count[value];
       }
-
-      std::vector<double> temp;
-      temp.push_back(mostFrequentValue(class_count, random_number_generator));
-      predictions.push_back(temp);
+      predictions[0][0][sample_idx] = mostFrequentValue(class_count, random_number_generator);
     }
 
   }
@@ -160,22 +164,20 @@ void ForestClassification::computePredictionErrorInternal() {
   }
 
   // Compute majority vote for each sample
-  predictions.reserve(num_samples);
+  predictions = std::vector<std::vector<std::vector<double>>>(1, std::vector<std::vector<double>>(1, std::vector<double>(num_samples)));
   for (size_t i = 0; i < num_samples; ++i) {
-    std::vector<double> temp;
     if (!class_counts[i].empty()) {
-      temp.push_back(mostFrequentValue(class_counts[i], random_number_generator));
+      predictions[0][0][i] = mostFrequentValue(class_counts[i], random_number_generator);
     } else {
-      temp.push_back(NAN);
+      predictions[0][0][i] = NAN;
     }
-    predictions.push_back(temp);
   }
 
   // Compare predictions with true data
   size_t num_missclassifications = 0;
   size_t num_predictions = 0;
-  for (size_t i = 0; i < predictions.size(); ++i) {
-    double predicted_value = predictions[i][0];
+  for (size_t i = 0; i < predictions[0][0].size(); ++i) {
+    double predicted_value = predictions[0][0][i];
     if (!std::isnan(predicted_value)) {
       ++num_predictions;
       double real_value = data->get(i, dependent_varID);
@@ -235,24 +237,6 @@ void ForestClassification::writeConfusionFile() {
   *verbose_out << "Saved confusion matrix to file " << filename << "." << std::endl;
 }
 
-std::vector<double> ForestClassification::getPredictionValues() {
-  // Open prediction file for reading
-  std::string filename = output_prefix + ".prediction";
-  std::ifstream infile;
-  infile.open(filename, std::ios::in);
-  if (!infile.good()) {
-    throw std::runtime_error("Could not read prediction file: " + filename + ".");
-  }
-  std::vector<double> retVals;
-  std::string line;
-  // remove header
-  getline(infile, line);
-  while(getline(infile, line)) {
-    retVals.push_back(stoi(line, nullptr, 0));
-  }
-  return retVals;
-}
-
 void ForestClassification::writePredictionFile() {
 
   // Open prediction file for writing
@@ -265,11 +249,24 @@ void ForestClassification::writePredictionFile() {
 
   // Write
   outfile << "Predictions: " << std::endl;
-  for (size_t i = 0; i < predictions.size(); ++i) {
-    for (size_t j = 0; j < predictions[i].size(); ++j) {
-      outfile << predictions[i][j] << " ";
+  if (predict_all) {
+    for (size_t k = 0; k < num_trees; ++k) {
+      outfile << "Tree " << k << ":" << std::endl;
+      for (size_t i = 0; i < predictions.size(); ++i) {
+        for (size_t j = 0; j < predictions[i].size(); ++j) {
+          outfile << predictions[i][j][k] << std::endl;
+        }
+      }
+      outfile << std::endl;
     }
-    outfile << std::endl;
+  } else {
+    for (size_t i = 0; i < predictions.size(); ++i) {
+      for (size_t j = 0; j < predictions[i].size(); ++j) {
+        for (size_t k = 0; k < predictions[i][j].size(); ++k) {
+          outfile << predictions[i][j][k] << std::endl;
+        }
+      }
+    }
   }
 
   PP->printLOG(Timestamp() + "Saved predictions to file " + filename + "\n");

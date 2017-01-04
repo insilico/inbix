@@ -376,7 +376,7 @@ bool TreeRegression::findBestSplitMaxstat(size_t nodeID, std::vector<size_t>& po
   for (auto& sampleID : sampleIDs[nodeID]) {
     response.push_back(data->get(sampleID, dependent_varID));
   }
-  std::vector<double> ranks = rangerRank(response);
+  std::vector<double> ranks = rank(response);
 
   // Save split stats
   std::vector<double> pvalues;

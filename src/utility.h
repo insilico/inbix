@@ -410,7 +410,7 @@ std::vector<size_t> orderInData(Data* data, std::vector<size_t>& sampleIDs, size
  * @return Ranks of input values
  */
 template<typename T>
-std::vector<double> rangerRank(std::vector<T>& values) {
+std::vector<double> rank(std::vector<T>& values) {
   size_t num_values = values.size();
 
   // Order

@@ -57,6 +57,10 @@ public:
     return (chf[terminal_nodeID]);
   }
 
+  size_t getPredictionTerminalNodeID(size_t sampleID) const {
+    return prediction_terminal_nodeIDs[sampleID];
+  }
+
 private:
 
   void createEmptyNodeInternal() override;

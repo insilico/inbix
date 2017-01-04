@@ -35,11 +35,11 @@ wright@imbs.uni-luebeck.de
 #include "utility.h"
 
 ArgumentHandler::ArgumentHandler(int argc, char **argv) :
-    caseweights(""), depvarname(""), fraction(1), holdout(false), memmode(MEM_DOUBLE), savemem(false), predict(""), splitweights(
-        ""), nthreads(DEFAULT_NUM_THREADS), predall(false), alpha(DEFAULT_ALPHA), minprop(DEFAULT_MINPROP), file(""), impmeasure(
-        DEFAULT_IMPORTANCE_MODE), targetpartitionsize(0), mtry(0), outprefix("ranger_out"), probability(false), splitrule(
-        DEFAULT_SPLITRULE), statusvarname(""), ntree(DEFAULT_NUM_TREE), replace(true), verbose(false), write(false), treetype(
-        TREE_CLASSIFICATION), seed(0) {
+    caseweights(""), depvarname(""), fraction(1), holdout(false), memmode(MEM_DOUBLE), savemem(false), predict(""), 
+        predictiontype(DEFAULT_PREDICTIONTYPE), splitweights(""), nthreads(DEFAULT_NUM_THREADS), predall(false), alpha(DEFAULT_ALPHA), 
+        minprop(DEFAULT_MINPROP), file(""), impmeasure(DEFAULT_IMPORTANCE_MODE), targetpartitionsize(0), mtry(0), outprefix("ranger_out"), 
+        probability(false), splitrule(DEFAULT_SPLITRULE), statusvarname(""), ntree(DEFAULT_NUM_TREE), replace(true), verbose(false), 
+        write(false), treetype(TREE_CLASSIFICATION), seed(0) {
   this->argc = argc;
   this->argv = argv;
 }
@@ -50,7 +50,7 @@ ArgumentHandler::~ArgumentHandler() {
 int ArgumentHandler::processArguments() {
 
   // short options
-  char const *short_options = "A:C:D:F:HM:NP:S:U:XZa:b:c:f:hil::m:o:pr:s:t:uvwy:z:";
+  char const *short_options = "A:C:D:F:HM:NP:Q:S:U:XZa:b:c:f:hil::m:o:pr:s:t:uvwy:z:";
 
   // long options: longname, no/optional/required argument?, flag(not used!), shortname
     const struct option long_options[] = {
@@ -148,6 +148,24 @@ int ArgumentHandler::processArguments() {
 
     case 'P':
       predict = optarg;
+      break;
+
+     case 'Q':
+       try {
+         switch (std::stoi(optarg)) {
+          case 1:
+            predictiontype = RESPONSE;
+            break;
+          case 2:
+            predictiontype = TERMINALNODES;
+            break;
+          default:
+            throw std::runtime_error("");
+            break;
+         }
+      } catch (...) {
+        throw std::runtime_error("Illegal prediction type selected. See '--help' for details.");
+      }
       break;
 
     case 'S':

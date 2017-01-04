@@ -133,6 +133,7 @@ bool RandomForest::InitializeData(bool doPrediction, bool useMask, bool doImport
             par::alpha, 
             par::minprop, 
             par::holdout,
+            RESPONSE,
             useMask, 
             dataset);
   } catch (std::exception& e) {
@@ -177,19 +178,19 @@ AttributeScores RandomForest::ComputeScores() {
 double RandomForest::Predict() {
   PP->printLOG(Timestamp() + "Running random forest algorithm in PREDICT mode\n");
   forest->run(par::verbose);
-  forest->writePredictionFile();
-  vector<double> treeEvals = forest->getPredictionValues();
-  vector<ClassLevel> classes;
-  dataset->GetClassValues(classes);
-  uint misclass = 0;
-  for(uint i=0; i < classes.size(); ++i) {
-    uint observed = classes[i];
-    uint predicted = static_cast<uint>(treeEvals[i]);
-    if(observed != predicted) { ++misclass; }
-  }
-  double retError = static_cast<double>(misclass) / classes.size();
+//  forest->writePredictionFile();
+//  vector<double> treeEvals = forest->getPredictionValues();
+//  vector<ClassLevel> classes;
+//  dataset->GetClassValues(classes);
+//  uint misclass = 0;
+//  for(uint i=0; i < classes.size(); ++i) {
+//    uint observed = classes[i];
+//    uint predicted = static_cast<uint>(treeEvals[i]);
+//    if(observed != predicted) { ++misclass; }
+//  }
+//  double retError = static_cast<double>(misclass) / classes.size();
 
-  return retError;
+  return forest->getOverallPredictionError();
 }
 
 double RandomForest::GetClassificationError() {

@@ -42,22 +42,26 @@ public:
 
   virtual ~TreeRegression();
 
-  void initInternal() override;
+  void initInternal();
 
   double estimate(size_t nodeID);
   void computePermutationImportanceInternal(std::vector<std::vector<size_t>>* permutations);
-  void appendToFileInternal(std::ofstream& file) override;
+  void appendToFileInternal(std::ofstream& file);
 
   double getPrediction(size_t sampleID) const {
     size_t terminal_nodeID = prediction_terminal_nodeIDs[sampleID];
     return (split_values[terminal_nodeID]);
   }
 
-private:
-  bool splitNodeInternal(size_t nodeID, std::vector<size_t>& possible_split_varIDs) override;
-  void createEmptyNodeInternal() override;
+  size_t getPredictionTerminalNodeID(size_t sampleID) const {
+    return prediction_terminal_nodeIDs[sampleID];
+  }
 
-  double computePredictionAccuracyInternal() override;
+private:
+  bool splitNodeInternal(size_t nodeID, std::vector<size_t>& possible_split_varIDs);
+  void createEmptyNodeInternal();
+
+  double computePredictionAccuracyInternal();
 
   // Called by splitNodeInternal(). Sets split_varIDs and split_values.
   bool findBestSplit(size_t nodeID, std::vector<size_t>& possible_split_varIDs);
@@ -73,7 +77,7 @@ private:
 
   double computePredictionMSE();
 
-  void cleanUpInternal() override {
+  void cleanUpInternal() {
     if (counter != 0) {
       delete[] counter;
     }
