@@ -1356,13 +1356,19 @@ int main(int argc, char* argv[]) {
     PP->printLOG("Loading training, holdout and testing data sets.\n");
     P.printLOG("\n");
     Dataset trainDs;
-    trainDs.LoadPrivacySim(par::ecPrivacyTrainFile);
+    if(!trainDs.LoadPrivacySim(par::ecPrivacyTrainFile)) {
+      error("Training Dataset initialization failed\n");
+    }
     P.printLOG("\n");
     Dataset holdoutDs;
-    holdoutDs.LoadPrivacySim(par::ecPrivacyHoldoutFile);
+    if(!holdoutDs.LoadPrivacySim(par::ecPrivacyHoldoutFile)) {
+      error("Holdout Dataset initialization failed\n");
+    }
     P.printLOG("\n");
     Dataset testDs;
-    testDs.LoadPrivacySim(par::ecPrivacyTestFile);
+    if(!testDs.LoadPrivacySim(par::ecPrivacyTestFile)) {
+      error("Test Dataset initialization failed\n");
+    }
     P.printLOG("\n");
     EvaporativeCoolingPrivacy ecp(&trainDs, &holdoutDs, &testDs, PP);
     if(!ecp.ComputeScores()) {

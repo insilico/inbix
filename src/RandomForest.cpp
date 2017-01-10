@@ -178,19 +178,19 @@ AttributeScores RandomForest::ComputeScores() {
 double RandomForest::Predict() {
   PP->printLOG(Timestamp() + "Running random forest algorithm in PREDICT mode\n");
   forest->run(par::verbose);
-//  forest->writePredictionFile();
-//  vector<double> treeEvals = forest->getPredictionValues();
-//  vector<ClassLevel> classes;
-//  dataset->GetClassValues(classes);
-//  uint misclass = 0;
-//  for(uint i=0; i < classes.size(); ++i) {
-//    uint observed = classes[i];
-//    uint predicted = static_cast<uint>(treeEvals[i]);
-//    if(observed != predicted) { ++misclass; }
-//  }
-//  double retError = static_cast<double>(misclass) / classes.size();
-
-  return forest->getOverallPredictionError();
+  forest->writePredictionFile();
+  vector<double> treeEvals = forest->getPredictionValues();
+  vector<ClassLevel> classes;
+  dataset->GetClassValues(classes);
+  uint misclass = 0;
+  for(uint i=0; i < classes.size(); ++i) {
+    uint observed = classes[i];
+    uint predicted = static_cast<uint>(treeEvals[i]);
+    if(observed != predicted) { ++misclass; }
+  }
+  double retError = static_cast<double>(misclass) / classes.size();
+  // retError = forest->getOverallPredictionError();
+  return retError;
 }
 
 double RandomForest::GetClassificationError() {

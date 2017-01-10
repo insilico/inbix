@@ -6,6 +6,8 @@
  * Author: bwhite
  *
  * Created on October 18, 2016, 10:57 PM
+ * THis file is a part of inbix which in turn is based on PLINK, so
+ * certain assumptions may apply.
  */
 
 #include <string>
@@ -39,13 +41,15 @@ private:
   bool ComputeImportance();
   bool ComputeAttributeProbabilities();
   bool GenerateRandomUniformProbabilities();
-  bool EvaporateWorstAttributes(uint numToRemove);
+  uint EvaporateWorstAttributes(uint numToRemove);
   bool EvaporateWorstAttribute();
   double ClassifyAttributeSet(std::vector<std::string> attrs, DATASET_TYPE);
   bool ComputeBestAttributesErrors();
   bool UpdateTemperature();
   bool ComputeInverseImportance();
-
+  uint CurrentNumberCorrect(std::vector<std::string> testSet);
+  bool RemoveImportanceScore(std::string varToRemove);
+  
   // Mersenne twister random number engine - based Mersenne prime 2^19937 − 1
   std::mt19937_64 engine;  
   // PLINK environment Plink object
@@ -54,7 +58,11 @@ private:
   double Q_EPS;
   uint MAX_ITERATIONS;
   
+  // algorithm
+  uint minRemainAttributes;
+  uint updateInterval;
   uint iteration;
+  uint update;
   
   // classification data sets
   Dataset* train;
@@ -84,26 +92,22 @@ private:
   double deltaQ;
   double threshold;
   double tolerance;
-  uint curDeleteImportanceIndex;
-  
+    
   // temperature schedule
-  uint numToRemovePerIteration;
   double startTemp;
   double currentTemp;
   double finalTemp;
   double tau;
   
-  // algorithm
-  uint minRemainAttributes;
-  uint updateInterval;
-
-  // evaporation variables
+  // evaporation phase variables
+  uint numToRemovePerIteration;
   std::vector<double> attributeProbabilty;
   double summedProbabilities;
   std::vector<double> scaledProbabilities;
   std::vector<double> cummulativeProbabilities;
   std::vector<double> randUniformProbs;
   double randUniformValue;
+  vector<string> possiblyRemove;
   std::vector<std::string> removeAttrs;
   std::vector<std::string> keepAttrs;
 

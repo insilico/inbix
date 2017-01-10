@@ -119,15 +119,17 @@ public:
   const std::vector<std::vector<std::vector<double>> >& getPredictions() const {
     return predictions;
   }
-//  virtual std::vector<double> getPredictionValues() {
-//    std::vector<double> retVals;
-//    for (size_t i = 0; i < predictions.size(); ++i) {
-//      for (size_t j = 0; j < predictions[i].size(); ++j) {
-//        retVals.push_back(predictions[i][j]);
-//      }
-//    }
-//    return retVals;
-//  }
+  virtual std::vector<double> getPredictionValues() {
+    std::vector<double> retVals;
+    for (size_t i = 0; i < predictions.size(); ++i) {
+      for (size_t j = 0; j < predictions[i].size(); ++j) {
+        for (size_t k = 0; k < predictions[i][j].size(); ++k) {
+          retVals.push_back(predictions[i][j][k]);
+        }
+      }
+    }
+    return retVals;
+  }
   size_t getDependentVarId() const {
     return dependent_varID;
   }

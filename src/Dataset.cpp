@@ -3494,12 +3494,10 @@ bool Dataset::LoadPrivacySim(string filename) {
 	numericsFilename = filename;
 	ifstream dataStream(numericsFilename.c_str());
 	if (!dataStream.is_open()) {
-		cerr << "ERROR: Could not open sim data file: " << numericsFilename
-				<< endl;
+		error("ERROR: Could not open sim data file: " + numericsFilename + "\n");
 		return false;
 	}
 	PP->printLOG(Timestamp() + "Reading sim data from " + numericsFilename + "\n");
-	//  PrintStats();
 
   // --------------------------------------------------------------------------
 	// temporary string for reading file lines
@@ -3520,36 +3518,31 @@ bool Dataset::LoadPrivacySim(string filename) {
 		numericsMask[*it] = numIdx;
 	}
   PP->printLOG(Timestamp() + "Read " + int2str(numericsNames.size()) + 
-    " numeric names from the file header\n");
+               " numeric names from the file header\n");
   
   // --------------------------------------------------------------------------
 	// no snp data in privacy sims, so create instances in this loop - 12/23/16
+  hasGenotypes = false;
+  hasNumerics = true;
 	map<string, bool> idsSeen;
 	DatasetInstance* tempInstance = 0;
   uint phenoIdx = numericsNames.size();
   hasPhenotypes = true;
   hasContinuousPhenotypes = false;
- 	hasNumerics = true;
-  hasGenotypes = false;
 	while (getline(dataStream, line)) {
     // parse line by line the matrix of expression and phenotype
 		++lineNumber;
-		// cout << lineNumber << ": " << line << endl;
 		vector<string> parsedNumericsFileLine;
 		split(parsedNumericsFileLine, line);
-		// cout << line << endl;
 		if (parsedNumericsFileLine.size() < 2) {
       error("ERROR: simulated data file must have at least two columns: "
             "VAR1 ... PHENO");
 		}
 		if (numericsNames.size() != (parsedNumericsFileLine.size() - 1)) {
-			cerr
-					<< "ERROR: Number of numeric values read from the simulated data file header: ["
-					<< numericsNames.size()
-					<< "] is not equal to the number of numeric"
-					<< " values read [" << (parsedNumericsFileLine.size() - 1)
-					<< "] on line: " << lineNumber << " of " << numericsFilename << endl;
-			return false;
+			error("Number of numeric values read from the simulated data file header: [" +
+            int2str(numericsNames.size()) + "] is not equal to the number of numeric" +
+            " values read [" + int2str(parsedNumericsFileLine.size() - 1) +
+            "] on line: " + int2str(lineNumber) + " of " + numericsFilename + "\n");
 		}
 
     // new instance information
@@ -3560,16 +3553,16 @@ bool Dataset::LoadPrivacySim(string filename) {
     instanceIdsToLoad.push_back(instID);
     
 		if (!IsLoadableInstanceID(instID)) {
-			cout << Timestamp() << "WARNING: Skipping Numeric ID [" << instID	<< "]. "
-					<< "It does not match the data set and/or phenotype file"	<< endl;
+			PP->printLOG(Timestamp() + "WARNING: Skipping Numeric ID [" + instID	+ 
+                   "]. It does not match the data set and/or phenotype file\n");
 			continue;
 		}
 		if (idsSeen.find(instID) == idsSeen.end()) {
 			idsSeen[instID] = true;
 		} else {
-			cout << Timestamp() << "WARNING: Duplicate ID [" << instID
-					<< "] detected and " << "skipped on line [" << lineNumber
-					<< "]" << endl;
+			PP->printLOG(Timestamp() + "WARNING: Duplicate ID [" + instID +
+                   "] detected and skipped on line [" + int2str(lineNumber) +
+                   + "]\n");
 			continue;
 		}
 
@@ -3598,6 +3591,7 @@ bool Dataset::LoadPrivacySim(string filename) {
         tempInstance->AddNumeric(thisValue);
       } else {
         ClassLevel thisClass = lexical_cast<ClassLevel>(*it);
+        // convert -1, 1 encoding to 0/1 phenotype for inbix expectations
         thisClass = (thisClass == -1)? 0: 1;
         tempInstance->SetClass(thisClass);
         classIndexes[thisClass].push_back(newInstanceIndex);
@@ -3608,8 +3602,8 @@ bool Dataset::LoadPrivacySim(string filename) {
     instancesMask[instID] = newInstanceIndex;
     ++newInstanceIndex;
 	} // end read line by line from file
-	cout << Timestamp() 
-          << "Read " << NumNumerics() << " simulated data attributes" << endl;
+	PP->printLOG(Timestamp() + "Read " + int2str(NumNumerics()) + 
+          " simulated data attributes\n");
 
 	// find the min and max values for each numeric attribute
 	// used in diff/distance calculation metrics
