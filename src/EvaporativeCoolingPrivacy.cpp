@@ -29,6 +29,7 @@
 #include "EvaporativeCoolingPrivacy.h"
 #include "ReliefF.h"
 #include "RandomForest.h"
+#include "StringUtils.h"
 
 using namespace std;
 using namespace arma;
@@ -94,7 +95,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	if(!iterationOutputStream.is_open()) {
 		error("Could not open iteration output file [ " + iterationOutputFile + " ]\n");
 	}
-  iterationOutputStream << "Iteration\tTemperature\tKeep\tRemove\tTrain\tHoldout\tTest\tCorrect\tFrom" << endl;
+  iterationOutputStream << "Iteration\tTemperature\tKeep\tRemove\tTrain\tHoldout\tTest\tCorrect\tRemoved\tRemain" << endl;
 
   // initialize all masks to contain all variables
   PP->printLOG(Timestamp() + "Initializing variable masks\n");
@@ -164,6 +165,12 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
         if(par::verbose) this->PrintState();
       }
       prevNumInUpdate.push_back(train->NumVariables());
+      cout << iteration << "\t"
+              << keepAttrs.size() << "\t"
+              << (1 - trainError) << "\t" 
+              << (1 - holdError) << "\t" 
+              << (1 - testError) << "\t"
+              << endl;
     }
     // ----------------------------------------------------------------------
     // write iteration update results to iterationOutputFile
@@ -172,10 +179,12 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
             << currentTemp << "\t"
             << keepAttrs.size() << "\t"
             << removeAttrs.size() << "\t"
-            << trainError << "\t" 
-            << holdError << "\t" 
-            << testError << "\t"
-            << this->CurrentNumberCorrect(keepAttrs)
+            << (1 - trainError) << "\t" 
+            << (1 - holdError) << "\t" 
+            << (1 - testError) << "\t"
+            << this->CurrentNumberCorrect(keepAttrs) << "\t"
+            << removeAttrs[0] << "\t"
+            << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
             << endl;
     // is this number of attributes left same as last update? 'while' above cond
     tail1 = prevNumInUpdate[prevNumInUpdate.size() - 2];
@@ -454,7 +463,7 @@ uint EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
     }
     keepAttrs = train->MaskGetAllVariableNames();
   } else {
-    PP->printLOG(Timestamp() +  "WARNING: Could not remove any variables in EvaporateWorstAttributes\n");
+    PP->printLOG(Timestamp() + "WARNING: Could not remove any variables in EvaporateWorstAttributes\n");
     return 0;
   }
     

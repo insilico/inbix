@@ -53,9 +53,10 @@ RandomForest::RandomForest(Dataset* ds, Plink* plinkPtr, bool doPrediction,
   InitializeData(doPrediction, false, computeImportance);
 }
 
-RandomForest::RandomForest(Dataset* ds, vector<string> bestAttributeNames
-, bool doPrediction):
-	AttributeRanker::AttributeRanker(ds) {
+RandomForest::RandomForest(Dataset* ds, 
+                           vector<string> bestAttributeNames,
+                           bool doPrediction):
+    AttributeRanker::AttributeRanker(ds) {
 	dataset = ds;
 	PP->printLOG(Timestamp() + "Random Forest constructor\n");
   forest = 0;
@@ -190,6 +191,7 @@ double RandomForest::Predict() {
   }
   double retError = static_cast<double>(misclass) / classes.size();
   // retError = forest->getOverallPredictionError();
+  
   return retError;
 }
 
