@@ -72,10 +72,7 @@ private:
   uint numSignalsInData;
   vector<string> signalNames;
   
-  // track original and current set of variables and their indices
-  // into the original data set
-  std::vector<std::string> origVarNames;
-  std::map<std::string, unsigned int> origVarMap;
+  // track current set of variables and their indices
   std::vector<std::string> curVarNames;
   std::map<std::string, unsigned int> curVarMap;
   

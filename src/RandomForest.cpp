@@ -186,7 +186,8 @@ double RandomForest::Predict() {
   uint misclass = 0;
   for(uint i=0; i < classes.size(); ++i) {
     uint observed = classes[i];
-    uint predicted = static_cast<uint>(treeEvals[i]);
+    // Ranger uses +/-1 for binary classes
+    uint predicted = (treeEvals[i] == -1)? 0: 1;
     if(observed != predicted) { ++misclass; }
   }
   double retError = static_cast<double>(misclass) / classes.size();

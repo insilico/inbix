@@ -95,13 +95,11 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	if(!iterationOutputStream.is_open()) {
 		error("Could not open iteration output file [ " + iterationOutputFile + " ]\n");
 	}
-  iterationOutputStream << "Iteration\tTemperature\tKeep\tRemove\tTrain\tHoldout\tTest\tCorrect\tRemoved\tRemain" << endl;
+  iterationOutputStream << "Iteration\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tRemoved\tRemain" << endl;
 
   // initialize all masks to contain all variables
   PP->printLOG(Timestamp() + "Initializing variable masks\n");
   train->MaskIncludeAllAttributes(NUMERIC_TYPE);
-  origVarNames = train->MaskGetAllVariableNames();
-  origVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
   holdout->MaskIncludeAllAttributes(NUMERIC_TYPE);
 
   // compute train and holdout importance with Relief-F
@@ -165,12 +163,14 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
         if(par::verbose) this->PrintState();
       }
       prevNumInUpdate.push_back(train->NumVariables());
-      cout << iteration << "\t"
-              << keepAttrs.size() << "\t"
-              << (1 - trainError) << "\t" 
-              << (1 - holdError) << "\t" 
-              << (1 - testError) << "\t"
-              << endl;
+      //      cout << "Accuracies:" << endl 
+      //              << iteration << "\t"
+      //              << keepAttrs.size() << "\t"
+      //              << (1 - trainError) << "\t" 
+      //              << (1 - holdError) << "\t" 
+      //              << (1 - testError) << "\t"
+      //              << endl;
+      ++update;
     }
     // ----------------------------------------------------------------------
     // write iteration update results to iterationOutputFile
@@ -529,16 +529,21 @@ bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
   uniform_real_distribution<double> runif(0, tolerance);
   double lilBit = runif(engine);
   if(fabs(trainError - holdError) < (threshold + lilBit)) {
-    holdError = trainError;
+    holdError = holdError;
   } else {
     PP->printLOG(Timestamp() + "adjusting small difference in holdout: " + dbl2str(lilBit) + "\n");
     holdError = holdError + lilBit;
   }
   testError = ClassifyAttributeSet(keepAttrs, TEST);
   testErrors.push_back(testError);
+  PP->printLOG(Timestamp() + "* Error\n");
   PP->printLOG(Timestamp() + "* train:   " + dbl2str(trainError) + "\n" +
                Timestamp() + "* holdout: " + dbl2str(holdError) + "\n" +
                Timestamp() + "* test:    " + dbl2str(testError) + "\n");
+  PP->printLOG(Timestamp() + "* Accuracy\n");
+  PP->printLOG(Timestamp() + "* train:   " + dbl2str(1-trainError) + "\n" +
+               Timestamp() + "* holdout: " + dbl2str(1-holdError) + "\n" +
+               Timestamp() + "* test:    " + dbl2str(1-testError) + "\n");
 }
 
 double 
