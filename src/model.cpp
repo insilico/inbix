@@ -351,7 +351,10 @@ void Model::buildDesignMatrix() {
 	/////////////////////////////////////////
 	// VIF-based check for multicollinearity
   // commented out - bcw - 10/31/13
-	//all_valid = checkVIF();
+	all_valid = checkVIF();
+  if(par::verbose && !all_valid) {
+    P->printLOG("WARNING: checkVIF() failed\n");
+  }
 
 	///////////////////////
 	// Add Y variable also

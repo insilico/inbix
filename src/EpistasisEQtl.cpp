@@ -29,6 +29,8 @@ EpistasisEQtl::EpistasisEQtl() {
   tfMode = false;
   tfRadius = 0;
   LoadDefaultTranscriptionFactorLUT();
+  goodModels = 0;
+  badModels = 0;
 }
 
 EpistasisEQtl::~EpistasisEQtl() {
@@ -352,7 +354,8 @@ bool EpistasisEQtl::Run(bool debug) {
     PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
     std::ofstream EQTL;
     EQTL.open(eqtlFilename.c_str(), ios::out);
-    for(set<int>::const_iterator loopIt=loopSnps.begin(); loopIt != loopSnps.end(); ++loopIt) {
+    for(set<int>::const_iterator loopIt=loopSnps.begin(); 
+            loopIt != loopSnps.end(); ++loopIt) {
       int thisSnpIndex = *loopIt;
       string thisSnpName = PP->locus[thisSnpIndex]->name;
       
@@ -412,7 +415,7 @@ bool EpistasisEQtl::Run(bool debug) {
     
     if(par::iqtl_interaction_full) {
       PP->printLOG("iQTL linear regression loop: SNP x SNP\n");
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 1)
       for(int ii=0; ii < nAllSnps; ++ii) {
         if(ii && (ii % 1000 == 0)) {
           cout << ii << "/" << nAllSnps << endl;
@@ -467,9 +470,12 @@ bool EpistasisEQtl::Run(bool debug) {
         PP->printLOG("iQTL linear regression loop TF: (" + 
           int2str(nOuterLoop) + ")\n");
       }
-#pragma omp parallel for
+      uint badModelsTotal = 0;
+      uint goodModelsTotal = 0;
+#pragma omp parallel for schedule(dynamic, 1)
       for(int ii=0; ii < nOuterLoop; ++ii) {
-        if(ii && (ii % 10000 == 0)) {
+        //if(ii && (ii % 10000 == 0)) {
+        if(ii && ((ii % 1000) == 0)) {
           cout << ii << "/" << nOuterLoop << endl;
         }
         int snpAIndex = -1;
@@ -479,6 +485,8 @@ bool EpistasisEQtl::Run(bool debug) {
           snpAIndex = ii;
         }
         string snpAName = PP->locus[snpAIndex]->name;
+        badModels = 0;
+        goodModels = 0;
         for(int jj=0; jj < nInnerLoop; ++jj) {
           int snpBIndex = thisTranscriptSnpIndices[jj];
           string snpBName = PP->locus[snpBIndex]->name;
@@ -503,33 +511,51 @@ bool EpistasisEQtl::Run(bool debug) {
             tp += par::clist_number;
           }
           interactionModel->testParameter = tp; // interaction
-          interactionModel->fitLM();
 #pragma omp critical
 {          
-          vector_t betaInteractionCoefs = interactionModel->getCoefs();
-          double interactionValue = 
-            betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-          vector_t betaInteractionCoefPVals = interactionModel->getPVals();
-          double interactionPval =
-            betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-           // if((interactionPval < 0) || (interactionPval > 1)) {
-           //   cout 
-           //    << "!!!!! DANGER !!!!!\t"
-           //     << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-           //     << "\t" << snpAIndex << "\t" << snpAName
-           //     << "\t" << snpBIndex << "\t" << snpBName 
-           //     << "\t" << interactionValue << "\t" << interactionPval
-           //     << "\t" << betaInteractionCoefs[3]
-           //     << "\t" << betaInteractionCoefPVals[2]
-           //     << endl;
-           //    exit(1);
-           //  }
-          resultsMatrixBetas[ii][jj] = interactionValue;
-          resultsMatrixPvals[ii][jj] = interactionPval;
-}
-          delete interactionModel;
+          interactionModel->fitLM();
+          bool badModel = false;
+          if(!interactionModel->isValid()) {
+            if(par::verbose) {
+              PP->printLOG("WARNING: outer index " + int2str(ii) + 
+                " inner index " + int2str(jj) + " linear model fitLM(): invalid\n");
+            }
+            badModel = true;
+          }
+          if(!interactionModel->fitConverged()) {
+            if(par::verbose) {
+              PP->printLOG("WARNING: linear model fitLM(): failed to converge: SNP A: " + 
+                snpAName + "SNP B: " + snpBName + "\n");
+            }
+            badModel = true;
+          }
+          if(!badModel) {
+            ++goodModels;
+            ++goodModelsTotal;
+            vector_t betaInteractionCoefs = interactionModel->getCoefs();
+            double interactionValue = 
+              betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+            // vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+//            double interactionPval =
+//              betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+            double interactionPval = ((LinearModel*) interactionModel)->getPValue();
+            resultsMatrixBetas[ii][jj] = interactionValue;
+            resultsMatrixPvals[ii][jj] = interactionPval;
+          } else {
+            ++badModels;
+            ++badModelsTotal;
+            resultsMatrixBetas[ii][jj] = 0.0;
+            resultsMatrixPvals[ii][jj] = 1.0;
+          }
+          
+}         delete interactionModel;
         }
+        PP->printLOG(int2str(ii) + "/" + int2str(nOuterLoop) +
+        ", inner loop good models: " + int2str(goodModels) +
+          ", bad models: " + int2str(badModels) + "\n");
       }
+      PP->printLOG("total good models: " + int2str(goodModelsTotal) +
+        ", bad models: " + int2str(badModelsTotal) + "\n");
     }
 
     // write regression results
@@ -557,7 +583,7 @@ bool EpistasisEQtl::Run(bool debug) {
       }
     }
     IQTL_OUT.close();
-
+    
     // release dynamically allocated memory
     for(int a=0; a < nOuterLoop; ++a) {
       delete [] resultsMatrixBetas[a];

@@ -693,7 +693,7 @@ double LinearModel::getPValue() {
 	bool okay = var[testParameter] < 1e-20 || 
 	!realnum(var[testParameter]) ? false : all_valid;
 
-	if(all_valid) {
+	if(okay) {
 		double se = sqrt(var[testParameter]);
 		double Z = coef[testParameter] / se;
 		return pT(Z, Y.size() - np);

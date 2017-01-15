@@ -53,6 +53,8 @@ private:
   bool tfMode;
   int tfRadius;
   TransciptFactorTable transcriptFactorLUT;
+  uint goodModels;
+  uint badModels;
 };
 
 #endif	/* EPISTASISEQTL_H */
