@@ -95,7 +95,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	if(!iterationOutputStream.is_open()) {
 		error("Could not open iteration output file [ " + iterationOutputFile + " ]\n");
 	}
-  iterationOutputStream << "Iteration\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tRemoved\tRemain" << endl;
+  iterationOutputStream << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tRemoved\tRemain" << endl;
 
   // initialize all masks to contain all variables
   PP->printLOG(Timestamp() + "Initializing variable masks\n");
@@ -115,8 +115,10 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   vector<uint> prevNumInUpdate;
   prevNumInUpdate.push_back(tail1);
   prevNumInUpdate.push_back(tail2);
-  cout << endl << "i: " << iteration << " prevNumInUpdate tail1: " 
-       << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
+  if(par::verbose) {
+    cout << endl << "i: " << iteration << " prevNumInUpdate tail1: " 
+         << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
+  }
 
   // main optimization loop
   PP->printLOG(Timestamp() + "Entering EVAPORATIVE COOLING cooling schedule loop\n");
@@ -171,27 +173,27 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
       //              << (1 - testError) << "\t"
       //              << endl;
       ++update;
+      // ----------------------------------------------------------------------
+      // write iteration update results to iterationOutputFile
+      iterationOutputStream 
+              << iteration << "\t"
+              << update << "\t"
+              << currentTemp << "\t"
+              << keepAttrs.size() << "\t"
+              << updateInterval << "\t"
+              << (1 - trainError) << "\t" 
+              << (1 - holdError) << "\t" 
+              << (1 - testError) << "\t"
+              << this->CurrentNumberCorrect(keepAttrs) << "\t"
+              << removeAttrs[0] << "\t"
+              << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
+              << endl;
+      // is this number of attributes left same as last update? 'while' above cond
+      tail1 = prevNumInUpdate[prevNumInUpdate.size() - 2];
+      tail2 = prevNumInUpdate[prevNumInUpdate.size() - 1];
+      //    cout << endl << "Update History i: " << iteration << " prevNumInUpdate tail1: " 
+      //         << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
     }
-    // ----------------------------------------------------------------------
-    // write iteration update results to iterationOutputFile
-    iterationOutputStream 
-            << iteration << "\t"
-            << currentTemp << "\t"
-            << keepAttrs.size() << "\t"
-            << removeAttrs.size() << "\t"
-            << (1 - trainError) << "\t" 
-            << (1 - holdError) << "\t" 
-            << (1 - testError) << "\t"
-            << this->CurrentNumberCorrect(keepAttrs) << "\t"
-            << removeAttrs[0] << "\t"
-            << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
-            << endl;
-    // is this number of attributes left same as last update? 'while' above cond
-    tail1 = prevNumInUpdate[prevNumInUpdate.size() - 2];
-    tail2 = prevNumInUpdate[prevNumInUpdate.size() - 1];
-    //    cout << endl << "Update History i: " << iteration << " prevNumInUpdate tail1: " 
-    //         << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
-    
     ++iteration;
   }
   // end temperature schedule
@@ -441,8 +443,8 @@ uint EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
     return 0;
   }
   // remove numToRemove of the toRemove variables
-  removeAttrs.clear();
-  keepAttrs.clear();
+  // removeAttrs.clear();
+  // keepAttrs.clear();
   uint loopToRemove = 0;
   if(found) {
     PP->printLOG(Timestamp() + "Found " + int2str(possiblyRemove.size()) + " candidates to remove\n");
@@ -529,7 +531,7 @@ bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
   uniform_real_distribution<double> runif(0, tolerance);
   double lilBit = runif(engine);
   if(fabs(trainError - holdError) < (threshold + lilBit)) {
-    holdError = holdError;
+    holdError = trainError;
   } else {
     PP->printLOG(Timestamp() + "adjusting small difference in holdout: " + dbl2str(lilBit) + "\n");
     holdError = holdError + lilBit;
