@@ -65,6 +65,8 @@ ifeq ($(SYS),UNIX)
   LIB += -larmadillo
   LIB += -llapack
   LIB += -lopenblas
+  LIB += -lgsl
+  LIB += -lgslcblas
  endif
 endif
 
@@ -106,8 +108,8 @@ metaanal.cpp ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp \
 CentralityRanker.cpp EpistasisEQtl.cpp Dataset.cpp AttributeRanker.cpp	\
 DistanceMetrics.cpp PlinkInternalsDataset.cpp RReliefF.cpp ReliefF.cpp	\
 ReliefFSeq.cpp SNReliefF.cpp DatasetInstance.cpp Insilico.cpp DgeData.cpp  \
-BirdseedData.cpp ChiSquared.cpp Statistics.cpp ReliefSeqController.cpp \
 PlinkInternalsDatasetInstance.cpp EvaporativeCooling.cpp Deseq.cpp Edger.cpp \
+BirdseedData.cpp ChiSquared.cpp Statistics.cpp ReliefSeqController.cpp \
 ArgumentHandler.cpp DataChar.cpp Data.cpp DataDouble.cpp DataFloat.cpp \
 ForestClassification.cpp Forest.cpp ForestProbability.cpp RandomForest.cpp \
 ForestRegression.cpp ForestSurvival.cpp TreeClassification.cpp \
@@ -180,5 +182,3 @@ clean:
 install:
 	cp inbix /usr/local/bin
 
-dist:
-	zip inbix_src.zip $(SRC) $(HDR) Makefile* COPYING.txt README.*

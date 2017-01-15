@@ -66,6 +66,7 @@ ifeq ($(SYS),UNIX)
   LIB += /usr/lib/gcc/x86_64-linux-gnu/4.6/libgfortran.a
  else
   LIB += -larmadillo
+  LIB += -lgsl
  endif
 endif
 

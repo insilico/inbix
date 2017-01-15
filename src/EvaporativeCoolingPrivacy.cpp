@@ -478,8 +478,8 @@ uint EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
 
 bool EvaporativeCoolingPrivacy::RemoveImportanceScore(std::string varToRemove) {
   bool found = false;
-  AttributeScoresCIt citTrain = trainImportance.begin();
-  AttributeScoresCIt citHoldout = holdoutImportance.begin();
+  AttributeScoresIt citTrain = trainImportance.begin();
+  AttributeScoresIt citHoldout = holdoutImportance.begin();
   while(!found && 
         (citTrain != trainImportance.end())&& 
         (citHoldout != holdoutImportance.end())) {
