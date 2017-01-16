@@ -12,6 +12,9 @@
 #include <vector>
 #include <set>
 #include <fstream>
+
+#include <armadillo>
+
 #include "plink.h"
 #include "model.h"
 #include "linear.h"
@@ -280,11 +283,6 @@ bool EpistasisEQtl::Run(bool debug) {
   if(par::do_iqtl_tf) {
     GetSnpsForTFs(thisTFSnpIndices, thisTFNames);
     nOuterLoop = thisTFSnpIndices.size();
-  } else {
-    nOuterLoop = nAllSnps;
-  }
-  if(debug) {
-    cout << "nOuterLoop (TFs) : " << nOuterLoop << endl;
     // cout << "TF snp indices: ";
     // copy(thisTFSnpIndices.begin(), 
     //   thisTFSnpIndices.end(), 
@@ -295,8 +293,12 @@ bool EpistasisEQtl::Run(bool debug) {
     //   thisTFNames.end(), 
     //   ostream_iterator<string>(cout, "\t"));
     // cout << endl;
+  } else {
+    nOuterLoop = nAllSnps;
   }
+  cout << "nOuterLoop (SNPs or TFs) : " << nOuterLoop << endl;
 
+  // --------------------------------------------------------------------------
   string thisTranscript;
   int transcriptIndex = 0;
   for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
@@ -309,7 +311,7 @@ bool EpistasisEQtl::Run(bool debug) {
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
     // determine SNPs being considered ----------------------------------------
-    int nInnerLoop = -1;
+    int nInnerLoop = 0;
     vector<int> thisTranscriptSnpIndices;
     if(par::iqtl_interaction_full) {
       nInnerLoop = nAllSnps;
@@ -317,9 +319,8 @@ bool EpistasisEQtl::Run(bool debug) {
       GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
       nInnerLoop = thisTranscriptSnpIndices.size();
     }
-    if(debug) {
-      cout << "nInnerLoop (cis): " << nInnerLoop << endl;
-    }
+    cout << "nInnerLoop (cis): " << nInnerLoop << endl;
+
     if(!(nInnerLoop * nOuterLoop)) {
       cerr << "WARNING: no interactions for: " << thisTranscript << endl;
       continue; // to next transcript
@@ -329,6 +330,9 @@ bool EpistasisEQtl::Run(bool debug) {
       std::inserter(loopSnps, loopSnps.end() ));
     // cout << "DEBUG loopSnps set size: " << loopSnps.size() << endl;
 
+    PP->printLOG("Writing transcript loop info to: " + loopInfoFilename + "\n");
+    PP->printLOG(thisTranscript + "\t" + int2str(nOuterLoop) + "\t" + 
+      int2str(nInnerLoop) + "\n");
     LOOPINFO 
       << thisTranscript << "\t"
       << nInnerLoop << "\t"
@@ -348,7 +352,7 @@ bool EpistasisEQtl::Run(bool debug) {
 
     // EQTL -------------------------------------------------------------------
     // fit main effect regression model for SNPs
-    //cout << "Running main effects regression models" << endl;
+    PP->printLOG("Running main effects regression models\n");
     string eqtlFilename = par::output_file_name + "." + 
       thisTranscript + ".eqtl.txt";
     PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
@@ -397,25 +401,15 @@ bool EpistasisEQtl::Run(bool debug) {
     EQTL.close();
     
     // IQTL -----------------------------------------------------------------
+    PP->printLOG("Running interaction effects regression models\n");
     // allocate results matrices
-    double** resultsMatrixBetas= new double*[nAllSnps];
-    for(int a=0; a < nOuterLoop; ++a) {
-      resultsMatrixBetas[a] = new double[nInnerLoop];
-      for(int b=0; b < nInnerLoop; ++b) {
-        resultsMatrixBetas[a][b] = 0.0;
-      }
-    }
-    double** resultsMatrixPvals= new double*[nOuterLoop];
-    for(int a=0; a < nOuterLoop; ++a) {
-      resultsMatrixPvals[a] = new double[nInnerLoop];
-      for(int b=0; b < nInnerLoop; ++b) {
-        resultsMatrixPvals[a][b] = 0.0;
-      }
-    }
-    
+    arma::mat resultsMatrixBetas(nOuterLoop, nInnerLoop);
+    resultsMatrixBetas.zeros();
+    arma::mat resultsMatrixPvals(nOuterLoop, nInnerLoop);
+    resultsMatrixPvals.ones();
     if(par::iqtl_interaction_full) {
       PP->printLOG("iQTL linear regression loop: SNP x SNP\n");
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel
       for(int ii=0; ii < nAllSnps; ++ii) {
         if(ii && (ii % 1000 == 0)) {
           cout << ii << "/" << nAllSnps << endl;
@@ -455,8 +449,8 @@ bool EpistasisEQtl::Run(bool debug) {
           vector_t betaInteractionCoefPVals = interactionModel->getPVals();
           double interactionPval =
             betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-          resultsMatrixBetas[ii][jj] = interactionValue;
-          resultsMatrixPvals[ii][jj] = interactionPval;
+          resultsMatrixBetas(ii, jj) = interactionValue;
+          resultsMatrixPvals(ii, jj) = interactionPval;
 }
           delete interactionModel;
         }
@@ -472,7 +466,7 @@ bool EpistasisEQtl::Run(bool debug) {
       }
       uint badModelsTotal = 0;
       uint goodModelsTotal = 0;
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel
       for(int ii=0; ii < nOuterLoop; ++ii) {
         //if(ii && (ii % 10000 == 0)) {
         if(ii && ((ii % 1000) == 0)) {
@@ -511,8 +505,6 @@ bool EpistasisEQtl::Run(bool debug) {
             tp += par::clist_number;
           }
           interactionModel->testParameter = tp; // interaction
-#pragma omp critical
-{          
           interactionModel->fitLM();
           bool badModel = false;
           if(!interactionModel->isValid()) {
@@ -539,16 +531,16 @@ bool EpistasisEQtl::Run(bool debug) {
 //            double interactionPval =
 //              betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
             double interactionPval = ((LinearModel*) interactionModel)->getPValue();
-            resultsMatrixBetas[ii][jj] = interactionValue;
-            resultsMatrixPvals[ii][jj] = interactionPval;
+            resultsMatrixBetas(ii, jj) = interactionValue;
+            resultsMatrixPvals(ii, jj) = interactionPval;
           } else {
             ++badModels;
             ++badModelsTotal;
-            resultsMatrixBetas[ii][jj] = 0.0;
-            resultsMatrixPvals[ii][jj] = 1.0;
+            resultsMatrixBetas(ii, jj) = 0.0;
+            resultsMatrixPvals(ii, jj) = 1.0;
           }
           
-}         delete interactionModel;
+          delete interactionModel;
         }
         PP->printLOG(int2str(ii) + "/" + int2str(nOuterLoop) +
         ", inner loop good models: " + int2str(goodModels) +
@@ -566,37 +558,32 @@ bool EpistasisEQtl::Run(bool debug) {
     IQTL_OUT.open(iqtlFilename.c_str(), ios::out);
     for(int kk=0; kk < nOuterLoop; ++kk) {
       for(int ll=0; ll < nInnerLoop; ++ll) {
-        if((resultsMatrixPvals[kk][ll] > 0) && 
-          (resultsMatrixPvals[kk][ll] < par::iqtl_pvalue)) {
+        double thisInteractionPval = resultsMatrixPvals(kk, ll);
+        if((thisInteractionPval > 0) && 
+           (thisInteractionPval < par::iqtl_pvalue)) {
           int snpAIndex = thisTFSnpIndices[kk];
           string snpAName = PP->locus[snpAIndex]->name;
-          string snpTF = thisTFNames[kk];
+          string snpTF = "NA";
+          if(tfMode) {
+             snpTF = thisTFNames[kk];
+          }
           int snpBIndex = thisTranscriptSnpIndices[ll];
           string snpBName = PP->locus[snpBIndex]->name;
           IQTL_OUT
-            << snpAName << "\t" << snpBName << "\t"
+            << snpAName << "\t" 
+            << snpBName << "\t"
             << thisTranscript << "\t"
             << snpTF << "\t"
-            << resultsMatrixBetas[kk][ll] << "\t"
-            << resultsMatrixPvals[kk][ll] << endl;
+            << resultsMatrixBetas(kk, ll) << "\t"
+            << resultsMatrixPvals(kk, ll) << endl;
         }
       }
     }
     IQTL_OUT.close();
     
-    // release dynamically allocated memory
-    for(int a=0; a < nOuterLoop; ++a) {
-      delete [] resultsMatrixBetas[a];
-    }
-    delete [] resultsMatrixBetas;
-    for(int a=0; a < nOuterLoop; ++a) {
-      delete [] resultsMatrixPvals[a];
-    }
-    delete [] resultsMatrixPvals;
-
-    TESTNUMBERS << thisTranscript << "\t" 
-      << (nOuterLoop * nInnerLoop) << endl;
-    
+    PP->printLOG("Writing statistical test numbers to: " + testnumbersFilename + "\n");
+    PP->printLOG(thisTranscript + "\t" + int2str(nOuterLoop * nInnerLoop) + "\n");
+    TESTNUMBERS << thisTranscript << "\t" << (nOuterLoop * nInnerLoop) << endl;
   } // END for each transcript loop
   
   TESTNUMBERS.close();
