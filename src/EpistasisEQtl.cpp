@@ -551,22 +551,26 @@ bool EpistasisEQtl::Run(bool debug) {
     }
 
     // write regression results
+    // fixed bug where not in transcription factor mode - 1/17/17
     string iqtlFilename = par::output_file_name + "." + 
       thisTranscript + ".iqtl.txt";
     PP->printLOG("Writing iQTL results to [ " + iqtlFilename + " ]\n");
     ofstream IQTL_OUT;
     IQTL_OUT.open(iqtlFilename.c_str(), ios::out);
-    for(int kk=0; kk < nOuterLoop; ++kk) {
-      for(int ll=0; ll < nInnerLoop; ++ll) {
+    for(int kk=0; kk < resultsMatrixPvals.n_rows; ++kk) {
+      for(int ll=0; ll < resultsMatrixPvals.n_cols; ++ll) {
         double thisInteractionPval = resultsMatrixPvals(kk, ll);
         if((thisInteractionPval > 0) && 
            (thisInteractionPval < par::iqtl_pvalue)) {
-          int snpAIndex = thisTFSnpIndices[kk];
-          string snpAName = PP->locus[snpAIndex]->name;
           string snpTF = "NA";
+          int snpAIndex = -1;
           if(tfMode) {
-             snpTF = thisTFNames[kk];
+            snpAIndex = thisTFSnpIndices[kk];
+            snpTF = thisTFNames[kk];
+          } else {
+            snpAIndex = thisTranscriptSnpIndices[kk];
           }
+          string snpAName = PP->locus[snpAIndex]->name;
           int snpBIndex = thisTranscriptSnpIndices[ll];
           string snpBName = PP->locus[snpBIndex]->name;
           IQTL_OUT
@@ -575,7 +579,7 @@ bool EpistasisEQtl::Run(bool debug) {
             << thisTranscript << "\t"
             << snpTF << "\t"
             << resultsMatrixBetas(kk, ll) << "\t"
-            << resultsMatrixPvals(kk, ll) << endl;
+            << thisInteractionPval << endl;
         }
       }
     }

@@ -112,30 +112,31 @@ CXXFLAGS += -fopenmp
 SRC = inbix.cpp plink.cpp options.cpp input.cpp binput.cpp tinput.cpp \
 genome.cpp helper.cpp stats.cpp filters.cpp locus.cpp multi.cpp crandom.cpp \
 cluster.cpp mds.cpp output.cpp informative.cpp assoc.cpp epi.cpp  \
-prephap.cpp phase.cpp trio.cpp tdt.cpp sharing.cpp genepi.cpp sets.cpp  \
+prephap.cpp phase.cpp trio.cpp tdt.cpp sharing.cpp genepi.cpp sets.cpp	\
 perm.cpp mh.cpp genedrop.cpp gxe.cpp merge.cpp hotel.cpp multiple.cpp \
 haploCC.cpp haploTDT.cpp poo.cpp webcheck.cpp qfam.cpp linear.cpp \
 bmerge.cpp parse.cpp mishap.cpp legacy.cpp homozyg.cpp segment.cpp  \
-model.cpp logistic.cpp glm.cpp dcdflib.cpp elf.cpp dfam.cpp fisher.cpp  \
+model.cpp logistic.cpp glm.cpp dcdflib.cpp elf.cpp dfam.cpp fisher.cpp	\
 linput.cpp sockets.cpp lookup.cpp proxy.cpp pdriver.cpp haploQTL.cpp  \
 haplohelper.cpp haplowindow.cpp genogroup.cpp nonfounderphasing.cpp \
 clumpld.cpp genoerr.cpp em.cpp impute.cpp metaem.cpp profile.cpp  \
 nlist.cpp whap.cpp simul.cpp gvar.cpp cnv.cpp step.cpp greport.cpp  \
-flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp  \
+flip.cpp qualscores.cpp cnvqt.cpp cfamily.cpp setscreen.cpp idhelp.cpp	\
 tag.cpp hapglm.cpp lookup2.cpp blox.cpp zed.cpp dosage.cpp annot.cpp  \
 metaanal.cpp ArmadilloFuncs.cpp regain.cpp InteractionNetwork.cpp \
-CentralityRanker.cpp EpistasisEQtl.cpp Dataset.cpp AttributeRanker.cpp  \
-DistanceMetrics.cpp PlinkInternalsDataset.cpp RReliefF.cpp ReliefF.cpp  \
+CentralityRanker.cpp EpistasisEQtl.cpp Dataset.cpp AttributeRanker.cpp	\
+DistanceMetrics.cpp PlinkInternalsDataset.cpp RReliefF.cpp ReliefF.cpp	\
 ReliefFSeq.cpp SNReliefF.cpp DatasetInstance.cpp Insilico.cpp DgeData.cpp  \
+PlinkInternalsDatasetInstance.cpp EvaporativeCooling.cpp Deseq.cpp Edger.cpp \
 BirdseedData.cpp ChiSquared.cpp Statistics.cpp ReliefSeqController.cpp \
-PlinkInternalsDatasetInstance.cpp \
 ArgumentHandler.cpp DataChar.cpp Data.cpp DataDouble.cpp DataFloat.cpp \
-ForestClassification.cpp Forest.cpp ForestProbability.cpp \
+ForestClassification.cpp Forest.cpp ForestProbability.cpp RandomForest.cpp \
 ForestRegression.cpp ForestSurvival.cpp TreeClassification.cpp \
-Tree.cpp TreeProbability.cpp TreeRegression.cpp TreeSurvival.cpp utility.cpp
+Tree.cpp TreeProbability.cpp TreeRegression.cpp TreeSurvival.cpp utility.cpp \
+EvaporativeCoolingPrivacy.cpp
 
 HDR = plink.h options.h helper.h stats.h crandom.h sets.h phase.h \
-perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h  \
+perm.h model.h linear.h logistic.h dcdflib.h ipmpar.h cdflib.h	\
 fisher.h sockets.h haplowindow.h genogroup.h clumpld.h nlist.h whap.h \
 gvar.h cnv.h cfamily.h idhelp.h zed.h StringUtils.h \
 ArmadilloFuncs.h regain.h InteractionNetwork.h CentralityRanker.h \
@@ -143,11 +144,12 @@ EpistasisEQtl.h Dataset.h AttributeRanker.h DistanceMetrics.h \
 PlinkInternalsDataset.h RReliefF.h ReliefF.h ReliefFSeq.h SNReliefF.h  \
 DatasetInstance.h Insilico.h BestN.h DgeData.h BirdseedData.h \
 ChiSquared.h Statistics.h PlinkInternalsDatasetInstance.h \
-ReliefSeqController.h \
+ReliefSeqController.h EvaporativeCooling.h Deseq.h Edger.h \
 ArgumentHandler.h DataDouble.h Data.h Forest.h ForestRegression.h \
-globals.h Tree.h TreeRegression.h utility.h DataChar.h DataFloat.h \
-ForestClassification.h ForestProbability.h ForestSurvival.h \
-TreeClassification.h TreeProbability.h TreeSurvival.h version.h
+RandomForest.h globals.h Tree.h TreeRegression.h utility.h DataChar.h \
+DataFloat.h ForestClassification.h ForestProbability.h ForestSurvival.h \
+TreeClassification.h TreeProbability.h TreeSurvival.h version.h \
+EvaporativeCoolingPrivacy.h
 
 ifdef WITH_R_PLUGINS
 CXXFLAGS += -DWITH_R_PLUGINS
