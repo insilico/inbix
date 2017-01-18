@@ -32,10 +32,6 @@ CXX_WIN = g++.exe
 CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DNDEBUG -Wno-write-strings -std=c++11
 LDFLAGS += -L/usr/local/lib -lgsl -lboost_program_options
 
-# IQTL
-#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11 \
-#  -L/usr/local/lib -DIQTL
-
 # debug mode
 #CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 

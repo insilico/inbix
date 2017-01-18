@@ -220,11 +220,7 @@ bool par::ped_skip_pheno = false;
 
 bool par::SNP_major = true;
 bool par::out_SNP_major = true;
-#ifndef IQTL
 string par::output_file_name = "inbix";
-#else
-string par::output_file_name = "iqtl";
-#endif
 bool par::silent = false;
 bool par::gplink = false;
 bool par::cli = false;
@@ -450,7 +446,7 @@ bool par::iqtl_interaction_full = false;
 bool par::do_iqtl_tf = false;
 int par::iqtl_tf_radius = 0;
 string par::iqtl_tf_coord_file = "";
-double par::iqtl_pvalue = 1.0;
+double par::iqtl_pvalue = 0.5;
 
 bool par::no_show_covar = false;
 bool par::dump_covar = false;

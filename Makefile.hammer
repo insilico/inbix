@@ -34,11 +34,6 @@ CXXFLAGS = -DARMA_DONT_USE_WRAPPER
 CXXFLAGS += -O3 -I. -I/home/bwhite/.local/include -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11 -DARMA_USE_LAPACK
 LDFLAGS = 
 LDFLAGS += -L/usr/lib64 -L/usr/local/lib -L/home/bwhite/.local/lib
-# IQTL
-#CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings \
-#  -L/usr/local/lib -DIQTL
-# debug mode
-#CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11
 
 # Misc
 #LIB_LAPACK = /home/bwhite/.local/lib/liblapack.so

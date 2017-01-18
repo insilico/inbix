@@ -4378,7 +4378,6 @@ void setOptions(CArgs & a) {
 
   /////////////////////////////////////////////
   //  Help -- display all options
-#if !defined(IQTL) && !defined(DCVAR)
   if(a.find("--help") || a.find("-h")) {
 
     cout << "\n"
@@ -4597,34 +4596,6 @@ void setOptions(CArgs & a) {
 
     shutdown();
   }
-#elif defined (IQTL)
-    if(a.find("--help") || a.find("-h")) {
-      cout
-            << "      --bfile {fileroot}             Specify .bed, .fam and .map \n"
-            << "      --covar {covarfile}            Specify covariate file           \n"
-            << "      --transcript-matrix {filename} Transcript matrix file\n"
-            << "      --coordinates {filename}       Transcript coordinates file\n"
-            << "      --local-cis                    Consider only SNPs within radius\n"
-            << "      --radius {value}               Number of kilobases considered cis\n"
-            << "      --TF                           Select SNPs in range of 1 or more transcription factors\n"
-            << "      --TF-radius {value}            Number of kilobases considered within TF radius\n"
-            << "      --TF-file {filename}           Select coordinates file different from default\n"
-            << "      --iqtl-pvalue {threshold}    P-value threshold\n"
-            << "      --full                         Consider all SNPs\n";
-      shutdown();
-    }
-#elif defined (DCVAR)
-    if(a.find("--help") || a.find("-h")) {
-      cout
-            << "      --bfile {fileroot}             Specify .bed, .fam and .map \n"
-            << "      --numeric-file {numeric file}  Specify numeric attribute file\n"
-            << "      --dcvar-pfilter                Enable p-value filtering\n"
-            << "      --dcvar-pfilter-value {value}  P-value filter value\n"
-            << "      --dcvar-pfilter-type {bon,fdr} P-value filter type Bonferroni or FDR (BH)\n"
-            << "      --var-model {dom|rec|hom}      Allelic model\n";
-      shutdown();
-    }
-#endif
   
   // By default, most tests are SNP major
   par::SNP_major = true;
