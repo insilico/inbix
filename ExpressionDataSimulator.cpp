@@ -23,10 +23,22 @@ ExpressionDataSimulator::ExpressionDataSimulator(Plink* plinkPtr):
   PP(plinkPtr) {
 }
 
-ExpressionDataSimulator::ExpressionDataSimulator(const ExpressionDataSimulator& orig) {
+ExpressionDataSimulator::~ExpressionDataSimulator() {
 }
 
-ExpressionDataSimulator::~ExpressionDataSimulator() {
+const mat& ExpressionDataSimulator::GetData(SplitType splitType) {
+  const mat& retMat;
+  switch(splitType) {
+    case TRAIN_SPLIT:
+      retMat =  simulatedDataTrain;
+    case HOLDOUT_SPLIT:
+      retMat =  simulatedDataHoldout;
+    case TEST_SPLIT:
+      retMat =  simulatedDataTest;
+    case NO_SPLIT:
+    default:
+      error("ExpressionDataSimulator::GetData invalid split type.");
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -34,8 +46,30 @@ ExpressionDataSimulator::~ExpressionDataSimulator() {
 bool ExpressionDataSimulator::CreateDiffCoexpMatrixNoME(uint M, uint N, 
         double meanExpression, mat A, double randSdNoise, double sdNoise, 
         vector<uint> sampleIndicesInteraction) {
+    dimM = M;
+    dimN = N;
+    n1 = dimN / 2;
+    n2 = dimN / 2;
+    for(uint i=0; i < n1; ++i) {
+      stringstream ss;
+      ss << "case" << i;
+      subIds.push_back(ss.str());
+      phenosBase.push_back(1);
+    }
+    for(uint i=0; i < n2; ++i) {
+      stringstream ss;
+      ss << "ctrl" << i;
+      subIds.push_back(ss.str());
+      phenosBase.push_back(1);
+    }
+    for(uint i=0; i < dimM; ++i) {
+      stringstream ss;
+      ss << "gene" << i;
+      colNames.push_back(ss.str());
+    }
+
     // create a random data matrix
-    mat D(M, N);
+    mat D(dimM, dimN);
     // rnorm(M * N, mean = meanExpression, sd = randSdNoise)
     mt19937 engine;  // Mersenne twister random number engine
     normal_distribution<double> normDist1(meanExpression, randSdNoise);
@@ -46,8 +80,8 @@ bool ExpressionDataSimulator::CreateDiffCoexpMatrixNoME(uint M, uint N,
     vec already_modified(M);
     already_modified.zeros();
     already_modified[0] = 1;
-    for (i=0; i< M; ++i) {
-      for (j=0; j < M; ++j) {
+    for (uint i=0; i< M; ++i) {
+      for (uint j=0; j < M; ++j) {
         PP->printLOG("Considering A: row" + int2str(i) + "column" + int2str(j) + "\n");
         if ((A(i, j) == 1) && (!already_modified(j))) {
           PP->printLOG("Making row" + int2str(j) + "from row" + int2str(i) + "\n");
@@ -68,10 +102,9 @@ bool ExpressionDataSimulator::CreateDiffCoexpMatrixNoME(uint M, uint N,
     }
     
     // perturb to get differential co-expression
-    double n1 = N / 2;
     uniform_real_distribution<double> runif();
     uint mGenesToPerturb = sampleIndicesInteraction.size();
-    for (i=0; i < mGenesToPerturb; ++i) {
+    for (uint i=0; i < mGenesToPerturb; ++i) {
       uint geneIdxInteraction = sampleIndicesInteraction(i);
       
       rowvec g0 = D(sampleIndicesInteraction, (n1 + 1):N);
@@ -83,14 +116,7 @@ bool ExpressionDataSimulator::CreateDiffCoexpMatrixNoME(uint M, uint N,
       D(geneIdxInteraction, 1:n1) = x;
     }
     
-    // return a regression ready data frame
-    uint dimN = D.n_cols;
-    double n1 = dimN / 2;
-    double n2 = dimN / 2;
-    vector<string> subIds =
-      c(paste("case", 1:n1, sep = ""), paste("ctrl", 1:n2, sep = ""));
-    vector<unit> phenos = c(rep(1, n1), rep(0, n2));
-    simulatedData = D.t() + phenos;
+    simulatedDataBase = D.t() + phenosBase;
             
     return true;
 }
@@ -119,9 +145,13 @@ bool ExpressionDataSimulator::SimulateData(uint n_e, uint n_db, uint n_ns,
   // p.b=0.3
   // p.gam=0.3
   // p.ov=0.1
-  uint n = n.db + n.ns;
+  uint n = n_db + n_ns;
   // Create random error
-  mat U = matrix(nrow = n.e, ncol = n, rnorm(n.e * n, sd = sd.u));
+  mt19937 engine;  // Mersenne twister random number engine
+  normal_distribution<double> normDist2(0, sd_u);
+  mat U = mat(n_e, n);
+  // rnorm(n_e * n, sd = sd_u)
+  U.imbue( [&]() { return normDist2(engine); } );
   
   // Create index for database vs. new sample #
   vector<string> ind = as.factor(c(rep("db", n.db), rep("ns", n.ns)));
@@ -272,7 +302,7 @@ bool ExpressionDataSimulator::SimulateData(uint n_e, uint n_db, uint n_ns,
 //###########################################################
 // data simulation:
 //###########################################################
-bool ExpressionDataSimulator::Simulate(uint n, uint d, double pb, 
+bool ExpressionDataSimulator::CreateSimulation(uint n, uint d, double pb, 
         double bias, stringtype) {
   // n = 150
   // d = 1000

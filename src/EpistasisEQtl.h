@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 
 typedef std::map<std::string, std::vector<int> > CoordinateTable;
 typedef std::map<std::string, std::vector<int> >::const_iterator CoordinateTableCIt;
@@ -27,14 +28,18 @@ class EpistasisEQtl {
 public:
   EpistasisEQtl();
   virtual ~EpistasisEQtl();
+  bool SetDebugMode(bool debugFlag=true);
+  bool Run(bool debug=false);
+  bool RunEqtl(std::string transcript);
+  bool RunIqtlFull();
+  bool RunIqtlCisTrans();
   bool ReadTranscriptCoordinates(std::string coordinatesFile);
   bool ReadTranscriptFactorCoordinates(std::string coordinatesFile);
   bool SetRadius(int newRadius);
   int GetRadius() { return radius; }
   bool SetLocalCis(bool localCisFlag);
   bool GetLocalCis() { return localCis; }
-  bool Run(bool debug=false);
-  // added 4/21/15
+  // added 4/21/15 for transcription factor considerations
   bool SetTFRadius(int newRadius);
   int GetTFRadius() { return tfRadius; }
   bool SetTF(bool tfFlag);
@@ -46,15 +51,24 @@ private:
   bool GetSnpsForTFs(std::vector<int>& snpIndices, std::vector<std::string>& tfs);
   bool LoadDefaultTranscriptionFactorLUT();
   bool IsSnpInTFs(int chr, int bp, std::string& tf);
+  bool debugMode;
   int radius;
   bool localCis;
   CoordinateTable coordinates;
   // added 4/21/15
+  bool tfTableLoaded;
   bool tfMode;
   int tfRadius;
   TransciptFactorTable transcriptFactorLUT;
+  std::vector<int> thisTranscriptSnpIndices;
+  uint nOuterLoop;
+  uint nInnerLoop;
+  std::vector<int> thisTFSnpIndices;
   uint goodModels;
   uint badModels;
+  std::set<int> outerLoopSnps;
+  arma::mat resultsMatrixBetas;
+  arma::mat resultsMatrixPvals;
 };
 
 #endif	/* EPISTASISEQTL_H */
