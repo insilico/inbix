@@ -14,6 +14,8 @@
 #include <map>
 #include <set>
 
+#include <armadillo>
+
 typedef std::map<std::string, std::vector<int> > CoordinateTable;
 typedef std::map<std::string, std::vector<int> >::const_iterator CoordinateTableCIt;
 
@@ -28,13 +30,14 @@ class EpistasisEQtl {
 public:
   EpistasisEQtl();
   virtual ~EpistasisEQtl();
-  bool SetDebugMode(bool debugFlag=true);
+  void PrintState();
   bool Run(bool debug=false);
   bool RunEqtl(std::string transcript);
   bool RunIqtlFull();
   bool RunIqtlCisTrans();
   bool ReadTranscriptCoordinates(std::string coordinatesFile);
   bool ReadTranscriptFactorCoordinates(std::string coordinatesFile);
+  bool SetDebugMode(bool debugFlag=true);
   bool SetRadius(int newRadius);
   int GetRadius() { return radius; }
   bool SetLocalCis(bool localCisFlag);
@@ -46,6 +49,7 @@ public:
   bool GetTF() { return tfMode; }
   bool GetTFInfo(std::string tf, std::vector<int>& tfInfo);
 private:
+  bool CheckInputs();
   bool GetSnpsForTranscript(std::string transcript, 
     std::vector<int>& snpIndices);
   bool GetSnpsForTFs(std::vector<int>& snpIndices, std::vector<std::string>& tfs);

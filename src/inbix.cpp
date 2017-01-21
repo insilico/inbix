@@ -745,7 +745,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// perform epistatic eQTL analysis
   if(par::do_iqtl) {
-		P.printLOG("Performing iQTL analysis\n");
+		P.printLOG("\nPerforming iQTL analysis\n");
 
     if(par::iqtl_expression_file == "") {
       error("Transcript expression file is required. Use --transcript-matrix");
