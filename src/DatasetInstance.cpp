@@ -34,6 +34,7 @@ DatasetInstance::DatasetInstance(Dataset* ds) {
   dataset = ds;
   classLabel = MISSING_DISCRETE_CLASS_VALUE;
   predictedValueTau = MISSING_DISCRETE_CLASS_VALUE;
+  cvSetType = CV_NONE;
 }
 
 DatasetInstance::~DatasetInstance() {
@@ -339,4 +340,22 @@ bool DatasetInstance::ResetNearestNeighbors() {
 	bestNeighborIds.clear();
 	
 	return true;
+}
+
+bool DatasetInstance::SetCvSetType(CvSetType newType) {
+  bool success = true;
+  switch(newType) {
+    case CV_TRAIN:
+    case CV_HOLDOUT:
+    case CV_TEST:
+    case CV_NONE:
+      cvSetType = newType;
+    default:
+      success = false;
+  }
+  return success;
+}
+
+CvSetType DatasetInstance::GetCvSetType() {
+  return cvSetType;
 }

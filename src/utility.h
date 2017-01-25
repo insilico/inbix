@@ -305,8 +305,11 @@ void splitString(std::vector<std::string>& result, std::string input, char split
  * @param n_first Number of elements of first part
  * @param random_number_generator Random number generator
  */
-void shuffleAndSplit(std::vector<size_t>& first_part, std::vector<size_t>& second_part, size_t n_all, size_t n_first,
-    std::mt19937_64 random_number_generator);
+void shuffleAndSplit(std::vector<size_t>& first_part, 
+                     std::vector<size_t>& second_part, 
+                     size_t n_all, 
+                     size_t n_first,
+                     std::mt19937_64 random_number_generator);
 
 /**
  * Check if not too many factor levels and all values in unordered categorical variables are positive integers.

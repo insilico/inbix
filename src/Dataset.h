@@ -78,6 +78,13 @@ public:
    ****************************************************************************/
   bool LoadDataset(BirdseedData* birdseedData);
   /*************************************************************************//**
+   * Load the data set from another data set's instances.
+   * \param [in] pointer to a Dataset
+   * \param [in] vector of instance indicies
+   * \return success
+   ****************************************************************************/
+  bool LoadOtherDatasetInstances(Dataset* otherDs, std::vector<uint> instIdx);
+  /*************************************************************************//**
    * Get the attribute value at row, column.
    * Same as instance index, attribute index.
    * \param [in] row instance row

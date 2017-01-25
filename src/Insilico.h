@@ -1,7 +1,7 @@
 /**
  * \file Insilico.h
  *
- * \brief Common functions for Insilico Lab projects.
+ * \brief Common functions for In silico Lab projects.
  *
  * \author: Bill White
  * \version 1.0
@@ -231,6 +231,19 @@ enum EcItAlgorithmType
 {
 	EC_IT_ALG_RF, /**< ReliefF interactions algorithm */
 	EC_IT_ALG_RFSEQ,  /**< ReliefFSeq interactions algorithm */
+};
+
+/// 
+/**
+ * \enum CvSetType.
+ * Cross validation set types.
+ */
+enum CvSetType
+{
+	CV_TRAIN, /**< Trainging set */
+	CV_HOLDOUT,  /**< Hold out set */
+	CV_TEST,  /**< Testing set */
+  CV_NONE
 };
 
 static std::map<std::string, std::string> datasetTypeToExt;

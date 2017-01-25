@@ -437,6 +437,27 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 	return true;
 }
 
+bool Dataset::LoadOtherDatasetInstances(Dataset* otherDs, 
+                                        vector<uint> instIdx) {
+  vector<string> tempInstanceIds = otherDs->GetInstanceIds();
+  vector<ClassLevel> tempClassValues;
+  otherDs->GetClassValues(tempClassValues);
+  instances.clear();
+  for(uint i=0; i < instIdx.size(); ++i) {
+    instances.push_back(otherDs->GetInstance(instIdx[i]));
+    instanceIds.push_back(tempInstanceIds[i]);
+    classIndexes[tempClassValues[i]].push_back(i);
+    instancesMask[tempInstanceIds[i]] = i;
+  }
+	hasGenotypes = otherDs->HasGenotypes();
+	hasAllelicInfo = otherDs->HasAllelicInfo();
+  hasNumerics = otherDs->HasNumerics();
+  hasPhenotypes = otherDs->HasPhenotypes();
+	UpdateAllLevelCounts();
+  
+  return true;
+}
+
 bool Dataset::GetAttributeRowCol(uint row, uint col,
 		AttributeLevel& attrVal) {
 	unsigned long numInstances = instances.size();

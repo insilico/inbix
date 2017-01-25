@@ -450,7 +450,8 @@ void Tree::bootstrapWithoutReplacement() {
 
 // Use fraction (default 63.21%) of the samples
   size_t num_samples_inbag = (size_t) num_samples * sample_fraction;
-  shuffleAndSplit(sampleIDs[0], oob_sampleIDs, num_samples, num_samples_inbag, random_number_generator);
+  shuffleAndSplit(sampleIDs[0], oob_sampleIDs, 
+          num_samples, num_samples_inbag, random_number_generator);
   num_samples_oob = oob_sampleIDs.size();
 
   if (keep_inbag) {

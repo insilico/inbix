@@ -146,6 +146,10 @@ public:
                             std::vector<unsigned int>& closestInstances);
 	/// Reset nearest neighbor information.
 	bool ResetNearestNeighbors();
+  /// Set cross-validation set type
+  bool SetCvSetType(CvSetType newType);
+  /// Get cross-validation set type
+  CvSetType GetCvSetType();
 protected:
   /// pointer to a Dataset object
   Dataset* dataset;
@@ -165,6 +169,8 @@ protected:
   std::vector<double> neighborInfluenceFactorDs;
   /// continuous value for this class
   double predictedValueTau;
+  /// classification dataset type: train | holdout | test
+  CvSetType cvSetType;
 };
 
 #endif

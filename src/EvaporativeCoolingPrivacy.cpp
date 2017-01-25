@@ -396,14 +396,15 @@ bool EvaporativeCoolingPrivacy::ComputeAttributeProbabilities() {
 
     // DEBUG ASSERT
     if(runningProbability < 0.999999) {
-      error("Bill your stats are whack bud!\n");
+      error("EvaporativeCoolingPrivacy::ComputeAttributeProbabilities "
+            "Bill your stats are whack bud!\n");
     }
     
     return true;
 }
 
 bool EvaporativeCoolingPrivacy::GenerateRandomUniformProbabilities() {
-  //    >   prob.rands <- runif(1, min = 0, max = 1)
+  // prob.rands <- runif(1, min = 0, max = 1)
   PP->printLOG(Timestamp() + "Generating uniform probabilities in (0, 1)\n");
   uniform_real_distribution<double> runif(0, 1);
   // generate random uniform probabilities
@@ -415,7 +416,7 @@ bool EvaporativeCoolingPrivacy::GenerateRandomUniformProbabilities() {
   sort(randUniformProbs.begin(), randUniformProbs.end());
   
   // TODO: bcw - 12/31/16 - use one random value not a vector?
-  //    >   prob.rands <- runif(1, min = 0, max = 1)
+  // prob.rands <- runif(1, min = 0, max = 1)
   randUniformValue = runif(engine);
           
   return true;
