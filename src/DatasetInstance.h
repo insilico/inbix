@@ -43,6 +43,7 @@ public:
    * \return success
    ****************************************************************************/
   bool LoadInstanceFromVector(std::vector<AttributeLevel> newAttributes);
+  bool LoadInstanceFromInstancePtr(Dataset* srcDs, DatasetInstance* srcInstance);
   /// return the number of discrete attributes
   virtual unsigned int NumAttributes();
   /*************************************************************************//**
@@ -150,6 +151,8 @@ public:
   bool SetCvSetType(CvSetType newType);
   /// Get cross-validation set type
   CvSetType GetCvSetType();
+  std::vector<AttributeLevel> GetAttributes() { return attributes; }
+  std::vector<NumericLevel> GetNumerics() { return numerics; }
 protected:
   /// pointer to a Dataset object
   Dataset* dataset;

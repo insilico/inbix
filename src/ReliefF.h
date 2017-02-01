@@ -72,12 +72,17 @@ public:
   void WriteBestKs(std::string baseFilename);
    /// Compute scores based on optimum k
   bool ComputeAttributeScoresKopt();
+  /// Print the ID to instance index map to stdout
+  void PrintInstancesMask();
 private:
   /// no default constructor
   ReliefF();
+  
 protected:
   // pointer to the PLINK ecosystem
   Plink* PP;
+  // distance matrix
+  matrix_t distanceMatrix;
 
   /// Compute the const AttributeScores& ComputeScores(); weight by distance factors for nearest neighbors.
   bool ComputeWeightByDistanceFactors();
@@ -148,6 +153,8 @@ protected:
   unsigned int koptStep;
   /// best k by attribute
   std::map<std::string, unsigned int> bestKs;
+  
+  bool ComputerGRM();
 };
 
 #endif

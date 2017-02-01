@@ -14,6 +14,7 @@
 #include "DatasetInstance.h"
 #include "StringUtils.h"
 #include "BestN.h"
+#include "helper.h"
 
 using namespace std;
 using namespace insilico;
@@ -55,6 +56,18 @@ DatasetInstance::LoadInstanceFromVector(vector<AttributeLevel> newAttributes) {
   for(it = newAttributes.begin(); it != newAttributes.end(); it++) {
     attributes.push_back(*it);
   }
+  return true;
+}
+
+bool 
+DatasetInstance::LoadInstanceFromInstancePtr(Dataset* srcDs, 
+                                             DatasetInstance* srcInstance) {
+  dataset = srcDs;
+  classLabel = srcInstance->GetClass();
+  attributes = srcInstance->GetAttributes();
+  numerics = srcInstance->GetNumerics();
+  predictedValueTau = srcInstance->GetPredictedValueTau();
+  
   return true;
 }
 
@@ -177,22 +190,23 @@ void DatasetInstance::SetDistanceSums(unsigned int kNearestNeighbors,
   // added 9/22/11 for iterative Relief-F
   bestNeighborIdsSameClass.clear();
   bestNeighborIdsDiffClass.clear();
-
+  
   // use Nate's best_n.h algorithm
-  // cout << "Same class sums:" << endl;
-  // PrintDistancePairs(sameClassSum);
+  if(par::algorithm_verbose) cout << "Same class sums:" << endl;
+  //PrintDistancePairs(sameClassSums);
   DistancePairs bestInstancesHits;
   best_n(sameClassSums.begin(), sameClassSums.end(),
-         back_insert_iterator<DistancePairs > (bestInstancesHits),
+         back_insert_iterator<DistancePairs>(bestInstancesHits),
          kNearestNeighbors, deref_less_bcw());
-  // cout << "Hits:" << endl;
+  if(par::algorithm_verbose) cout << "Hits:" << endl;
   DistancePairsIt hit;
   for(hit = bestInstancesHits.begin(); hit != bestInstancesHits.end(); ++hit) {
     DistancePair thisHit = *hit;
-    // cout << thisHit.first << " => " << thisHit.second << endl;
+    if(par::algorithm_verbose) cout << thisHit.first << " => " << thisHit.second << endl;
     bestNeighborIdsSameClass.push_back(thisHit.second);
   }
-
+  if(par::algorithm_verbose) cout << "--------" << endl;
+  if(par::algorithm_verbose) cout << "Other class(es) class sums:" << endl;
   map<ClassLevel, DistancePairs>::const_iterator it = diffClassSums.begin();
   for(; it != diffClassSums.end(); ++it) {
     ClassLevel thisClass = it->first;
@@ -202,15 +216,16 @@ void DatasetInstance::SetDistanceSums(unsigned int kNearestNeighbors,
            back_insert_iterator<DistancePairs > (bestInstancesMisses),
            kNearestNeighbors, deref_less_bcw());
     DistancePairsIt mit;
-    // cout << "Class " << thisClass << ", Different class sums:" << endl;
-    // PrintDistancePairs(bestInstanceMisses);
+    if(par::algorithm_verbose) cout << "Class " << thisClass << ", Different class sums:" << endl;
+    //PrintDistancePairs(bestInstancesMisses);
     for(mit = bestInstancesMisses.begin(); mit != bestInstancesMisses.end(); ++mit) {
       DistancePair thisMiss = *mit;
-      // cout << thisMiss.first << " => " << thisMiss.second << endl;
+      if(par::algorithm_verbose) cout << thisMiss.first << " => " << thisMiss.second << endl;
       bestNeighborIdsDiffClass[thisClass].push_back(thisMiss.second);
     }
   }
-  // cout << "----------------------------------------------------------" << endl;
+  if(par::algorithm_verbose) 
+    cout << "----------------------------------------------------------" << endl;
 }
 
 void DatasetInstance::SetDistanceSums(unsigned int kNearestNeighbors,
@@ -274,41 +289,42 @@ bool DatasetInstance::GetNNearestInstances(unsigned int n,
         map<ClassLevel, vector<unsigned int> >& diffClassInstances) {
 
   if(bestNeighborIdsSameClass.size() < n) {
-    cerr << endl << "ERROR: GetNNearestInstances: N: [" << n
-            << "] is larger than the number of neighbors "
-            << "in same class: [" << bestNeighborIdsSameClass.size()
-            << "]" << endl;
+    error("GetNNearestInstances: N: [" + int2str(n) + 
+          "] is larger than the number of neighbors in same class: [" + 
+          int2str(bestNeighborIdsSameClass.size()) +"]\n");
     return false;
   }
-
+  map<string, uint> instMap = dataset->MaskGetInstanceMask();
+  if(par::algorithm_verbose) cout << "--------- same" << endl;
   sameClassInstances.clear();
-  for(unsigned int i = 0; i < n; ++i) {
-    unsigned int sameIdx;
-    dataset->GetInstanceIndexForID(bestNeighborIdsSameClass[i], sameIdx);
-    //    cout << bestNeighborIdsSameClass[i] << ", " << sameIdx << endl;
+  for(uint i = 0; i < n; ++i) {
+    uint sameIdx = instMap[bestNeighborIdsSameClass[i]];
+    //dataset->GetInstanceIndexForID(bestNeighborIdsSameClass[i], sameIdx);
+    if(par::algorithm_verbose) cout << bestNeighborIdsSameClass[i] << ", " << sameIdx << endl;
     sameClassInstances.push_back(sameIdx);
   }
-  //  cout << "------" << endl;
-  // diffClassInstances.clear();
-  map<ClassLevel, std::vector<std::string> >::const_iterator it;
+  if(par::algorithm_verbose) cout << "--------- diff" << endl;
+  diffClassInstances.clear();
+  map<ClassLevel, vector<string> >::const_iterator it;
   for(it = bestNeighborIdsDiffClass.begin();
       it != bestNeighborIdsDiffClass.end(); ++it) {
     ClassLevel thisClass = it->first;
-    vector<string> ids = it->second;
-    if(ids.size() < n) {
-      cerr << endl << "ERROR: GetNNearestInstances: N: [" << n
-              << "] is larger than the number of neighbors for class "
-              << thisClass << ": [" << bestNeighborIdsDiffClass.size()
-              << "]" << endl;
-      return false;
+    vector<string> thisClassIds = it->second;
+    if(thisClassIds.size() < n) {
+      error("GetNNearestInstances: N: [" + int2str(n) + 
+             "] is larger than the number of neighbors for class " +
+             int2str(thisClass) + ": [" + 
+             int2str(bestNeighborIdsDiffClass.size()) + "]\n");
     }
     for(unsigned int i = 0; i < n; ++i) {
-      unsigned int diffIdx;
-      dataset->GetInstanceIndexForID(ids[i], diffIdx);
-      //      cout << ids[i] << ", " << diffIdx << endl;
+      uint diffIdx = instMap[thisClassIds[i]];
+      //dataset->GetInstanceIndexForID(thisClassIds[i], diffIdx);
+      if(par::algorithm_verbose) 
+        cout << thisClassIds[i] << ", " << diffIdx << endl;
       diffClassInstances[thisClass].push_back(diffIdx);
     }
   }
+  
   return true;
 }
 

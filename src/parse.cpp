@@ -430,6 +430,8 @@ void setOptions(CArgs & a) {
 
   if(a.find("--verbose")) par::verbose = true;
 
+  if(a.find("--algorithm-verbose")) par::algorithm_verbose = true;
+
   if(a.find("--pedigree")) par::dumpped = true;
 
   if(a.find("--tucc")) par::tucc = true;
@@ -4590,6 +4592,9 @@ void setOptions(CArgs & a) {
             << "      --chap                    Conditional haplotype tests \n"
             << "      --hap-phase               Report haplotype phases     \n"
             << "      --hap-freq                Report haplotype frequencies\n"
+            << "\n"
+            << "      --verbose                 Verbose output\n"
+            << "      --algorithm-verbose       Verbose output for algorithms\n"
             << "\n";
 
     cout << "\nPlease visit the PLINK and Insilico websites for a complete list of options\n\n";

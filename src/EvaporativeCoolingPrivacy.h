@@ -30,13 +30,14 @@ typedef std::pair<std::vector<std::string>, std::vector<std::string>> ResultsLis
 class EvaporativeCoolingPrivacy {
 public:
   EvaporativeCoolingPrivacy(Dataset* trainset, Dataset* holdoset, 
-                            Dataset* testset, Plink* plinkPtr);
+                            Dataset* testset, Plink* plinkPtr, bool simData=false);
   virtual ~EvaporativeCoolingPrivacy();
   bool ComputeScores();
   void PrintState();
   ResultsLists GetKeptRemoved();
   bool WriteBestAttributes(std::string fileSuffix);
   std::pair<uint, double> CheckDetectedAttributes();
+  bool UsingSimData() { return dataIsSimulated; }
 private:
   bool ComputeImportance();
   bool ComputeAttributeProbabilities();
@@ -65,10 +66,12 @@ private:
   uint update;
   
   // classification data sets
+  bool dataIsSimulated;
   Dataset* train;
   Dataset* holdout;
   Dataset* test;
   uint numInstances;
+  uint numVariables;
   uint numSignalsInData;
   vector<string> signalNames;
   
@@ -82,7 +85,7 @@ private:
 	AttributeScores trainInvImportance;    // p_t
 	AttributeScores holdoutInvImportance;  // p_h
 
-  // computing importance
+  // computing Relief-F importance and delta Q
   std::map<std::string, double> diffImportance;
   std::vector<double> diffScores;
   std::vector<double> diff;
@@ -108,7 +111,7 @@ private:
   std::vector<std::string> removeAttrs;
   std::vector<std::string> keepAttrs;
 
-  // classification/prediction errors
+  // random forest classification/prediction errors
   double randomForestPredictError;
   double trainError;
   double holdError;

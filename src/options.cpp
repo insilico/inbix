@@ -23,6 +23,7 @@ bool par::myfunction = false;
 Options par::opt;
 
 bool   par::verbose = false;
+bool   par::algorithm_verbose = false;
 bool   par::flag = false;
 bool   par::dumpped = false;
 bool   par::debug = false;

@@ -439,22 +439,72 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 
 bool Dataset::LoadOtherDatasetInstances(Dataset* otherDs, 
                                         vector<uint> instIdx) {
-  vector<string> tempInstanceIds = otherDs->GetInstanceIds();
-  vector<ClassLevel> tempClassValues;
-  otherDs->GetClassValues(tempClassValues);
+  // --------------------------------------------------------------------------
+  // Load all indexed instance meta data for loop below
+  vector<string> otherInstanceIds = otherDs->GetInstanceIds();
+  vector<ClassLevel> otherClassValues;
+  otherDs->GetClassValues(otherClassValues);
+  // --------------------------------------------------------------------------
+  // Create new instance meta data in this Dataset from meta data and instances 
+  // from the other data instances in passed instIdx parameter as indexes
   instances.clear();
-  for(uint i=0; i < instIdx.size(); ++i) {
-    instances.push_back(otherDs->GetInstance(instIdx[i]));
-    instanceIds.push_back(tempInstanceIds[i]);
-    classIndexes[tempClassValues[i]].push_back(i);
-    instancesMask[tempInstanceIds[i]] = i;
+  instanceIds.clear();
+  instanceIdsToLoad.clear();
+  instancesMask.clear();
+  for(uint newInstanceIdx=0; newInstanceIdx < instIdx.size(); ++newInstanceIdx) {
+    uint otherInstanceIdx = instIdx[newInstanceIdx];
+    DatasetInstance* srcInstance = otherDs->GetInstance(otherInstanceIdx);
+    DatasetInstance* dstInstance = new DatasetInstance(this);
+    dstInstance->LoadInstanceFromInstancePtr(this, srcInstance);
+    string newInstanceId = otherInstanceIds[otherInstanceIdx];
+    instanceIds.push_back(newInstanceId);
+    ClassLevel newInstanceClass = otherClassValues[otherInstanceIdx];
+    classIndexes[newInstanceClass].push_back(newInstanceIdx);
+    instances.push_back(dstInstance);
+    instanceIdsToLoad.push_back(newInstanceId);
+    instancesMask[newInstanceId] = newInstanceIdx;
   }
-	hasGenotypes = otherDs->HasGenotypes();
-	hasAllelicInfo = otherDs->HasAllelicInfo();
-  hasNumerics = otherDs->HasNumerics();
-  hasPhenotypes = otherDs->HasPhenotypes();
-	UpdateAllLevelCounts();
   
+  hasPhenotypes = otherDs->HasPhenotypes();
+  hasContinuousPhenotypes = otherDs->HasContinuousPhenotypes();
+  if(!hasContinuousPhenotypes) {
+    this->PrintClassIndexInfo(cout);
+  }
+  // --------------------------------------------------------------------------
+	hasGenotypes = otherDs->HasGenotypes();
+  if(hasGenotypes) {
+    UpdateAllLevelCounts();
+  	hasAllelicInfo = otherDs->HasAllelicInfo();
+    // TODO: how to copy allelic info???
+    MaskIncludeAllAttributes(DISCRETE_TYPE);
+  }
+  hasNumerics = otherDs->HasNumerics();
+  if(hasNumerics) {
+    numericsNames = otherDs->GetNumericsNames();
+    MaskIncludeAllAttributes(NUMERIC_TYPE);
+    // find the min and max values for each numeric attribute
+    // used in diff/distance calculation metrics
+    vector<NumericLevel> numericColumn;
+    for (uint i = 0; i < NumNumerics(); ++i) {
+      double columnSum = 0.0;
+      GetNumericValues(i, numericColumn);
+      double minElement = *numericColumn.begin();
+      double maxElement = *numericColumn.begin();
+      for (vector<NumericLevel>::const_iterator it = numericColumn.begin();
+          it != numericColumn.end(); ++it) {
+        if ((*it != MISSING_NUMERIC_VALUE) && (*it < minElement)) {
+          minElement = *it;
+        }
+        if ((*it != MISSING_NUMERIC_VALUE) && (*it > maxElement)) {
+          maxElement = *it;
+        }
+        columnSum += *it;
+      }
+      numericsMinMax.push_back(make_pair(minElement, maxElement));
+      numericsSums.push_back(columnSum);
+    }
+  }
+    
   return true;
 }
 
@@ -687,16 +737,12 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 	PrintStats();
 
 	if (!attributes.size()) {
-		cerr << "ERROR: Dataset::WriteNewDataset: no named attributes to write"
-				<< endl;
-		return false;
+		error("Dataset::WriteNewDataset: no named attributes to write\n");
 	}
 
 	switch (outputDatasetType) {
 	case PLINK_PED_DATASET:
-		cerr << "ERROR: This version of WriteNewDataset does not support PED"
-				<< endl;
-		return false;
+		error("This version of WriteNewDataset does not support PED\n");
 	case TAB_DELIMITED_DATASET:
 	case CSV_DELIMITED_DATASET:
 	case ARFF_DATASET:
@@ -704,15 +750,13 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 	case NO_OUTPUT_DATASET:
 		break;
 	default:
-		cerr << "ERROR: Output data set file type not recognized." << endl;
+		error("Output data set file type not recognized.\n");
 		return false;
 	}
 
 	ofstream newDatasetStream(newDatasetFilename.c_str());
 	if (!newDatasetStream.is_open()) {
-		cerr << "ERROR: Could not open new dataset file: " << newDatasetFilename
-				<< endl;
-		return false;
+		error("Could not open new dataset file: " + newDatasetFilename + "\n");
 	}
 
 	/// write the attribute names header
@@ -741,55 +785,52 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 		case PLINK_BED_DATASET:
 		case NO_OUTPUT_DATASET:
 		default:
-			cerr << "ERROR: Unrecognized output data set type: "
-					<< outputDatasetType << endl;
-			return false;
+			error("Unrecognized output data set type: " + 
+            int2str(outputDatasetType) + "\n");
 		}
 	}
 	map<string, uint>::const_iterator nit = numericsMask.begin();
 	for (; nit != numericsMask.end(); ++nit) {
-		switch (outputDatasetType) {
 		if (find(attributes.begin(), attributes.end(), nit->first)
 				== attributes.end()) {
 			continue;
 		}
-	case TAB_DELIMITED_DATASET:
-		newDatasetStream << nit->first << "\t";
-		break;
-	case CSV_DELIMITED_DATASET:
-		newDatasetStream << nit->first << ",";
-		break;
-	case ARFF_DATASET:
-		newDatasetStream << "@ATTRIBUTE " << nit->first << " numeric" << endl;
-		break;
-	case PLINK_PED_DATASET:
-	case PLINK_BED_DATASET:
-	case NO_OUTPUT_DATASET:
-	default:
-		cerr << "ERROR: Unrecognized output data set type: "
-				<< outputDatasetType << endl;
-		return false;
-		}
+  	switch (outputDatasetType) {
+      case TAB_DELIMITED_DATASET:
+        newDatasetStream << nit->first << "\t";
+        break;
+      case CSV_DELIMITED_DATASET:
+        newDatasetStream << nit->first << ",";
+        break;
+      case ARFF_DATASET:
+        newDatasetStream << "@ATTRIBUTE " << nit->first << " numeric" << endl;
+        break;
+      case PLINK_PED_DATASET:
+      case PLINK_BED_DATASET:
+      case NO_OUTPUT_DATASET:
+      default:
+        error("Unrecognized output data set type: " + 
+              int2str(outputDatasetType) + "\n");
+    }
 	}
 	switch (outputDatasetType) {
-	case TAB_DELIMITED_DATASET:
-	case CSV_DELIMITED_DATASET:
-		newDatasetStream << "Class" << endl;
-		break;
-	case ARFF_DATASET:
-		if (hasContinuousPhenotypes) {
-			newDatasetStream << "@ATTRIBUTE Class numeric" << endl;
-		} else {
-			newDatasetStream << "@ATTRIBUTE Class {0,1}" << endl;
-		}
-		break;
-	case PLINK_PED_DATASET:
-	case PLINK_BED_DATASET:
-	case NO_OUTPUT_DATASET:
-	default:
-		cerr << "ERROR: Unrecognized output data set type: "
-				<< outputDatasetType << endl;
-		return false;
+    case TAB_DELIMITED_DATASET:
+    case CSV_DELIMITED_DATASET:
+      newDatasetStream << "Class" << endl;
+      break;
+    case ARFF_DATASET:
+      if (hasContinuousPhenotypes) {
+        newDatasetStream << "@ATTRIBUTE Class numeric" << endl;
+      } else {
+        newDatasetStream << "@ATTRIBUTE Class {0,1}" << endl;
+      }
+      break;
+    case PLINK_PED_DATASET:
+    case PLINK_BED_DATASET:
+    case NO_OUTPUT_DATASET:
+    default:
+      error("Unrecognized output data set type: " + 
+            int2str(outputDatasetType) + "\n");
 	}
 
 	/// write the data, respecting the masked attributes, numerics
@@ -832,9 +873,8 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 			case PLINK_BED_DATASET:
 			case NO_OUTPUT_DATASET:
 			default:
-				cerr << "ERROR: Unrecognized output data set type: "
-						<< outputDatasetType << endl;
-				return false;
+				error("Unrecognized output data set type: " + 
+              int2str(outputDatasetType) + "\n");
 			}
 		}
 		/// write continuous attribute values
@@ -866,9 +906,8 @@ bool Dataset::WriteNewDataset(string newDatasetFilename,
 			case PLINK_BED_DATASET:
 			case NO_OUTPUT_DATASET:
 			default:
-				cerr << "ERROR: Unrecognized output data set type: "
-						<< outputDatasetType << endl;
-				return false;
+				error("ERROR: Unrecognized output data set type: " +
+              int2str(outputDatasetType) + "\n");
 			}
 		}
 		// class/phenotype
@@ -894,8 +933,7 @@ bool Dataset::ExtractAttributes(string scoresFilename, uint topN,
 	// read attribute scores from file
 	ifstream scoresStream(scoresFilename.c_str());
 	if (!scoresStream.is_open()) {
-		cerr << "ERROR: Could not open scores file: " << scoresFilename << endl;
-		return false;
+		error("Could not open scores file: " + scoresFilename + "\n");
 	}
 	// build a "rank map": pair<ranker score, attribute index>
 	// for all scores in the score file
@@ -927,9 +965,7 @@ bool Dataset::ExtractAttributes(string scoresFilename, uint topN,
 	// honor MDR format by using header row information - bcw - 9/13/05
 	ofstream newDatasetStream(newDatasetFilename.c_str());
 	if (!newDatasetStream.is_open()) {
-		cerr << "ERROR: Could not open new data set file: "
-				<< newDatasetFilename << endl;
-		return false;
+		error("Could not open new data set file: " + newDatasetFilename + "\n");
 	}
 
 	// write MDR header - bcw - 9/13/05
@@ -960,11 +996,8 @@ bool Dataset::ExtractAttributes(string scoresFilename, uint topN,
 									GetNumericIndexFromName(rankIt->second))
 							<< "\t";
 				} else {
-					cerr
-							<< "ERROR: Dataset::ExtractAttributes: requested variable name ["
-							<< rankIt->second << "] is not in the data set"
-							<< endl;
-					return false;
+					error("Dataset::ExtractAttributes: requested variable name [" +
+                rankIt->second + "] is not in the data set" + "\n");
 				}
 			}
 		}
@@ -1013,8 +1046,7 @@ DatasetInstance* Dataset::GetInstance(uint index) {
 	if (index < instances.size()) {
 		return instances[index];
 	}
-	cout << "ERROR: Instance index out of range: " << index << endl;
-	exit(-1);
+	error("Instance index out of range: " + int2str(index) + "\n");
 }
 
 DatasetInstance* Dataset::GetRandomInstance() {
@@ -1037,8 +1069,7 @@ bool Dataset::GetInstanceIndexForID(string ID, uint& instanceIndex) {
 		instanceIndex = instancesMask[ID];
 		return true;
 	}
-
-	cerr << "ERROR: Could not find instance ID: " << ID << endl;
+	error("Could not find instance ID: " + ID + "\n");
 
 	return false;
 }
@@ -1070,9 +1101,8 @@ vector<string> Dataset::GetFileAttributeNames() {
 bool Dataset::GetAttributeValues(uint attributeIndex,
 		vector<AttributeLevel>& attributeValues) {
 	if (attributeIndex > attributeNames.size()) {
-		cerr
-				<< "ERROR: Dataset::GetAttributeValues: attribute index out of range: "
-				<< attributeIndex << endl;
+		error("Dataset::GetAttributeValues: attribute index out of range: "
+				  + int2str(attributeIndex) + "\n");
 		return false;
 	}
 	if (hasGenotypes) {
@@ -1084,8 +1114,7 @@ bool Dataset::GetAttributeValues(uint attributeIndex,
 			attributeValues.push_back(thisAttribute);
 		}
 	} else {
-		cerr << "ERROR: attempting to access SNP data when none "
-				<< "have been loaded" << endl;
+		error("Attempting to access SNP data when none have been loaded\n");
 		return false;
 	}
 
@@ -1098,10 +1127,8 @@ bool Dataset::GetAttributeValues(string attributeName,
 		GetAttributeValues(GetAttributeIndexFromName(attributeName),
 				attributeValues);
 	} else {
-		cerr
-				<< "ERROR: Dataset::GetAttributeValues cannot get attribute values for: "
-				<< attributeName << ". Either doesn't exist or is excluded"
-				<< endl;
+		error("Dataset::GetAttributeValues cannot get attribute values for: " + 
+          attributeName + ". Either doesn't exist or is excluded\n");
 		return false;
 	}
 	return true;
@@ -1121,34 +1148,29 @@ bool Dataset::HasAllelicInfo() {
 
 AttributeLevel Dataset::GetAttribute(unsigned instanceIndex, string name) {
 	if (instanceIndex >= instances.size()) {
-		cerr << "ERROR: Dataset::GetAttribute: instance index " << instanceIndex
-				<< " out of range" << endl;
-		exit(1);
+		error("Dataset::GetAttribute: instance index " + 
+          int2str(instanceIndex) + " out of range\n");
 	}
 	map<string, uint>::iterator pos = attributesMask.find(name);
 	if (pos != attributesMask.end()) {
 		return instances[instanceIndex]->GetAttribute(pos->second);
 	} else {
-		cerr << "ERROR: Dataset::GetAttribute: " << name
-				<< " at instance index: " << instanceIndex << " not found"
-				<< endl;
-		exit(1);
+		error("Dataset::GetAttribute: " + name + " at instance index: " + 
+          int2str(instanceIndex) + " not found\n");
 	}
 }
 
 pair<char, char> Dataset::GetAttributeAlleles(uint attributeIndex) {
 	if (!hasAllelicInfo) {
-		cerr << "ERROR: GetAttributeAlleles: This data set does not have "
-				<< "allelic information." << endl;
-		exit(EXIT_FAILURE);
+		error("GetAttributeAlleles: This data set does not have "
+				  "allelic information.\n");
 	}
 	pair<char, char> returnPair = make_pair(' ', ' ');
 	if (attributeIndex < attributeAlleles.size()) {
 		returnPair = attributeAlleles[attributeIndex];
 	} else {
-		cerr << "ERROR: GetAttributeAlleles: attribute index out of range: "
-				<< attributeIndex << endl;
-		exit(EXIT_FAILURE);
+		error("GetAttributeAlleles: attribute index out of range: " +
+				  int2str(attributeIndex) + "\n");
 	}
 	return returnPair;
 }
@@ -1186,9 +1208,7 @@ pair<char, double> Dataset::GetAttributeMAF(uint attributeIndex) {
 bool Dataset::ProcessExclusionFile(string exclusionFilename) {
 	ifstream dataStream(exclusionFilename.c_str());
 	if (!dataStream.is_open()) {
-		cerr << "ERROR: Could not open exclusion file: " << exclusionFilename
-				<< endl;
-		return false;
+		error("Could not open exclusion file: " + exclusionFilename + "\n");
 	}
 
 	// temporary string for reading file lines
@@ -1198,11 +1218,9 @@ bool Dataset::ProcessExclusionFile(string exclusionFilename) {
 		++lineNumber;
 		string attributeName = trim(line);
 		if (!MaskRemoveVariable(attributeName)) {
-			cerr << "ERROR: attribute to exclude [" << attributeName
-					<< "] on line [" << lineNumber
-					<< "] in the exclusion file. It is not in the data set"
-					<< endl;
-			return false;
+			error("Attribute to exclude [" + attributeName + "] on line [" +
+            int2str(lineNumber) + 
+            "] in the exclusion file. It is not in the data set\n");
 		}
 	}
 	dataStream.close();
@@ -1884,14 +1902,16 @@ bool Dataset::MaskSearchInstance(string instanceId) {
 }
 
 bool Dataset::MaskIncludeAllInstances() {
+  PP->printLOG("Clearing the instance mask\n");
 	instancesMask.clear();
+  PP->printLOG("Adding all instance IDs to the instance mask\n");
 	vector<string>::const_iterator it = instanceIds.begin();
-	uint instanceIndex = 0;
-	for (; it != instanceIds.end(); ++it) {
-		instancesMask[*it] = instanceIndex;
-		++instanceIndex;
+	for(uint instanceIndex=0; it != instanceIds.end(); ++it, ++instanceIndex) {
+    instancesMask[*it] = instanceIndex;
+    cout << instanceIndex << "\t" << *it << endl;
 	}
-
+  cout << "Final mask size: " << instancesMask.size() << endl;
+  
 	return true;
 }
 
@@ -3245,6 +3265,12 @@ bool Dataset::LoadSnps(std::string filename) {
 
 void Dataset::UpdateAllLevelCounts() {
 	cout << Timestamp() << "Updating all level counts:" << endl;
+  if(NumAttributes() < 1) {
+    error("Dataset::UpdateAllLevelCounts: No attributes to update\n");
+  }
+  if(!hasGenotypes) {
+    error("Dataset::UpdateAllLevelCounts: Level counts only works on genotype data\n");
+  }
 	levelCounts.clear();
 	levelCounts.resize(NumAttributes());
 	if (hasPhenotypes && !hasContinuousPhenotypes) {
@@ -3270,10 +3296,6 @@ void Dataset::UpdateAllLevelCounts() {
 	}
 	cout << Timestamp() << instanceCount << "/" << instancesMask.size()
 			<< " done" << endl;
-
-	/// exclude monomorphic SNPs
-//	cout << Timestamp() << "Excluding monomorphic SNPs" << endl;
-//	ExcludeMonomorphs();
 }
 
 void Dataset::UpdateLevelCounts(DatasetInstance* dsi) {

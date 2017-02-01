@@ -21,12 +21,6 @@ PlinkInternalsDataset::PlinkInternalsDataset(Plink* plinkPtr):
 }
 
 PlinkInternalsDataset::~PlinkInternalsDataset() {
-	vector<DatasetInstance*>::const_iterator it;
-	for (it = instances.begin(); it != instances.end(); it++) {
-		if (*it) {
-			delete *it;
-		}
-	}
 }
 
 bool PlinkInternalsDataset::LoadDatasetPP() {
@@ -86,6 +80,7 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
     PP->printLOG(Timestamp() + "Detected CONTINUOUS phenotype\n");
     hasContinuousPhenotypes = true;
   }
+  hasPhenotypes = true;  
   
   unsigned int nextInstanceIdx = 0;
   for(int i=0; i < PP->sample.size(); i++) {
@@ -110,7 +105,8 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
       int intPheno = PP->sample[i]->aff? 2: 1;
       phenotype = static_cast<double>(PP->sample[i]->aff? 2: 1);
       classIndexes[intPheno].push_back(i);
-      tmpInd->SetClass(phenotype);
+      // encode 0/1
+      tmpInd->SetClass(phenotype - 1);
     } else {
       phenotype = PP->sample[i]->phenotype;
       tmpInd->SetPredictedValueTau(phenotype);
@@ -166,16 +162,16 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
     }
     instances.push_back(tmpInd);
   }
-  MaskIncludeAllInstances();
-  hasPhenotypes = true;  
-  hasAllelicInfo = true;
+
+  if(hasGenotypes) {
+    hasAllelicInfo = true;
+  } else {
+    hasAllelicInfo = false;
+  }
 
   PP->printLOG(Timestamp() + "Final number of subjects loaded: " + int2str(instances.size()) + "\n");
   PP->printLOG(Timestamp() + "Final number of SNPs loaded: " + int2str(numAttributes) + "\n");
   PP->printLOG(Timestamp() + "Final number of numerics loaded: " + int2str(numNumerics) + "\n");
-
-  // this has already been done above; called by iterative Relief-F to update
-  // UpdateAllLevelCounts();
 
   return true;
 }

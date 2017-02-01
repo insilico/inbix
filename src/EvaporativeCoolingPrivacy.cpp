@@ -14,7 +14,9 @@
 #include <armadillo>
 #include <random>
 #include <cmath>
-
+#include <ctgmath>
+#include <limits>
+        
 #include <boost/format.hpp>
 
 // inbix PLINK base
@@ -38,7 +40,7 @@ using namespace arma;
 // public methods
 
 EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset, 
-        Dataset* holdoset, Dataset* testset, Plink* plinkPtr) {
+        Dataset* holdoset, Dataset* testset, Plink* plinkPtr, bool simData) {
   // pointer to a PLINK environment
   PP = plinkPtr;
   Q_EPS = 0.005;
@@ -47,20 +49,28 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   updateInterval = par::ecPrivacyUpdateFrequency;
   iteration = 0;
   update = 0;
+  dataIsSimulated = simData;
   train = trainset;
   holdout = holdoset;
   test = testset;
-  numInstances = trainset->NumInstances();
-  numSignalsInData = static_cast<uint>(train->NumVariables() * 
-          par::ecPrivacyPercentSignal);
-  curVarNames = trainset->MaskGetAllVariableNames();
-  curVarMap = trainset->MaskGetAttributeMask(NUMERIC_TYPE);
-  for(uint i=0; i < numSignalsInData; ++i) {
-    signalNames.push_back(curVarNames[i]);
+  numInstances = 0;
+  curVarNames = trainset->GetVariableNames();
+  numVariables = trainset->NumVariables();
+  if(trainset->NumVariables() != holdoset->NumVariables() ||
+     trainset->NumVariables() != testset->NumVariables() ||
+     holdoset->NumVariables() != testset->NumVariables()) {
+    error("Training, holdout and testing data sets must have the "
+            "same number of variables\n");
+  }
+  numSignalsInData = static_cast<uint>(numVariables * par::ecPrivacyPercentSignal);
+  if(dataIsSimulated) {
+    for(uint sigNum=0; sigNum < numSignalsInData; ++sigNum) {
+      signalNames.push_back(curVarNames[sigNum]);
+    }
   }
   deltaQ = 0;
-  threshold = 4.0 / sqrt(numInstances);
-  tolerance = 1.0 / sqrt(numInstances);
+  threshold = 0;
+  tolerance = 0;
   startTemp = par::ecPrivacyStartTemp;
   currentTemp = startTemp;
   finalTemp = par::ecPrivacyFinalTemp;
@@ -95,7 +105,11 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	if(!iterationOutputStream.is_open()) {
 		error("Could not open iteration output file [ " + iterationOutputFile + " ]\n");
 	}
-  iterationOutputStream << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tRemoved\tRemain" << endl;
+  if(dataIsSimulated) {
+    iterationOutputStream << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tFirstRemoved" << endl;
+  } else {
+    iterationOutputStream << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tFirstRemoved" << endl;
+  }
 
   // initialize all masks to contain all variables
   PP->printLOG(Timestamp() + "Initializing variable masks\n");
@@ -115,7 +129,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   vector<uint> prevNumInUpdate;
   prevNumInUpdate.push_back(tail1);
   prevNumInUpdate.push_back(tail2);
-  if(par::verbose) {
+  if(par::algorithm_verbose) {
     cout << endl << "i: " << iteration << " prevNumInUpdate tail1: " 
          << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
   }
@@ -126,6 +140,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   finalTemp = par::ecPrivacyFinalTemp;
   currentTemp = startTemp;
   PP->printLOG(Timestamp() + "Starting temperature: " + dbl2str(startTemp) + "\n");
+  numInstances = train->NumInstances();
   threshold = 4.0 / sqrt(numInstances);
   tolerance = 1.0 / sqrt(numInstances);
   tau = par::ecPrivacyTau;
@@ -175,19 +190,34 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
       ++update;
       // ----------------------------------------------------------------------
       // write iteration update results to iterationOutputFile
-      iterationOutputStream 
-              << iteration << "\t"
-              << update << "\t"
-              << currentTemp << "\t"
-              << keepAttrs.size() << "\t"
-              << updateInterval << "\t"
-              << (1 - trainError) << "\t" 
-              << (1 - holdError) << "\t" 
-              << (1 - testError) << "\t"
-              << this->CurrentNumberCorrect(keepAttrs) << "\t"
-              << removeAttrs[0] << "\t"
-              << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
-              << endl;
+      if(dataIsSimulated) {
+        iterationOutputStream 
+                << iteration << "\t"
+                << update << "\t"
+                << currentTemp << "\t"
+                << keepAttrs.size() << "\t"
+                << updateInterval << "\t"
+                << (1 - trainError) << "\t" 
+                << (1 - holdError) << "\t" 
+                << (1 - testError) << "\t"
+                << this->CurrentNumberCorrect(keepAttrs) << "\t"
+                << removeAttrs[0] << "\t"
+                << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
+                << endl;
+      } else {
+        iterationOutputStream 
+                << iteration << "\t"
+                << update << "\t"
+                << currentTemp << "\t"
+                << keepAttrs.size() << "\t"
+                << updateInterval << "\t"
+                << (1 - trainError) << "\t" 
+                << (1 - holdError) << "\t" 
+                << (1 - testError) << "\t"
+                << ((removeAttrs.size())? removeAttrs[0]: 0) << "\t"
+                << endl;
+        // << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
+      }
       // is this number of attributes left same as last update? 'while' above cond
       tail1 = prevNumInUpdate[prevNumInUpdate.size() - 2];
       tail2 = prevNumInUpdate[prevNumInUpdate.size() - 1];
@@ -215,6 +245,7 @@ uint EvaporativeCoolingPrivacy::CurrentNumberCorrect(vector<string> testSet) {
   for(auto i=0; i < testSet.size(); ++i) {
     string candidate = testSet[i];
     bool found = false;
+    
     for(auto j=0; (j < signalNames.size()) && !found; ++j) {
       if(candidate == signalNames[j]) {
         found = true;
@@ -230,21 +261,26 @@ void EvaporativeCoolingPrivacy::PrintState() {
   cout << "PRIVACY EC CURRENT STATE" << endl;
   cout << "Q_EPS:              " << Q_EPS << endl;
   cout << "iteration:          " << iteration << endl;
+  cout << "updates:            " << update << endl;
+  cout << "max iterations:     " << MAX_ITERATIONS << endl;
   cout << "deltaQ:             " << deltaQ << endl;
-  cout << "threshold:          " << threshold << endl;
-  cout << "tolerance:          " << tolerance << endl;
   cout << "remove per:         " << numToRemovePerIteration << endl;
+  cout << "min final set size: " << minRemainAttributes << endl;
   cout << "start temp:         " << startTemp << endl;
   cout << "current temp:       " << currentTemp << endl;
   cout << "final temp:         " << finalTemp << endl;
   cout << "tau:                " << tau << endl;
   cout << "update frequency:   " << updateInterval << endl;
-  cout << "num attributes:     " << train->NumVariables() << endl;
-  cout << "num instances:      " << numInstances << endl;
-  cout << "num sim signals:    " << numSignalsInData << endl;
+  cout << "num attributes:     " << train->NumVariables() << " (train)" << endl;
+  cout << "num instances:      " << train->NumInstances() << " (train)" << endl;
+  cout << "data simulated?     " << (dataIsSimulated? "true": "false") << endl;
+  if(dataIsSimulated) {
+    cout << "num sim signals:    " << numSignalsInData << endl;
+  }
   cout << "last train error:   " << trainError << endl;
   cout << "last holdout error: " << holdError << endl;
   cout << "last test error:    " << testError << endl;
+
   cout << "**********************************************************" << endl;
 }
 
@@ -358,10 +394,10 @@ bool EvaporativeCoolingPrivacy::ComputeAttributeProbabilities() {
     diff.clear();
     for(uint i=0; i < trainImportance.size(); ++i) {
       string key = trainImportance[i].second;
-      if(diffImportance[key] > 0.001) {
+      if(diffImportance[key] > 0.01) {
         diff.push_back(diffImportance[key]);
       } else {
-        diff.push_back(0.001);
+        diff.push_back(0.01);
       }
     }
     PP->printLOG(Timestamp() + "\tP(a)) and sum probs\n");
@@ -372,6 +408,14 @@ bool EvaporativeCoolingPrivacy::ComputeAttributeProbabilities() {
     for(uint i=0; trainIt != trainImportance.end(); ++trainIt, ++i) {
       double q1Score = (*trainIt).first;
       double prob = exp(-q1Score / (2.0 * diff[i] * currentTemp));
+      if(std::isinf(prob)) {
+        PP->printLOG("WARNING: infinity detected; setting to MAX_DOUBLE\n");
+        prob = numeric_limits<double>::max();
+      }
+      if(par::algorithm_verbose) {
+        cout << prob << "\t" << q1Score << "\t" << diff[i] << "\t" 
+                << currentTemp << endl;
+      }
       attributeProbabilty.push_back(prob);
       summedProbabilities += prob;
     }

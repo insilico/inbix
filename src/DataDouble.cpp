@@ -106,7 +106,7 @@ bool DataDouble::loadFromDatasetMask(Dataset* ds, vector<string> bestAttributes)
   num_cols_no_sparse = num_cols;
   variable_names.resize(num_cols);
   copy(bestAttributes.begin(), bestAttributes.end(), variable_names.begin());
-  variable_names[bestAttributes.size()] = ("pheno");
+  variable_names[bestAttributes.size()] = (par::depvarname);
   if(data) delete [] data;
   reserveMemory(); // allocates num_cols * num_rows double matrix
 

@@ -29,6 +29,8 @@
 #include "logistic.h"
 #include "linear.h"
 
+#include "Insilico.h"
+
 #define FPMIN 1.0e-30
 
 extern ofstream LOG;
@@ -1772,7 +1774,7 @@ void Plink::Ind2SNP() {
 // Convert dataset from SNP-major format to Individual-major
 void Plink::SNP2Ind() {
 
-	printLOG("Converting data to Individual-major format\n");
+	printLOG(Timestamp() + "Converting data to Individual-major format\n");
 
 	vector<Individual*>::iterator person = sample.begin();
 

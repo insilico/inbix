@@ -97,7 +97,8 @@ RandomForest::RandomForest(Dataset* ds, string datasetFilename,
   InitializeData(doPrediction, true, true);
 }
   
-bool RandomForest::InitializeData(bool doPrediction, bool useMask, bool doImportance) {
+bool RandomForest::InitializeData(bool doPrediction, bool useMask, 
+                                  bool doImportance) {
   // set class variables for reserving memory and other operations
   PP->printLOG(Timestamp() + "Initializing random forest\n");
   if(!dataset->HasNumerics()) {

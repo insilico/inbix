@@ -110,6 +110,7 @@ public:
   static Options opt;
 
   static bool verbose;
+  static bool algorithm_verbose; // bcw - 1/31/17
   static bool flag;
   static bool dumpped;
   static bool debug;
