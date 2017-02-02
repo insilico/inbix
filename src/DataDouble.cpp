@@ -80,7 +80,7 @@ bool DataDouble::loadFromPlink(Plink* PP) {
     }
     double phenotype = -9;
     if(par::bt) {
-      int intPheno = PP->sample[i]->aff? 2: 1;
+      int intPheno = PP->sample[i]->aff? 1: -1;
       phenotype = static_cast<double>(intPheno);
     } else {
       phenotype = PP->sample[i]->phenotype;

@@ -1377,6 +1377,7 @@ int main(int argc, char* argv[]) {
         }
         vector<string> varNames = plinkInternalsDataset->GetVariableNames();
         P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
+        plinkInternalsDataset->PrintStatsSimple(cout);
         P.printLOG(Timestamp() + "Splitting PLINK internal data into train, holdout and test.\n");
         // split the instances equally by case/control status
         map<ClassLevel, vector<uint>> classIdx = 
@@ -1437,14 +1438,17 @@ int main(int argc, char* argv[]) {
                                                idxSetTrain)) {
           error("Training Dataset initialization failed\n");
         }
+        trainDs->PrintStatsSimple(cout);
         if(!holdoutDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
                                                  idxSetHoldout)) {
           error("Holdout Dataset initialization failed\n");
         }
+        holdoutDs->PrintStatsSimple(cout);
         if(!testDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
                                               idxSetTest)) {
           error("Test Dataset initialization failed\n");
         }
+        testDs->PrintStatsSimple(cout);
       }
     } else {
       // -----------------------------------------------------------------------

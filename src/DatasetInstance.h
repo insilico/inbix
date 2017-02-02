@@ -32,7 +32,7 @@ public:
    * Construct an data set instance object.
    * \param [in] ds pointer to a Dataset object
    ****************************************************************************/
-  DatasetInstance(Dataset* ds);
+  DatasetInstance(Dataset* ds, std::string newId);
   virtual ~DatasetInstance();
   /// return the Dataset pointer associated with this instance
   Dataset* GetDatasetPtr();
@@ -153,9 +153,13 @@ public:
   CvSetType GetCvSetType();
   std::vector<AttributeLevel> GetAttributes() { return attributes; }
   std::vector<NumericLevel> GetNumerics() { return numerics; }
+  bool SetId(std::string newId);
+  std::string GetId() { return id; }
 protected:
   /// pointer to a Dataset object
   Dataset* dataset;
+  /// unique identifier
+  std::string id;
   /// the class value for this instance
   ClassLevel classLabel;
   /// discrete attributes

@@ -26,7 +26,8 @@ using namespace insilico;
 
 PlinkInternalsDatasetInstance::
 PlinkInternalsDatasetInstance(Dataset* ds, string instanceID, 
-        Plink* plinkPtr, Individual* plinkInd): DatasetInstance(ds) {
+                              Plink* plinkPtr, Individual* plinkInd): 
+DatasetInstance(ds, instanceID) {
   PP = plinkPtr;
   ID = instanceID;
   individual = plinkInd;

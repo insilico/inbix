@@ -94,19 +94,21 @@ Dataset::Dataset() {
 	/// metric defaults
 	snpMetric = "gm";
 	snpDiff = diffGMM;
-
 	snpMetricNN = "gm";
 	snpDiffNN = diffGMM;
-
 	numMetric = "manhattan";
 	numDiff = diffManhattan;
 
-	cout << Timestamp() << "Default SNP diff metric: "
-			<< snpMetric << endl;
-	cout << Timestamp() << "Default SNP nearest neighbors distance metric: "
-			<< snpMetricNN << endl;
-	cout << Timestamp() << "Default continuous distance metric: " 
-      << numMetric << endl;
+  if(par::verbose) {
+    PP->printLOG(Timestamp() + 
+                 "Default SNP diff metric: " + snpMetric + "\n");
+    PP->printLOG(Timestamp() + 
+                 "Default SNP nearest neighbors distance metric: " + 
+                 snpMetricNN + "\n");
+    PP->printLOG(Timestamp() + 
+                 "Default continuous distance metric: " + 
+                 numMetric + "\n");
+  }
 }
 
 Dataset::~Dataset() {
@@ -173,7 +175,7 @@ bool Dataset::LoadDataset(vector<vector<int> >& dataMatrix,
 		vector<int> row(numAttributes);
 		copy(rowIt->begin(), rowIt->end(), row.begin());
 		string ID = zeroPadNumber(rowIndex, 8) + zeroPadNumber(rowIndex, 8);
-		DatasetInstance* dsi = new DatasetInstance(this);
+		DatasetInstance* dsi = new DatasetInstance(this, ID);
 		dsi->LoadInstanceFromVector(row);
 		dsi->SetClass(classLabels[rowIndex]);
 		classIndexes[classLabels[rowIndex]].push_back(rowIndex);
@@ -306,14 +308,14 @@ bool Dataset::LoadDataset(DgeData* dgeData) {
 	vector<string> sampleNames = dgeData->GetSampleNames();
 	for (int instanceIndex = 0; instanceIndex < (int) sampleNames.size();
 			++instanceIndex) {
+		string ID = sampleNames[instanceIndex] + sampleNames[instanceIndex];
 		vector<double> sampleValues = dgeData->GetSampleCounts(instanceIndex);
-		DatasetInstance* dsi = new DatasetInstance(this);
+		DatasetInstance* dsi = new DatasetInstance(this, ID);
 		for (int numericIndex = 0; numericIndex < (int) geneNames.size();
 				++numericIndex) {
 			dsi->AddNumeric(sampleValues[numericIndex]);
 		}
 		instances.push_back(dsi);
-		string ID = sampleNames[instanceIndex] + sampleNames[instanceIndex];
 		instanceIds.push_back(ID);
 		numericsIds.push_back(ID);
 		instancesMask[ID] = instanceIndex;
@@ -365,9 +367,10 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 	}
 	int numSamples = sampleNames.size();
 	for (int instanceIndex = 0; instanceIndex < numSamples; ++instanceIndex) {
+		string ID = sampleNames[instanceIndex] + sampleNames[instanceIndex];
 		vector<AttributeLevel> sampleValues = birdseedData->GetSubjectGenotypes(
 				instanceIndex);
-		DatasetInstance* dsi = new DatasetInstance(this);
+		DatasetInstance* dsi = new DatasetInstance(this, ID);
 		vector<AttributeLevel> thisSnps(numAttributes);
 		for (int snpIndex = 0; snpIndex < numAttributes; ++snpIndex) {
 			AttributeLevel thisSnp = sampleValues[snpIndex];
@@ -377,7 +380,6 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
     dsi->LoadInstanceFromVector(thisSnps);
 		instances.push_back(dsi);
 
-		string ID = sampleNames[instanceIndex] + sampleNames[instanceIndex];
 		instanceIds.push_back(ID);
 //			attributeIds.push_back(ID);
 		instancesMask[ID] = instanceIndex;
@@ -440,13 +442,8 @@ bool Dataset::LoadDataset(BirdseedData* birdseedData) {
 bool Dataset::LoadOtherDatasetInstances(Dataset* otherDs, 
                                         vector<uint> instIdx) {
   // --------------------------------------------------------------------------
-  // Load all indexed instance meta data for loop below
-  vector<string> otherInstanceIds = otherDs->GetInstanceIds();
-  vector<ClassLevel> otherClassValues;
-  otherDs->GetClassValues(otherClassValues);
-  // --------------------------------------------------------------------------
   // Create new instance meta data in this Dataset from meta data and instances 
-  // from the other data instances in passed instIdx parameter as indexes
+  // from the other data instances in passed vector instIdx as indexes
   instances.clear();
   instanceIds.clear();
   instanceIdsToLoad.clear();
@@ -454,18 +451,17 @@ bool Dataset::LoadOtherDatasetInstances(Dataset* otherDs,
   for(uint newInstanceIdx=0; newInstanceIdx < instIdx.size(); ++newInstanceIdx) {
     uint otherInstanceIdx = instIdx[newInstanceIdx];
     DatasetInstance* srcInstance = otherDs->GetInstance(otherInstanceIdx);
-    DatasetInstance* dstInstance = new DatasetInstance(this);
+    string destInstanceId = srcInstance->GetId();
+    DatasetInstance* dstInstance = new DatasetInstance(this, destInstanceId);
     dstInstance->LoadInstanceFromInstancePtr(this, srcInstance);
-    string newInstanceId = otherInstanceIds[otherInstanceIdx];
-    instanceIds.push_back(newInstanceId);
-    ClassLevel newInstanceClass = otherClassValues[otherInstanceIdx];
-    classIndexes[newInstanceClass].push_back(newInstanceIdx);
+    instanceIds.push_back(destInstanceId);
+    classIndexes[dstInstance->GetClass()].push_back(newInstanceIdx);
+    instanceIdsToLoad.push_back(destInstanceId);
     instances.push_back(dstInstance);
-    instanceIdsToLoad.push_back(newInstanceId);
-    instancesMask[newInstanceId] = newInstanceIdx;
+    instancesMask[destInstanceId] = newInstanceIdx;
   }
-  
   hasPhenotypes = otherDs->HasPhenotypes();
+  hasAlternatePhenotypes = true;
   hasContinuousPhenotypes = otherDs->HasContinuousPhenotypes();
   if(!hasContinuousPhenotypes) {
     this->PrintClassIndexInfo(cout);
@@ -3209,7 +3205,7 @@ bool Dataset::LoadSnps(std::string filename) {
 			return false;
 		}
 
-		DatasetInstance* newInst = new DatasetInstance(this);
+		DatasetInstance* newInst = new DatasetInstance(this, ID);
 		if (newInst) {
 			if (hasContinuousPhenotypes) {
 				newInst->SetPredictedValueTau(numericClassLevel);
@@ -3469,9 +3465,9 @@ bool Dataset::LoadNumerics(string filename) {
 		numericsIds.push_back(ID);
 		if (!hasGenotypes) {
 			instancesMask[ID] = newInstanceIdx++;
-			tempInstance = new DatasetInstance(this);
+			tempInstance = new DatasetInstance(this, ID);
 		}
-		// skip the first two columns: familiy and individual IDs
+		// skip the first two columns: family and individual IDs
 		vector<string>::const_iterator it = numericsStringVector.begin() + 2;
 		// add new numeric columns to this instance
 		uint numericsIndex = 0;
@@ -3609,7 +3605,7 @@ bool Dataset::LoadPrivacySim(string filename) {
 			continue;
 		}
 
-    tempInstance = new DatasetInstance(this);
+    tempInstance = new DatasetInstance(this, instID);
 		vector<string>::const_iterator it = parsedNumericsFileLine.begin();
     numericsIds.clear();
 		for (uint numericsIndex = 0; 

@@ -62,8 +62,11 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
     error("Training, holdout and testing data sets must have the "
             "same number of variables\n");
   }
-  numSignalsInData = static_cast<uint>(numVariables * par::ecPrivacyPercentSignal);
+  // special variables for simulated data sets
+  numSignalsInData = numVariables;
   if(dataIsSimulated) {
+    numSignalsInData = 
+            static_cast<uint>(numVariables * par::ecPrivacyPercentSignal);
     for(uint sigNum=0; sigNum < numSignalsInData; ++sigNum) {
       signalNames.push_back(curVarNames[sigNum]);
     }
@@ -601,6 +604,8 @@ EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
   switch(dataType) {
     case TRAIN:
       PP->printLOG(Timestamp() + "Classify best attributes for TRAINING data\n");
+      train->WriteNewDataset("tempTrain.dat", TAB_DELIMITED_DATASET);
+      par::ecPrivacyTrainFile = "tempTrain.dat";
       randomForest = new RandomForest(train, par::ecPrivacyTrainFile, attrs, false);
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
@@ -608,13 +613,17 @@ EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
       break;
     case HOLDOUT:
       PP->printLOG(Timestamp() + "Classify best attributes for HOLDOUT data\n");
+      train->WriteNewDataset("tempHoldout.dat", TAB_DELIMITED_DATASET);
+      par::ecPrivacyTrainFile = "tempHoldout.dat";
       randomForest = new RandomForest(holdout, par::ecPrivacyHoldoutFile, attrs, false);
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
       break;
     case TEST:
       PP->printLOG(Timestamp() + "Predicting best attributes for TESTING data\n");
-      randomForest = new RandomForest(test, par::ecPrivacyTestFile, attrs, true);
+      train->WriteNewDataset("tempTest.dat", TAB_DELIMITED_DATASET);
+      par::ecPrivacyTrainFile = "tempTest.dat";
+      randomForest = new RandomForest(test, par::ecPrivacyTestFile, attrs, false);
       retError = randomForest->Predict();
       break;
     default:

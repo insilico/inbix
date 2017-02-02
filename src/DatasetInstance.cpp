@@ -31,8 +31,9 @@ public:
   }
 };
 
-DatasetInstance::DatasetInstance(Dataset* ds) {
+DatasetInstance::DatasetInstance(Dataset* ds, string newId) {
   dataset = ds;
+  id = newId;
   classLabel = MISSING_DISCRETE_CLASS_VALUE;
   predictedValueTau = MISSING_DISCRETE_CLASS_VALUE;
   cvSetType = CV_NONE;
@@ -67,7 +68,13 @@ DatasetInstance::LoadInstanceFromInstancePtr(Dataset* srcDs,
   attributes = srcInstance->GetAttributes();
   numerics = srcInstance->GetNumerics();
   predictedValueTau = srcInstance->GetPredictedValueTau();
+  id = srcInstance->GetId();
   
+  return true;
+}
+
+bool DatasetInstance::SetId(std::string newId) {
+  id = newId;
   return true;
 }
 

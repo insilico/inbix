@@ -29,7 +29,8 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
   // get variable metadata
   unsigned int numAttributes = PP->nl_all;
   if(numAttributes) {
-    PP->printLOG(Timestamp() + "Get PLINK SNP variable metadata for " + int2str(numAttributes) + " SNPs\n");
+    PP->printLOG(Timestamp() + "Get PLINK SNP variable metadata for " + 
+                 int2str(numAttributes) + " SNPs\n");
     hasGenotypes = true;
     attributeAlleles.resize(numAttributes);
     attributeMinorAllele.resize(numAttributes);
@@ -49,7 +50,8 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
   }
   unsigned int numNumerics = PP->nlistname.size();
   if(numNumerics) {
-    PP->printLOG(Timestamp() + "Get PLINK Numeric variable metadata for " + int2str(numNumerics) + " numerics\n");
+    PP->printLOG(Timestamp() + "Get PLINK Numeric variable metadata for " + 
+                 int2str(numNumerics) + " numerics\n");
     hasNumerics = true;
     for(int i=0; i < PP->nlistname.size(); i++) {
       string numericName = PP->nlistname[i];
@@ -83,14 +85,15 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
   hasPhenotypes = true;  
   
   unsigned int nextInstanceIdx = 0;
-  for(int i=0; i < PP->sample.size(); i++) {
-    string ID = PP->sample[i]->fid + PP->sample[i]->iid;
+  instances.clear();
+  for(int sampleIdx=0; sampleIdx < PP->sample.size(); sampleIdx++) {
+    string ID = PP->sample[sampleIdx]->fid + PP->sample[sampleIdx]->iid;
 //    if(par::verbose) {
 //      PP->printLOG("[ DEBUG ] individual i: " + int2str(i)
 //              + ", ID: " + ID 
 //              + ", next index: " + int2str(nextInstanceIdx) + "\n");
 //    }
-    if(PP->sample[i]->missing) {
+    if(PP->sample[sampleIdx]->missing) {
       // missing phenotype so skip this individual
       if(par::verbose) {
         PP->printLOG(Timestamp() + "ID: " + ID + " missing, skipping\n");
@@ -99,16 +102,16 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
     }
     // this individual is a "go"!
     PlinkInternalsDatasetInstance* tmpInd = 
-      new PlinkInternalsDatasetInstance(this, ID, PP, PP->sample[i]);
+      new PlinkInternalsDatasetInstance(this, ID, PP, PP->sample[sampleIdx]);
     double phenotype = -9;
     if(par::bt) {
-      int intPheno = PP->sample[i]->aff? 2: 1;
-      phenotype = static_cast<double>(PP->sample[i]->aff? 2: 1);
-      classIndexes[intPheno].push_back(i);
-      // encode 0/1
-      tmpInd->SetClass(phenotype - 1);
+      // encode 0/1 for my Dataset class assumptions
+      uint intPheno = PP->sample[sampleIdx]->aff? 1: 0;
+      phenotype = static_cast<double>(intPheno);
+      classIndexes[intPheno].push_back(sampleIdx);
+      tmpInd->SetClass(phenotype);
     } else {
-      phenotype = PP->sample[i]->phenotype;
+      phenotype = PP->sample[sampleIdx]->phenotype;
       tmpInd->SetPredictedValueTau(phenotype);
     }
     instanceIds.push_back(ID);
@@ -117,26 +120,26 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
     nextInstanceIdx++;
     vector<AttributeLevel> tmpSnps;
     if(hasGenotypes) {
-      for(int j=0; j < numAttributes; j++) {
+      for(int attrIdx=0; attrIdx < numAttributes; attrIdx++) {
         AttributeLevel attr = -9;
-        attr = static_cast<AttributeLevel>(tmpInd->GetSimpleSNPValue(j));
+        attr = static_cast<AttributeLevel>(tmpInd->GetSimpleSNPValue(attrIdx));
         tmpSnps.push_back(attr);
         if(attr == -9) {
-          missingValues[ID].push_back(j);
+          missingValues[ID].push_back(attrIdx);
         }
-        ++levelCounts[j][attr];
+        ++levelCounts[attrIdx][attr];
         if(!HasContinuousPhenotypes()) {
           ClassLevel classLevel = static_cast<ClassLevel>(tmpInd->GetClass());
-          ++levelCountsByClass[j][make_pair(attr, classLevel)];
+          ++levelCountsByClass[attrIdx][make_pair(attr, classLevel)];
         }
-        pair<char, char> alleles = attributeAlleles[j];
-        ++attributeAlleleCounts[j][alleles.first];
-        ++attributeAlleleCounts[j][alleles.second];
+        pair<char, char> alleles = attributeAlleles[attrIdx];
+        ++attributeAlleleCounts[attrIdx][alleles.first];
+        ++attributeAlleleCounts[attrIdx][alleles.second];
         string genotype = "  ";
         genotype[0] = alleles.first;
         genotype[1] = alleles.second;
-        ++genotypeCounts[j][genotype];
-        attributeLevelsSeen[j].insert(genotype);
+        ++genotypeCounts[attrIdx][genotype];
+        attributeLevelsSeen[attrIdx].insert(genotype);
       }
       tmpInd->LoadInstanceFromVector(tmpSnps);
       MaskIncludeAllAttributes(DISCRETE_TYPE);
@@ -144,23 +147,24 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
     if(hasNumerics) {
       numericsSums.resize(numNumerics);
       numericsMinMax.resize(numNumerics);
-      for(int j=0; j < numNumerics; j++) {
-        NumericLevel numeric = PP->sample[i]->nlist[j];
+      for(int numericIdx=0; numericIdx < numNumerics; numericIdx++) {
+        NumericLevel numeric = PP->sample[sampleIdx]->nlist[numericIdx];
         if(numeric == -9) {
-          missingNumericValues[ID].push_back(j);
+          missingNumericValues[ID].push_back(numericIdx);
         }
-        numericsSums[j] += numeric;
-        if(numeric < numericsMinMax[j].first) {
-          numericsMinMax[j].first = numeric;
+        numericsSums[numericIdx] += numeric;
+        if(numeric < numericsMinMax[numericIdx].first) {
+          numericsMinMax[numericIdx].first = numeric;
         }
-        if(numeric > numericsMinMax[j].second) {
-          numericsMinMax[j].second = numeric;
+        if(numeric > numericsMinMax[numericIdx].second) {
+          numericsMinMax[numericIdx].second = numeric;
         }
         tmpInd->AddNumeric(numeric);
       }
       MaskIncludeAllAttributes(NUMERIC_TYPE);
     }
     instances.push_back(tmpInd);
+    instancesMask[ID] = sampleIdx;
   }
 
   if(hasGenotypes) {
