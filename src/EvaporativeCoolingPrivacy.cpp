@@ -240,8 +240,14 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   PP->printLOG(Timestamp() + "Final classification errors:    " + dbl2str(trainError) + 
                "\t" + dbl2str(holdError) + "\t" + dbl2str(testError) + "\n");
 
-  PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy::ComputeScores() END\n");
+  // clean up temporary Ranger prediction files
+  string removeFile = par::output_file_name + ".forest";
+  unlink(removeFile.c_str());
+  removeFile = par::output_file_name + ".prediction";
+  unlink(removeFile.c_str());
 
+  PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy::ComputeScores() END\n");
+  
   return true;
 }
 
