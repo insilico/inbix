@@ -109,9 +109,11 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 		error("Could not open iteration output file [ " + iterationOutputFile + " ]\n");
 	}
   if(dataIsSimulated) {
-    iterationOutputStream << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tFirstRemoved" << endl;
+    iterationOutputStream 
+            << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tLastRemoved" << endl;
   } else {
-    iterationOutputStream << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tFirstRemoved" << endl;
+    iterationOutputStream 
+            << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved" << endl;
   }
 
   // initialize all masks to contain all variables
@@ -217,7 +219,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
                 << (1 - trainError) << "\t" 
                 << (1 - holdError) << "\t" 
                 << (1 - testError) << "\t"
-                << ((removeAttrs.size())? removeAttrs[0]: 0) << "\t"
+                << ((removeAttrs.size())? removeAttrs[removeAttrs.size()-1]: 0) << "\t"
                 << endl;
         // << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
       }
@@ -610,6 +612,7 @@ EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
       randomForest->SaveForest();
+      unlink("tempTrain.dat");
       break;
     case HOLDOUT:
       PP->printLOG(Timestamp() + "Classify best attributes for HOLDOUT data\n");
@@ -618,6 +621,7 @@ EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
       randomForest = new RandomForest(holdout, par::ecPrivacyHoldoutFile, attrs, false);
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
+      unlink("tempHoldout.dat");
       break;
     case TEST:
       PP->printLOG(Timestamp() + "Predicting best attributes for TESTING data\n");
@@ -625,6 +629,7 @@ EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
       par::ecPrivacyTrainFile = "tempTest.dat";
       randomForest = new RandomForest(test, par::ecPrivacyTestFile, attrs, false);
       retError = randomForest->Predict();
+      unlink("tempTest.dat");
       break;
     default:
       error("EvaporativeCoolingPrivacy::ClassifyAttributeSet Dataset type not recognized");

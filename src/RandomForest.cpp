@@ -180,14 +180,14 @@ AttributeScores RandomForest::ComputeScores() {
 double RandomForest::Predict() {
   PP->printLOG(Timestamp() + "Running random forest algorithm in PREDICT mode\n");
   forest->run(par::verbose);
-  forest->writePredictionFile();
+  //forest->writePredictionFile();
   vector<double> treeEvals = forest->getPredictionValues();
   vector<ClassLevel> classes;
   dataset->GetClassValues(classes);
   uint misclass = 0;
   for(uint i=0; i < classes.size(); ++i) {
     uint observed = classes[i];
-    // Ranger uses +/-1 for binary classes
+    // Ranger uses +/-1 for binary classes, so convert to 0/1 for comparison
     uint predicted = (treeEvals[i] == -1)? 0: 1;
     if(observed != predicted) { ++misclass; }
   }
