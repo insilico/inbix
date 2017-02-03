@@ -30,7 +30,7 @@ CXX_WIN = g++.exe
 # Any other compiler flags here ( -Wall, -g, etc)
 # optimized mode
 # uncomment below for debug mode
-CXXFLAGS += -g -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen \
+CXXFLAGS += -g -O2 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen \
   -Wno-write-strings -std=c++11
 # uncomment below for optimized mode
 #CXXFLAGS += -O3 -I. -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen \

@@ -1354,6 +1354,7 @@ int main(int argc, char* argv[]) {
     Dataset* holdoutDs = new Dataset();
     Dataset* testDs = new Dataset();
     PlinkInternalsDataset* plinkInternalsDataset = 0;
+    bool usingSimData = false;
     if((par::ecPrivacyTrainFile == "") || 
        (par::ecPrivacyHoldoutFile == "") || 
        (par::ecPrivacyTestFile == "")) {
@@ -1483,6 +1484,8 @@ int main(int argc, char* argv[]) {
          (par::k > classIdx[1].size())) {
         error("k is greater than testing case or control split size\n");
       }
+      
+      usingSimData = true;
     }
     P.printLOG("\n");
 
@@ -1492,7 +1495,7 @@ int main(int argc, char* argv[]) {
     if(!testDs->NumInstances()) { error("Testing data set has no instances\n"); }
     
     // -------------------------------------------------------------------------
-    EvaporativeCoolingPrivacy ecp(trainDs, holdoutDs, testDs, &P);
+    EvaporativeCoolingPrivacy ecp(trainDs, holdoutDs, testDs, &P, usingSimData);
     if(!ecp.ComputeScores()) {
       error("EvaporativeCoolingPrivacy::ComputeScores failed\n");
     }
