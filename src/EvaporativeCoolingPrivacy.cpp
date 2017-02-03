@@ -609,33 +609,37 @@ EvaporativeCoolingPrivacy::ClassifyAttributeSet(vector<string> attrs,
                                                 DATASET_TYPE dataType) {
   double retError = 1.0;
   RandomForest* randomForest = 0;
+  string outfileTrain, outfileTest, outfileHoldout;
   switch(dataType) {
     case TRAIN:
       PP->printLOG(Timestamp() + "Classify best attributes for TRAINING data\n");
-      train->WriteNewDataset("tempTrain.dat", TAB_DELIMITED_DATASET);
-      par::ecPrivacyTrainFile = "tempTrain.dat";
+      outfileTrain = par::output_file_name + ".train.tmp";
+      train->WriteNewDataset(outfileTrain, TAB_DELIMITED_DATASET);
+      par::ecPrivacyTrainFile = outfileTrain;
       randomForest = new RandomForest(train, par::ecPrivacyTrainFile, attrs, false);
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
       randomForest->SaveForest();
-      unlink("tempTrain.dat");
+      unlink(outfileTrain.c_str());
       break;
     case HOLDOUT:
       PP->printLOG(Timestamp() + "Classify best attributes for HOLDOUT data\n");
-      train->WriteNewDataset("tempHoldout.dat", TAB_DELIMITED_DATASET);
-      par::ecPrivacyTrainFile = "tempHoldout.dat";
+      outfileHoldout = par::output_file_name + ".holdout.tmp";
+      train->WriteNewDataset(outfileHoldout, TAB_DELIMITED_DATASET);
+      par::ecPrivacyTrainFile = outfileHoldout;
       randomForest = new RandomForest(holdout, par::ecPrivacyHoldoutFile, attrs, false);
       randomForest->ComputeScores();
       retError = randomForest->GetClassificationError();
-      unlink("tempHoldout.dat");
+      unlink(outfileHoldout.c_str());
       break;
     case TEST:
       PP->printLOG(Timestamp() + "Predicting best attributes for TESTING data\n");
-      train->WriteNewDataset("tempTest.dat", TAB_DELIMITED_DATASET);
-      par::ecPrivacyTrainFile = "tempTest.dat";
+      outfileTest = par::output_file_name + ".test.tmp";
+      train->WriteNewDataset(outfileTest, TAB_DELIMITED_DATASET);
+      par::ecPrivacyTrainFile = outfileTest;
       randomForest = new RandomForest(test, par::ecPrivacyTestFile, attrs, false);
       retError = randomForest->Predict();
-      unlink("tempTest.dat");
+      unlink(outfileTest.c_str());
       break;
     default:
       error("EvaporativeCoolingPrivacy::ClassifyAttributeSet Dataset type not recognized");
