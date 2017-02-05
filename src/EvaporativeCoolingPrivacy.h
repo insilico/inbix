@@ -30,7 +30,8 @@ typedef std::pair<std::vector<std::string>, std::vector<std::string>> ResultsLis
 class EvaporativeCoolingPrivacy {
 public:
   EvaporativeCoolingPrivacy(Dataset* trainset, Dataset* holdoset, 
-                            Dataset* testset, Plink* plinkPtr, bool simData=false);
+                            Dataset* testset, Plink* plinkPtr, 
+                            bool datasetsAreSims);
   virtual ~EvaporativeCoolingPrivacy();
   bool ComputeScores();
   void PrintState();

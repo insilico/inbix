@@ -40,57 +40,67 @@ using namespace arma;
 // public methods
 
 EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset, 
-        Dataset* holdoset, Dataset* testset, Plink* plinkPtr, bool simData) {
+                                                     Dataset* holdoset, 
+                                                     Dataset* testset, 
+                                                     Plink* plinkPtr, 
+                                                     bool datasetsAreSims) {
+  // --------------------------------------------------------------------------
+  // data
+  train = trainset;
+  holdout = holdoset;
+  test = testset;
   // pointer to a PLINK environment
   PP = plinkPtr;
+  dataIsSimulated = datasetsAreSims;
+  numInstances = 0;
+  curVarNames = trainset->GetVariableNames();
+  numVariables = trainset->NumVariables();
+  numSignalsInData = numVariables;
+  // --------------------------------------------------------------------------
+  // if the passed data sets are simulated (for paper)
+  if(datasetsAreSims) {
+    if(trainset->NumVariables() != holdoset->NumVariables() ||
+       trainset->NumVariables() != testset->NumVariables() ||
+       holdoset->NumVariables() != testset->NumVariables()) {
+      error("Training, holdout and testing data sets must have the "
+              "same number of variables\n");
+    }
+    // special variables for simulated data sets
+    numSignalsInData = 
+            static_cast<uint>(numVariables * par::ecPrivacyPercentSignal);
+    for(uint sigNum=0; sigNum < numSignalsInData; ++sigNum) {
+      signalNames.push_back(curVarNames[sigNum]);
+
+    }
+  }
+  // --------------------------------------------------------------------------
+  // algorithm
   Q_EPS = 0.005;
   MAX_ITERATIONS = 1e6;
   minRemainAttributes = par::ecPrivacyMinVars;
   updateInterval = par::ecPrivacyUpdateFrequency;
   iteration = 0;
   update = 0;
-  dataIsSimulated = simData;
-  train = trainset;
-  holdout = holdoset;
-  test = testset;
-  numInstances = 0;
-  curVarNames = trainset->GetVariableNames();
-  numVariables = trainset->NumVariables();
-  if(trainset->NumVariables() != holdoset->NumVariables() ||
-     trainset->NumVariables() != testset->NumVariables() ||
-     holdoset->NumVariables() != testset->NumVariables()) {
-    error("Training, holdout and testing data sets must have the "
-            "same number of variables\n");
-  }
-  // special variables for simulated data sets
-  numSignalsInData = numVariables;
-  if(dataIsSimulated) {
-    numSignalsInData = 
-            static_cast<uint>(numVariables * par::ecPrivacyPercentSignal);
-    for(uint sigNum=0; sigNum < numSignalsInData; ++sigNum) {
-      signalNames.push_back(curVarNames[sigNum]);
-    }
-  }
   deltaQ = 0;
   threshold = 0;
   tolerance = 0;
   startTemp = par::ecPrivacyStartTemp;
   currentTemp = startTemp;
   finalTemp = par::ecPrivacyFinalTemp;
-  tau = par::ecPrivacyTau;
-  
-  numToRemovePerIteration = par::ecPrivacyRemovePerIteration;
   // Trang: larger tau takes longer to get to Tmin (finalTemp)
   // > tau <- d^2/2 # larger tau takes longer to get to Tmin
   // tau = (train->NumVariables() * train->NumVariables()) / 2.0; 
+  tau = par::ecPrivacyTau;
+  numToRemovePerIteration = par::ecPrivacyRemovePerIteration;
   summedProbabilities = 0;
   randUniformValue = 0;
   randomForestPredictError = 0;
   trainError = 0;
   holdError = 0;
   trainError = 0;
-
-  this->PrintState();
+  // --------------------------------------------------------------------------
+  // end of constructor
+  PrintState();
 }
 
 EvaporativeCoolingPrivacy::~EvaporativeCoolingPrivacy() {
@@ -108,9 +118,9 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	if(!iterationOutputStream.is_open()) {
 		error("Could not open iteration output file [ " + iterationOutputFile + " ]\n");
 	}
-  if(dataIsSimulated) {
+  if(UsingSimData()) {
     iterationOutputStream 
-            << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tCorrect\tLastRemoved" << endl;
+            << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved\tCorrect" << endl;
   } else {
     iterationOutputStream 
             << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved" << endl;
@@ -195,7 +205,11 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
       ++update;
       // ----------------------------------------------------------------------
       // write iteration update results to iterationOutputFile
-      if(dataIsSimulated) {
+      // if simulated data, report the number of correctly detected attributes
+      string lastGeneRemoved = 
+              ((removeAttrs.size())? removeAttrs[removeAttrs.size()-1]: "-none-");
+      if(UsingSimData()) {
+        uint numSignalsFound = CurrentNumberCorrect(keepAttrs);
         iterationOutputStream 
                 << iteration << "\t"
                 << update << "\t"
@@ -205,9 +219,8 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
                 << (1 - trainError) << "\t" 
                 << (1 - holdError) << "\t" 
                 << (1 - testError) << "\t"
-                << this->CurrentNumberCorrect(keepAttrs) << "\t"
-                << removeAttrs[0] << "\t"
-                << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
+                << lastGeneRemoved << "\t"
+                << numSignalsFound
                 << endl;
       } else {
         iterationOutputStream 
@@ -219,7 +232,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
                 << (1 - trainError) << "\t" 
                 << (1 - holdError) << "\t" 
                 << (1 - testError) << "\t"
-                << ((removeAttrs.size())? removeAttrs[removeAttrs.size()-1]: 0) << "\t"
+                << lastGeneRemoved
                 << endl;
         // << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
       }
@@ -253,11 +266,10 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 
 uint EvaporativeCoolingPrivacy::CurrentNumberCorrect(vector<string> testSet) {
   uint returnValue = 0;
-  for(auto i=0; i < testSet.size(); ++i) {
+  for(uint i=0; i < testSet.size(); ++i) {
     string candidate = testSet[i];
     bool found = false;
-    
-    for(auto j=0; (j < signalNames.size()) && !found; ++j) {
+    for(uint j=0; (j < signalNames.size()) && !found; ++j) {
       if(candidate == signalNames[j]) {
         found = true;
         ++returnValue;
@@ -284,8 +296,8 @@ void EvaporativeCoolingPrivacy::PrintState() {
   cout << "update frequency:   " << updateInterval << endl;
   cout << "num attributes:     " << train->NumVariables() << " (train)" << endl;
   cout << "num instances:      " << train->NumInstances() << " (train)" << endl;
-  cout << "data simulated?     " << (dataIsSimulated? "true": "false") << endl;
-  if(dataIsSimulated) {
+  cout << "data simulated?     " << (UsingSimData()? "true": "false") << endl;
+  if(UsingSimData()) {
     cout << "num sim signals:    " << numSignalsInData << endl;
   }
   cout << "last train error:   " << trainError << endl;

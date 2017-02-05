@@ -1358,6 +1358,7 @@ int main(int argc, char* argv[]) {
     if((par::ecPrivacyTrainFile == "") || 
        (par::ecPrivacyHoldoutFile == "") || 
        (par::ecPrivacyTestFile == "")) {
+      usingSimData = false;
       // can we split potential PLINK samples into train, holdout and test sets
       if(P.sample.size() < 12) {
         error("Privacy EC requires sample size >= 12 (balanced, unbalanced varies) loaded with:\n"
@@ -1366,95 +1367,94 @@ int main(int argc, char* argv[]) {
               "* PLINK data sets loaded with --bfile/--file\n"
               "and/or\n"
               "* expression data loaded with --numeric-file.\n");
-      } else {
-        // --------------------------------------------------------------------
-        // SPLIT PLINK loaded data set and run EvaporativeCoolingPrivacy 
-        P.SNP2Ind();
-        P.printLOG(Timestamp() + "Loading PLINK internal data.\n");
-        plinkInternalsDataset = new PlinkInternalsDataset(&P);
-        // split the PLINK internal data into three Datasets
-        if(!plinkInternalsDataset->LoadDatasetPP()) {
-          error("Could not load data set from PLINK internal data structures\n");
+      } 
+      // --------------------------------------------------------------------
+      // SPLIT PLINK loaded data set and run EvaporativeCoolingPrivacy 
+      P.SNP2Ind();
+      P.printLOG(Timestamp() + "Loading PLINK internal data.\n");
+      plinkInternalsDataset = new PlinkInternalsDataset(&P);
+      // split the PLINK internal data into three Datasets
+      if(!plinkInternalsDataset->LoadDatasetPP()) {
+        error("Could not load data set from PLINK internal data structures\n");
+      }
+      vector<string> varNames = plinkInternalsDataset->GetVariableNames();
+      P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
+      plinkInternalsDataset->PrintStatsSimple(cout);
+      P.printLOG(Timestamp() + "Splitting PLINK internal data into train, holdout and test.\n");
+      // split the instances equally by case/control status
+      map<ClassLevel, vector<uint>> classIdx = 
+              plinkInternalsDataset->GetClassIndexes();
+      vector<uint> idxSetCtrls = classIdx[0];
+      vector<uint> idxSetCases = classIdx[1];
+      // shuffle and distribute equally cases and controls
+      random_device rd;
+      mt19937 gen(rd());
+      shuffle(idxSetCases.begin(), idxSetCases.end(), gen);
+      shuffle(idxSetCtrls.begin(), idxSetCtrls.end(), gen);
+      vector<uint> idxSetTrain;
+      vector<uint> idxSetHoldout;
+      vector<uint> idxSetTest;
+      for(uint n=0; n < idxSetCases.size(); ++n) {
+        int thisValue = idxSetCases[n];
+        switch(n % 3) {
+          case 0:
+            idxSetTrain.push_back(thisValue);
+            break;
+          case 1:
+            idxSetHoldout.push_back(thisValue);
+            break;
+          case 2:
+            idxSetTest.push_back(thisValue);
+            break;
         }
-        vector<string> varNames = plinkInternalsDataset->GetVariableNames();
-        P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
-        plinkInternalsDataset->PrintStatsSimple(cout);
-        P.printLOG(Timestamp() + "Splitting PLINK internal data into train, holdout and test.\n");
-        // split the instances equally by case/control status
-        map<ClassLevel, vector<uint>> classIdx = 
-                plinkInternalsDataset->GetClassIndexes();
-        vector<uint> idxSetCtrls = classIdx[0];
-        vector<uint> idxSetCases = classIdx[1];
-        // shuffle and distribute equally cases and controls
-        random_device rd;
-        mt19937 gen(rd());
-        shuffle(idxSetCases.begin(), idxSetCases.end(), gen);
-        shuffle(idxSetCtrls.begin(), idxSetCtrls.end(), gen);
-        vector<uint> idxSetTrain;
-        vector<uint> idxSetHoldout;
-        vector<uint> idxSetTest;
-        for(uint n=0; n < idxSetCases.size(); ++n) {
-          int thisValue = idxSetCases[n];
-          switch(n % 3) {
-            case 0:
-              idxSetTrain.push_back(thisValue);
-              break;
-            case 1:
-              idxSetHoldout.push_back(thisValue);
-              break;
-            case 2:
-              idxSetTest.push_back(thisValue);
-              break;
-          }
+      }
+      for(uint n=0; n < idxSetCtrls.size(); ++n) {
+        int thisValue = idxSetCtrls[n];
+        switch(n % 3) {
+          case 0:
+            idxSetTrain.push_back(thisValue);
+            break;
+          case 1:
+            idxSetHoldout.push_back(thisValue);
+            break;
+          case 2:
+            idxSetTest.push_back(thisValue);
+            break;
         }
-        for(uint n=0; n < idxSetCtrls.size(); ++n) {
-          int thisValue = idxSetCtrls[n];
-          switch(n % 3) {
-            case 0:
-              idxSetTrain.push_back(thisValue);
-              break;
-            case 1:
-              idxSetHoldout.push_back(thisValue);
-              break;
-            case 2:
-              idxSetTest.push_back(thisValue);
-              break;
-          }
+      }
+      if(par::verbose) {
+        cout << "TRAIN " << idxSetTrain.size() << endl;
+        for(int n=0; n < idxSetTrain.size(); ++n) {
+           cout << n << "\t" << idxSetTrain[n] << endl;
         }
-        if(par::verbose) {
-          cout << "TRAIN " << idxSetTrain.size() << endl;
-          for(int n=0; n < idxSetTrain.size(); ++n) {
-             cout << n << "\t" << idxSetTrain[n] << endl;
-          }
-          cout << "HOLDOUT " << idxSetHoldout.size() << endl;
-          for(int n=0; n < idxSetHoldout.size(); ++n) {
-             cout << n << "\t" << idxSetHoldout[n] << endl;
-          }
-          cout << "TEST " << idxSetTest.size() << endl;
-          for(int n=0; n < idxSetTest.size(); ++n) {
-             cout << n << "\t" << idxSetTest[n] << endl;
-          }
+        cout << "HOLDOUT " << idxSetHoldout.size() << endl;
+        for(int n=0; n < idxSetHoldout.size(); ++n) {
+           cout << n << "\t" << idxSetHoldout[n] << endl;
         }
-        if(!trainDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
-                                               idxSetTrain)) {
-          error("Training Dataset initialization failed\n");
+        cout << "TEST " << idxSetTest.size() << endl;
+        for(int n=0; n < idxSetTest.size(); ++n) {
+           cout << n << "\t" << idxSetTest[n] << endl;
         }
-        trainDs->PrintStatsSimple(cout);
-        if(!holdoutDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
-                                                 idxSetHoldout)) {
-          error("Holdout Dataset initialization failed\n");
-        }
-        holdoutDs->PrintStatsSimple(cout);
-        if(!testDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
-                                              idxSetTest)) {
-          error("Test Dataset initialization failed\n");
-        }
-        testDs->PrintStatsSimple(cout);
+      }
+      if(!trainDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
+                                             idxSetTrain)) {
+        error("Training Dataset initialization failed\n");
+      }
+      trainDs->PrintStatsSimple(cout);
+      if(!holdoutDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
+                                               idxSetHoldout)) {
+        error("Holdout Dataset initialization failed\n");
+      }
+      holdoutDs->PrintStatsSimple(cout);
+      if(!testDs->LoadOtherDatasetInstances(plinkInternalsDataset, 
+                                            idxSetTest)) {
+        error("Test Dataset initialization failed\n");
       }
     } else {
       // -----------------------------------------------------------------------
-      // run EvaporativeCoolingPrivacy here with data sets from other sources
-      P.printLOG("Loading training, holdout and testing data sets.\n");
+      // data sets from other sources, simulations here
+      P.printLOG("Loading simulated training, holdout and testing data sets.\n");
+      usingSimData = true;
       if(!trainDs->LoadPrivacySim(par::ecPrivacyTrainFile)) {
         error("Training Dataset initialization failed\n");
       }
@@ -1484,22 +1484,25 @@ int main(int argc, char* argv[]) {
          (par::k > classIdx[1].size())) {
         error("k is greater than testing case or control split size\n");
       }
-      
-      usingSimData = true;
     }
     P.printLOG("\n");
-
+    if(usingSimData) {
+      P.printLOG(Timestamp() + "Using SIMULATED data\n");
+    } else {
+      P.printLOG(Timestamp() + "Using PLINK data\n");
+    }
     // check that data sets have been loaded
     if(!trainDs->NumInstances()) { error("Training data set has no instances\n"); }
     if(!holdoutDs->NumInstances()) { error("Holdout data set has no instances\n"); }
     if(!testDs->NumInstances()) { error("Testing data set has no instances\n"); }
-    
+    testDs->PrintStatsSimple(cout);
+
     // -------------------------------------------------------------------------
     EvaporativeCoolingPrivacy ecp(trainDs, holdoutDs, testDs, &P, usingSimData);
     if(!ecp.ComputeScores()) {
       error("EvaporativeCoolingPrivacy::ComputeScores failed\n");
     }
-    if(ecp.UsingSimData()) {
+    if(usingSimData) {
       pair<uint, double> detection = ecp.CheckDetectedAttributes();
       P.printLOG(Timestamp() + "Privacy EC detected simulated signals: " + 
                  int2str(detection.first) + "\t(" + 
