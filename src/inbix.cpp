@@ -1453,7 +1453,7 @@ int main(int argc, char* argv[]) {
     } else {
       // -----------------------------------------------------------------------
       // data sets from other sources, simulations here
-      P.printLOG("Loading simulated training, holdout and testing data sets.\n");
+      P.printLOG(Timestamp() + "Loading simulated training, holdout and testing data sets.\n");
       usingSimData = true;
       if(!trainDs->LoadPrivacySim(par::ecPrivacyTrainFile)) {
         error("Training Dataset initialization failed\n");
@@ -1502,13 +1502,14 @@ int main(int argc, char* argv[]) {
     if(!ecp.ComputeScores()) {
       error("EvaporativeCoolingPrivacy::ComputeScores failed\n");
     }
-    if(usingSimData) {
-      pair<uint, double> detection = ecp.CheckDetectedAttributes();
-      P.printLOG(Timestamp() + "Privacy EC detected simulated signals: " + 
-                 int2str(detection.first) + "\t(" + 
-                 dbl2str(detection.second * 100) + "%)\n");
-      ecp.WriteBestAttributes(par::output_file_name);
-    }
+
+    //    if(usingSimData) {
+    //      pair<uint, double> detection = ecp.CheckDetectedAttributes();
+    //      P.printLOG(Timestamp() + "Privacy EC detected simulated signals: " + 
+    //                 int2str(detection.first) + "\t(" + 
+    //                 dbl2str(detection.second * 100) + "%)\n");
+    //      ecp.WriteBestAttributes(par::output_file_name);
+    //    }
     
     P.printLOG(Timestamp() + "Cleaning up dynamically allocated memory\n");
     if(trainDs) delete trainDs;

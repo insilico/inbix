@@ -404,8 +404,6 @@ double par::ecPrivacyStartTemp = 0.1;
 double par::ecPrivacyFinalTemp = 0.00001;
 double par::ecPrivacyTau = 100;
 uint par::ecPrivacyUpdateFrequency = 50;
-unsigned int par::ecPrivacyRemovePerIteration = 1;
-unsigned int par::ecPrivacyMinVars = 2;
 double par::ecPrivacyPercentSignal = 0.1;
 
 // added for recursive indirect path modularity support - bcw - 5/31/16

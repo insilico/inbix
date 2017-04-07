@@ -77,7 +77,6 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   // algorithm
   Q_EPS = 0.005;
   MAX_ITERATIONS = 1e6;
-  minRemainAttributes = par::ecPrivacyMinVars;
   updateInterval = par::ecPrivacyUpdateFrequency;
   iteration = 0;
   update = 0;
@@ -91,7 +90,6 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   // > tau <- d^2/2 # larger tau takes longer to get to Tmin
   // tau = (train->NumVariables() * train->NumVariables()) / 2.0; 
   tau = par::ecPrivacyTau;
-  numToRemovePerIteration = par::ecPrivacyRemovePerIteration;
   summedProbabilities = 0;
   randUniformValue = 0;
   randomForestPredictError = 0;
@@ -120,10 +118,10 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
 	}
   if(UsingSimData()) {
     iterationOutputStream 
-            << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved\tCorrect" << endl;
+            << "Iteration\tTemperature\tKeep\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved\tCorrect" << endl;
   } else {
     iterationOutputStream 
-            << "Iteration\tUpdate\tTemperature\tKeep\tRemove\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved" << endl;
+            << "Iteration\tTemperature\tKeep\tTrainAcc\tHoldoutAcc\tTestAcc\tLastRemoved" << endl;
   }
 
   // initialize all masks to contain all variables
@@ -137,18 +135,6 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   PP->printLOG(Timestamp() + "\tscore count: " + int2str(trainImportance.size()) + "\n");
   PP->printLOG(Timestamp() + "\tdelta Q: " + dbl2str(deltaQ) + "\n");
 
-  // initialize loop control variables
-  iteration = 1;
-  uint tail1 = 0;
-  uint tail2 = train->NumVariables();
-  vector<uint> prevNumInUpdate;
-  prevNumInUpdate.push_back(tail1);
-  prevNumInUpdate.push_back(tail2);
-  if(par::algorithm_verbose) {
-    cout << endl << "i: " << iteration << " prevNumInUpdate tail1: " 
-         << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
-  }
-
   // main optimization loop
   PP->printLOG(Timestamp() + "Entering EVAPORATIVE COOLING cooling schedule loop\n");
   startTemp = par::ecPrivacyStartTemp;
@@ -156,13 +142,15 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
   currentTemp = startTemp;
   PP->printLOG(Timestamp() + "Starting temperature: " + dbl2str(startTemp) + "\n");
   numInstances = train->NumInstances();
+  // TODO: make these two parameters?
   threshold = 4.0 / sqrt(numInstances);
   tolerance = 1.0 / sqrt(numInstances);
   tau = par::ecPrivacyTau;
   removeAttrs.clear();
   keepAttrs = train->GetVariableNames();
-  while((currentTemp > finalTemp) && (tail1 != tail2) && 
-          (train->NumVariables() >= minRemainAttributes)) {
+  iteration = 1;
+  update = 0;
+  while((currentTemp > finalTemp) && (train->NumVariables() > 0)) {
     if(iteration > MAX_ITERATIONS) {
       error("EvaporativeCoolingPrivacy::ComputeScores() Maximum iterations reached " 
               + int2str(iteration) + "\n");
@@ -177,24 +165,23 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
     PP->printLOG(Timestamp() + "Computing p_t, p_h and delta_t\n");
     this->ComputeAttributeProbabilities();
     // evaporate worst
-    uint numRemoved = this->EvaporateWorstAttributes(numToRemovePerIteration);
-    PP->printLOG(Timestamp() + "Removed        : " + int2str(numRemoved) + "\n");
-    PP->printLOG(Timestamp() + "Dataset now has: " + int2str(train->NumVariables()) + "\n");
-    // if we need to update temperature
+    uint attributesRemoved = this->EvaporateWorstAttributes(1);
+    if(attributesRemoved) {
+      PP->printLOG(Timestamp() + "Dataset now has: " + int2str(train->NumVariables()) + "\n");
+    } else {
+      error("EvaporativeCoolingPrivacy::ComputeScores() could not remove worst");
+    }
     if((iteration % updateInterval) == 1) {
-      if(numRemoved) {
-        PP->printLOG(Timestamp() + "Calculating importance scores and delta Q\n");
-        this->ComputeImportance();
-        PP->printLOG(Timestamp() + "\tscore count: " + int2str(trainImportance.size()) + "\n");
-        PP->printLOG(Timestamp() + "\tdelta Q: " + dbl2str(deltaQ) + "\n");
-        PP->printLOG(Timestamp() + "Running classifiers on train, holdout and test\n");
-        this->ComputeBestAttributesErrors();
-        PP->printLOG(Timestamp() + "Running temperature update\n");
-        this->UpdateTemperature();
-        PP->printLOG(Timestamp() + "New temperature: " + dbl2str(currentTemp) + "\n");
-        if(par::verbose) this->PrintState();
-      }
-      prevNumInUpdate.push_back(train->NumVariables());
+      PP->printLOG(Timestamp() + "Calculating importance scores and delta Q\n");
+      this->ComputeImportance();
+      PP->printLOG(Timestamp() + "\tscore count: " + int2str(trainImportance.size()) + "\n");
+      PP->printLOG(Timestamp() + "\tdelta Q: " + dbl2str(deltaQ) + "\n");
+      PP->printLOG(Timestamp() + "Running classifiers on train, holdout and test\n");
+      this->ComputeBestAttributesErrors();
+      PP->printLOG(Timestamp() + "Running temperature update\n");
+      this->UpdateTemperature();
+      PP->printLOG(Timestamp() + "New temperature: " + dbl2str(currentTemp) + "\n");
+      if(par::verbose) this->PrintState();
       //      cout << "Accuracies:" << endl 
       //              << iteration << "\t"
       //              << keepAttrs.size() << "\t"
@@ -202,20 +189,16 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
       //              << (1 - holdError) << "\t" 
       //              << (1 - testError) << "\t"
       //              << endl;
-      ++update;
       // ----------------------------------------------------------------------
       // write iteration update results to iterationOutputFile
       // if simulated data, report the number of correctly detected attributes
-      string lastGeneRemoved = 
-              ((removeAttrs.size())? removeAttrs[removeAttrs.size()-1]: "-none-");
+      string lastGeneRemoved = removeAttrs[removeAttrs.size()-1];
       if(UsingSimData()) {
         uint numSignalsFound = CurrentNumberCorrect(keepAttrs);
         iterationOutputStream 
                 << iteration << "\t"
-                << update << "\t"
                 << currentTemp << "\t"
                 << keepAttrs.size() << "\t"
-                << updateInterval << "\t"
                 << (1 - trainError) << "\t" 
                 << (1 - holdError) << "\t" 
                 << (1 - testError) << "\t"
@@ -225,10 +208,8 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
       } else {
         iterationOutputStream 
                 << iteration << "\t"
-                << update << "\t"
                 << currentTemp << "\t"
                 << keepAttrs.size() << "\t"
-                << updateInterval << "\t"
                 << (1 - trainError) << "\t" 
                 << (1 - holdError) << "\t" 
                 << (1 - testError) << "\t"
@@ -236,11 +217,7 @@ bool EvaporativeCoolingPrivacy::ComputeScores() {
                 << endl;
         // << insilico::join(keepAttrs.begin(), keepAttrs.end(), ",") 
       }
-      // is this number of attributes left same as last update? 'while' above cond
-      tail1 = prevNumInUpdate[prevNumInUpdate.size() - 2];
-      tail2 = prevNumInUpdate[prevNumInUpdate.size() - 1];
-      //    cout << endl << "Update History i: " << iteration << " prevNumInUpdate tail1: " 
-      //         << tail1 << "\t" << "tail2: " << tail2 << endl << endl;
+      ++update;
     }
     ++iteration;
   }
@@ -287,8 +264,6 @@ void EvaporativeCoolingPrivacy::PrintState() {
   cout << "updates:            " << update << endl;
   cout << "max iterations:     " << MAX_ITERATIONS << endl;
   cout << "deltaQ:             " << deltaQ << endl;
-  cout << "remove per:         " << numToRemovePerIteration << endl;
-  cout << "min final set size: " << minRemainAttributes << endl;
   cout << "start temp:         " << startTemp << endl;
   cout << "current temp:       " << currentTemp << endl;
   cout << "final temp:         " << finalTemp << endl;
@@ -511,8 +486,6 @@ uint EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
     return 0;
   }
   // remove numToRemove of the toRemove variables
-  // removeAttrs.clear();
-  // keepAttrs.clear();
   uint loopToRemove = 0;
   if(found) {
     PP->printLOG(Timestamp() + "Found " + int2str(possiblyRemove.size()) + " candidates to remove\n");
@@ -563,31 +536,34 @@ bool EvaporativeCoolingPrivacy::RemoveImportanceScore(std::string varToRemove) {
 
   return found;
 }
-// remove *the* worst attribute: no 's' in the method name
-bool EvaporativeCoolingPrivacy::EvaporateWorstAttribute() {
-  //    >   num.remv <- 1 # only remove 1 attribute  
-  //    >   remv.atts <- kept.atts[prob.rands < cum.scaled.PAs][1] 
-  if(par::verbose) 
-    PP->printLOG(Timestamp() + "Evaporating single worst attribute\n");
-  sort(trainImportance.begin(), trainImportance.end(), scoresSortAsc);
-  pair<double, string> worstAttr = *(trainImportance.begin());
-  string thisVar = worstAttr.second;
-  double thisVarValue = worstAttr.first;
-  sort(trainImportance.begin(), trainImportance.end(), scoresSortAscByName);
-  if(par::verbose) {
-    PP->printLOG(Timestamp() + "Worst attribute [" + thisVar + "]\n");
-    PP->printLOG(Timestamp() + thisVar + " (" + int2str(thisVarValue) + ")\n");
-  }
-  // adjust masks
-  train->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
-  holdout->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
-  test->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
-  // keep/remove accounting
-  removeAttrs.push_back(thisVar);
-  keepAttrs = train->MaskGetAllVariableNames();
 
-  return true;
-}
+// remove *the* worst attribute: no 's' in the method name
+//bool EvaporativeCoolingPrivacy::EvaporateWorstAttribute() {
+//  if(par::verbose) 
+//    PP->printLOG(Timestamp() + "Evaporating single worst attribute\n");
+//  sort(trainImportance.begin(), trainImportance.end(), scoresSortAsc);
+//  pair<double, string> worstAttr = *(trainImportance.begin());
+//  string thisVar = worstAttr.second;
+//  double thisVarValue = worstAttr.first;
+//  sort(trainImportance.begin(), trainImportance.end(), scoresSortAscByName);
+//  if(par::verbose) {
+//    PP->printLOG(Timestamp() + "Worst attribute [" + thisVar + "]\n");
+//    PP->printLOG(Timestamp() + thisVar + " (" + int2str(thisVarValue) + ")\n");
+//  }
+//  // adjust masks
+//  train->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
+//  holdout->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
+//  test->MaskRemoveVariableType(thisVar, NUMERIC_TYPE);
+//  // keep/remove accounting
+//  removeAttrs.push_back(thisVar);
+//  keepAttrs = train->MaskGetAllVariableNames();
+//
+//  // update the algorithm tracking variables
+//  curVarNames = train->MaskGetAllVariableNames();
+//  curVarMap = train->MaskGetAttributeMask(NUMERIC_TYPE);
+//
+//  return true;
+//}
 
 bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
   PP->printLOG(Timestamp() + "Compute errors for the best attributes\n");

@@ -3060,12 +3060,6 @@ void setOptions(CArgs & a) {
   if(a.find("--ec-privacy-update-frequency")) {
 		par::ecPrivacyUpdateFrequency = a.value_int("--ec-privacy-update-frequency");
   }
-  if(a.find("--ec-privacy-remove-per-iter")) {
-		par::ecPrivacyRemovePerIteration = a.value_int("--ec-privacy-remove-per-iter");
-  }
-  if(a.find("--ec-privacy-min-vars")) {
-		par::ecPrivacyMinVars = a.value_int("--ec-privacy-min-vars");
-  }
   if(a.find("--ec-privacy-percent-signal")) {
     par::ecPrivacyPercentSignal = a.value_double("--ec-privacy-percent-signal");
   }
@@ -4552,8 +4546,6 @@ void setOptions(CArgs & a) {
             << "      --ec-privacy-final-temp   Privacy EC final temperature\n"
             << "      --ec-privacy-tau          Privacy EC tau\n"
             << "      --ec-privacy-update-frequency Privacy EC scores updated every frequency iterations\n"
-            << "      --ec-privacy-remove-per-iter  Privacy EC  number of variables to remove per iteration\n"
-            << "      --ec-privacy-min-vars     Privacy EC minimum number of variables to continue iterations\n"
             << "      --ec-privacy-percent-signal Privacy EC percent signal in simulation data sets\n"
             << "\n"
             << "      --rank-by {ranker}        Rank variables by ranker\n"

@@ -44,7 +44,7 @@ private:
   bool ComputeAttributeProbabilities();
   bool GenerateRandomUniformProbabilities();
   uint EvaporateWorstAttributes(uint numToRemove);
-  bool EvaporateWorstAttribute();
+  // bool EvaporateWorstAttribute();
   double ClassifyAttributeSet(std::vector<std::string> attrs, DATASET_TYPE);
   bool ComputeBestAttributesErrors();
   bool UpdateTemperature();
@@ -61,7 +61,6 @@ private:
   uint MAX_ITERATIONS;
   
   // algorithm
-  uint minRemainAttributes;
   uint updateInterval;
   uint iteration;
   uint update;
@@ -101,7 +100,6 @@ private:
   double tau;
   
   // evaporation phase variables
-  uint numToRemovePerIteration;
   std::vector<double> attributeProbabilty;
   double summedProbabilities;
   std::vector<double> scaledProbabilities;
