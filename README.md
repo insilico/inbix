@@ -9,7 +9,7 @@ inbix
 inbix is a free, open-source bioinformatics tool, designed to perform a 
 range of large-scale analyses in a computationally efficient manner. The inbix
 program integrates many different analyses developed by the McKinney [In Silico
-Lab][insilico.utulsa.edu] for Bioinformatics and Computational Biology at the 
+Lab](insilico.utulsa.edu) for Bioinformatics and Computational Biology at the 
 University of Tulsa.
 
 inbix is built upon the PLINK project developed by Shaun Purcell at the 
