@@ -3,4 +3,8 @@ inbix
 inbix.log
 epiqtl
 nbproject
+Makefile
+CMakeCache.txt
+CMakeFiles/*
+cmake_install.cmake
 

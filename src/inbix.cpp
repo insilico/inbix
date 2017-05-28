@@ -95,6 +95,8 @@ int main(int argc, char* argv[]) {
 
 	set_new_handler(NoMem);
 
+	// ssstream versionString;
+	// versionString << inbix_VERSION_MAJOR << "." << inbix_VERSION_MINOR;
 	PVERSION = "0.05"; // 4 chars
 	PREL = "p"; // space or p (full, or prelease) 
 	PDATE = "2017       "; // 11 chars

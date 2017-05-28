@@ -9,7 +9,7 @@ inbix
 inbix is a free, open-source bioinformatics tool, designed to perform a 
 range of large-scale analyses in a computationally efficient manner. The inbix
 program integrates many different analyses developed by the McKinney [In Silico
-Lab][insilico.utulsa.edu] for Bioinformatics and Computational Biology at the 
+Lab](insilico.utulsa.edu) for Bioinformatics and Computational Biology at the 
 University of Tulsa.
 
 inbix is built upon the PLINK project developed by Shaun Purcell at the 
@@ -20,6 +20,8 @@ For more details, visit the inbix
 [website](http://insilico.utulsa.edu/index.php/inbix-in-silico-research-groups-bioinformatics-toolbox-for-network-and-machine-learning-analysis/)
 
 ### Dependencies ###
+* [cmake](http:/cmake.org) is required to build the executable from source.
+
 * The libz/zlib compression library is required, but this is installed by default
 on most Unix systems.  In MinGW libz is installed via mingw-get.
 
@@ -39,18 +41,16 @@ analysis code.  This is another library typically installed alongside the
 compiler toolchain.
 
 ### Compilation Environment and Instructions ###
-GNU g++ has been used to successfully compile the code.
+GNU g++ 4.9 successfully compiles the code using the cmake 2.8.11 build system.
 
 We have successfully built and run inbix on:
 
-* Linux (64-bit)
+* Linux (64-bit) Debian 8, Ubuntu 14.04
 
-To build inbix, run make, which invokes the Makefile
+To build inbix, run 'cmake .', which builds 'Makefile', then run 'make'.
 
+    $ cmake .
     $ make
-
-Other makefiles are in this repository. USE AT YOUR OWN RISK! However, having 
-an example, any example, is better than nothing.
 
 ### Contributors ###
 See AUTHORS file.
