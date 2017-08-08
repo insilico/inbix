@@ -1354,12 +1354,13 @@ int main(int argc, char* argv[]) {
     // load the data sets: train, holdout and test from R simulations
     Dataset* trainDs = new Dataset();
     Dataset* holdoutDs = new Dataset();
-    Dataset* testDs = new Dataset();
+    Dataset* testDs = NULL;
+    if(par::ecPrivacyTestFile != "") {
+	    Dataset* testDs = new Dataset();
+	  }
     PlinkInternalsDataset* plinkInternalsDataset = 0;
     bool usingSimData = false;
-    if((par::ecPrivacyTrainFile == "") || 
-       (par::ecPrivacyHoldoutFile == "") || 
-       (par::ecPrivacyTestFile == "")) {
+    if((par::ecPrivacyTrainFile == "") || (par::ecPrivacyHoldoutFile == "")) {
       usingSimData = false;
       // can we split potential PLINK samples into train, holdout and test sets
       if(P.sample.size() < 12) {
@@ -1369,7 +1370,7 @@ int main(int argc, char* argv[]) {
               "* PLINK data sets loaded with --bfile/--file\n"
               "and/or\n"
               "* expression data loaded with --numeric-file.\n");
-      } 
+      }
       // --------------------------------------------------------------------
       // SPLIT PLINK loaded data set and run EvaporativeCoolingPrivacy 
       P.SNP2Ind();
@@ -1455,7 +1456,7 @@ int main(int argc, char* argv[]) {
     } else {
       // -----------------------------------------------------------------------
       // data sets from other sources, simulations here
-      P.printLOG(Timestamp() + "Loading simulated training, holdout and testing data sets.\n");
+      P.printLOG(Timestamp() + "Loading simulated data sets.\n");
       usingSimData = true;
       if(!trainDs->LoadPrivacySim(par::ecPrivacyTrainFile)) {
         error("Training Dataset initialization failed\n");
@@ -1466,28 +1467,25 @@ int main(int argc, char* argv[]) {
          (par::k > classIdx[1].size())) {
         error("k is greater than training case or control split size\n");
       }
-      P.printLOG("\n");
-      
       if(!holdoutDs->LoadPrivacySim(par::ecPrivacyHoldoutFile)) {
         error("Holdout Dataset initialization failed\n");
       }
-      P.printLOG("\n");
       classIdx = holdoutDs->GetClassIndexes();
       if((par::k > classIdx[0].size()) ||
          (par::k > classIdx[1].size())) {
         error("k is greater than holdout case or control split size\n");
       }
-
-      if(!testDs->LoadPrivacySim(par::ecPrivacyTestFile)) {
-        error("Test Dataset initialization failed\n");
-      }
-      classIdx = testDs->GetClassIndexes();
-      if((par::k > classIdx[0].size()) ||
-         (par::k > classIdx[1].size())) {
-        error("k is greater than testing case or control split size\n");
-      }
+			if(testDs) {
+	      if(!testDs->LoadPrivacySim(par::ecPrivacyTestFile)) {
+	        error("Test Dataset initialization failed\n");
+	      }
+        classIdx = testDs->GetClassIndexes();
+	      if((par::k > classIdx[0].size()) ||
+	         (par::k > classIdx[1].size())) {
+	        error("k is greater than testing case or control split size\n");
+	      }
+    	}
     }
-    P.printLOG("\n");
     if(usingSimData) {
       P.printLOG(Timestamp() + "Using SIMULATED data\n");
     } else {
@@ -1496,8 +1494,10 @@ int main(int argc, char* argv[]) {
     // check that data sets have been loaded
     if(!trainDs->NumInstances()) { error("Training data set has no instances\n"); }
     if(!holdoutDs->NumInstances()) { error("Holdout data set has no instances\n"); }
-    if(!testDs->NumInstances()) { error("Testing data set has no instances\n"); }
-    testDs->PrintStatsSimple(cout);
+    if(testDs) {
+    	if(!testDs->NumInstances()) { cerr << "WARNING: Testing data set has no instances\n"; }
+    }
+   	trainDs->PrintStatsSimple(cout);
 
     // -------------------------------------------------------------------------
     EvaporativeCoolingPrivacy ecp(trainDs, holdoutDs, testDs, &P, usingSimData);

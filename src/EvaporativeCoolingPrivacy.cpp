@@ -45,12 +45,13 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
                                                      Plink* plinkPtr, 
                                                      bool datasetsAreSims) {
   // --------------------------------------------------------------------------
+  PP = plinkPtr;
+  PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy constructor START\n");
   // data
   train = trainset;
   holdout = holdoset;
   test = testset;
   // pointer to a PLINK environment
-  PP = plinkPtr;
   dataIsSimulated = datasetsAreSims;
   numInstances = 0;
   curVarNames = trainset->GetVariableNames();
@@ -59,20 +60,26 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   // --------------------------------------------------------------------------
   // if the passed data sets are simulated (for paper)
   if(datasetsAreSims) {
-    if(trainset->NumVariables() != holdoset->NumVariables() ||
-       trainset->NumVariables() != testset->NumVariables() ||
-       holdoset->NumVariables() != testset->NumVariables()) {
-      error("Training, holdout and testing data sets must have the "
-              "same number of variables\n");
+    PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy constructor: simulated data\n");
+    if(trainset->NumVariables() != holdoset->NumVariables()) {
+      if(testset) {
+        if(trainset->NumVariables() != testset->NumVariables() ||
+            holdoset->NumVariables() != testset->NumVariables()) {
+                error("Training, holdout and testing data sets must have the same number of variables\n");
+        }
+      }
     }
     // special variables for simulated data sets
-    numSignalsInData = 
-            static_cast<uint>(numVariables * par::ecPrivacyPercentSignal);
+    PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy variables: " + int2str(numVariables) + "\n");
+    PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy percent signal: " + dbl2str(par::ecPrivacyPercentSignal) + "\n");
+    numSignalsInData = (uint) ((double) numVariables * par::ecPrivacyPercentSignal);
+    PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy signals: " + int2str(numSignalsInData) + "\n");
+    signalNames.clear();
     for(uint sigNum=0; sigNum < numSignalsInData; ++sigNum) {
       signalNames.push_back(curVarNames[sigNum]);
-
     }
   }
+  PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy initialize\n");
   // --------------------------------------------------------------------------
   // algorithm
   Q_EPS = 0.005;
@@ -98,6 +105,7 @@ EvaporativeCoolingPrivacy::EvaporativeCoolingPrivacy(Dataset* trainset,
   trainError = 0;
   // --------------------------------------------------------------------------
   // end of constructor
+  PP->printLOG(Timestamp() + "EvaporativeCoolingPrivacy END\n");
   PrintState();
 }
 
@@ -277,7 +285,9 @@ void EvaporativeCoolingPrivacy::PrintState() {
   }
   cout << "last train error:   " << trainError << endl;
   cout << "last holdout error: " << holdError << endl;
-  cout << "last test error:    " << testError << endl;
+  if(test) {
+    cout << "last test error:    " << testError << endl;  
+  }
 
   cout << "**********************************************************" << endl;
 }
@@ -499,7 +509,9 @@ uint EvaporativeCoolingPrivacy::EvaporateWorstAttributes(uint numToRemove) {
       PP->printLOG(Timestamp() + "Evaporating/removing variable: " + removeVar + "\n");
       train->MaskRemoveVariable(removeVar);
       holdout->MaskRemoveVariable(removeVar);
-      test->MaskRemoveVariable(removeVar);
+      if(test) {
+        test->MaskRemoveVariable(removeVar);
+      }
       removeAttrs.push_back(removeVar);
       // remove the importance scores for the variables removed
       this->RemoveImportanceScore(removeVar);
@@ -580,16 +592,24 @@ bool EvaporativeCoolingPrivacy::ComputeBestAttributesErrors() {
     PP->printLOG(Timestamp() + "adjusting small difference in holdout: " + dbl2str(lilBit) + "\n");
     holdError = holdError + lilBit;
   }
-  testError = ClassifyAttributeSet(keepAttrs, TEST);
+  testError = 1.0;
+  if(test) {
+    testError = ClassifyAttributeSet(keepAttrs, TEST);
+  }
   testErrors.push_back(testError);
+
   PP->printLOG(Timestamp() + "* Error\n");
   PP->printLOG(Timestamp() + "* train:   " + dbl2str(trainError) + "\n" +
-               Timestamp() + "* holdout: " + dbl2str(holdError) + "\n" +
-               Timestamp() + "* test:    " + dbl2str(testError) + "\n");
+               Timestamp() + "* holdout: " + dbl2str(holdError) + "\n");
+  if(test) {
+    PP->printLOG(Timestamp() + "* test:    " + dbl2str(testError) + "\n");
+  }
   PP->printLOG(Timestamp() + "* Accuracy\n");
-  PP->printLOG(Timestamp() + "* train:   " + dbl2str(1-trainError) + "\n" +
-               Timestamp() + "* holdout: " + dbl2str(1-holdError) + "\n" +
-               Timestamp() + "* test:    " + dbl2str(1-testError) + "\n");
+  PP->printLOG(Timestamp() + "* train:   " + dbl2str(1 - trainError) + "\n" +
+               Timestamp() + "* holdout: " + dbl2str(1 - holdError) + "\n");
+  if(test) {
+    PP->printLOG(Timestamp() + "* test:    " + dbl2str(1 - testError) + "\n");
+  }
 }
 
 double 
