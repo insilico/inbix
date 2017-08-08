@@ -23,8 +23,8 @@
 #include "Insilico.h"
 
 using namespace std;
-using namespace insilico;
 using namespace arma;
+using namespace insilico;
 
 CentralityRanker::CentralityRanker(string gainFileParam, bool isUpperTriangular)
 {
@@ -166,26 +166,24 @@ void CentralityRanker::WriteToFile(string outFile, int topN)
 {
   PP->printLOG("Writing centrality scores to [" + outFile + "]\n");
 	// r indices sorted in descending order
-	uvec r_indices = sort_index(r, 1);
-	int index = 0;
-
+	uvec r_indices = sort_index(r, "descend");
 	// output r (SNPrank rankings) to file, truncating to 6 decimal places
 	ofstream outputFileHandle(outFile.c_str());
 	streamsize savedPrecision = cout.precision();
 	cout.precision(numeric_limits<double>::digits10);
 	outputFileHandle << "SNP\tSNPrank\tdiag\tdegree" << endl;
-	int numToWrite = (int) r.n_elem;
+	uint numToWrite = static_cast<uint>(r.n_elem);
   if((topN > 0) && (topN <= numToWrite)) {
     numToWrite = topN;
   }
   PP->printLOG("Writing " + int2str(numToWrite) + " top ranks\n");
-	for(int i = 0; i < numToWrite; i++) {
-			index = r_indices[i];
-			outputFileHandle << variableNames[index] << "\t"
-					 << r[index] << "\t"
-					 << Gdiag(index) << "\t"
-					 << colsum(index);
-			outputFileHandle << endl;
+	for(uint indexIt=0; indexIt < numToWrite; ++indexIt) {
+    uint index = r_indices[indexIt];
+    outputFileHandle << variableNames[index] << "\t"
+         << r[index] << "\t"
+         << Gdiag(index) << "\t"
+         << colsum(index);
+    outputFileHandle << endl;
 	}
 	outputFileHandle.close();
 	cout.precision(savedPrecision);
@@ -194,14 +192,12 @@ void CentralityRanker::WriteToFile(string outFile, int topN)
 void CentralityRanker::WriteToConsole(int topN)
 {
 	// r indices sorted in descending order
-	uvec r_indices = sort_index(r, 1);
-	int index = 0;
+	uvec r_indices = sort_index(r, "descend");
 	// output r (SNPrank rankings) to file with full precision
 	streamsize savedPrecision = cout.precision();
 	cout.precision(numeric_limits<double>::digits10);
 	cout << "SNP\tSNPrank\tdiag\tdegree" << endl;
-	for(int i = 0; i < (int) r.n_elem; i++) {
-			index = r_indices[i];
+	for(auto index: r_indices) {
 			cout << variableNames[index] << "\t"
 					 << r[index] << "\t"
 					 << Gdiag(index) << "\t"
