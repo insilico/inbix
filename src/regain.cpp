@@ -329,7 +329,7 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
       double rawValue = valueToWrite = regainMatrix[i][j];
       switch(outputTransform) {
         case REGAIN_OUTPUT_TRANSFORM_ABS:
-          valueToWrite = abs(rawValue);
+          valueToWrite = fabs(rawValue);
           break;
         case REGAIN_OUTPUT_TRANSFORM_THRESH:
           valueToWrite = rawValue < outputThreshold ? 0 : rawValue;
@@ -574,7 +574,7 @@ void Regain::mainEffect(int varIndex, bool varIsNumeric) {
         }
         break;
       case REGAIN_OUTPUT_TRANSFORM_ABS:
-        mainEffectValueTransformed = abs(mainEffectValue);
+        mainEffectValueTransformed = fabs(mainEffectValue);
         break;
     }
 
@@ -701,7 +701,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
     vector_t betaInteractionCoefPVals;
     if(!interactionModel->isValid()) {
       string failMsg = "FAILURE: Invalid regression fit for interaction "
-        "variables [" + coef1Label + "], [" + coef2Label + "]";
+        "variables [" + coef1Label + "], [" + coef2Label + "]\n";
       failures.push_back(failMsg);
       useFailureValue = true;
     }
@@ -741,24 +741,24 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
           // interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
-          interactionValue = 0;
           ++infCount;
           stringstream ss;
           ss << "Regression test statistic is +/-infinity on coefficient "
             << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
+          interactionValue = 0;
         }
         if(std::isnan(interactionValue)) {
-          interactionValue = 0;
           ++nanCount;
           stringstream ss;
           ss << "Regression test statistic is not a number NaN on coefficient "
             << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
           warnings.push_back(ss.str());
+          interactionValue = 0;
         }
       } else {
         interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-        if(abs(interactionValue) > par::regainLargeCoefTvalue) {
+        if(fabs(interactionValue) > par::regainLargeCoefTvalue) {
           stringstream ss;
           ss << "Large test statistic value [" << interactionValue
             << "] on coefficient for interaction variables ["
@@ -800,7 +800,7 @@ void Regain::interactionEffect(int varIndex1, bool var1IsNumeric,
           }
           break;
         case REGAIN_OUTPUT_TRANSFORM_ABS:
-          interactionValueTransformed = abs(interactionValue);
+          interactionValueTransformed = fabs(interactionValue);
           break;
       }
     }
@@ -1004,7 +1004,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
         }
       } else {
         interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-        if(abs(interactionValue) > par::regainLargeCoefTvalue) {
+        if(fabs(interactionValue) > par::regainLargeCoefTvalue) {
           stringstream ss;
           ss << "Large test statistic value [" << interactionValue
             << "] on coefficient for interaction variables ["
@@ -1052,7 +1052,7 @@ void Regain::pureInteractionEffect(int varIndex1, bool var1IsNumeric,
             }
             break;
           case REGAIN_OUTPUT_TRANSFORM_ABS:
-            interactionValueTransformed = abs(interactionValue);
+            interactionValueTransformed = fabs(interactionValue);
             break;
         }
         regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
