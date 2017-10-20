@@ -2824,6 +2824,16 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar-var-model")) {
     par::dcvar_var_model = a.value("--dcvar-var-model");
   }
+  // added for an OMRF project - bcw - 10/18/17
+  if(a.find("--dcvar-genotypes-file")) {
+    par::dcvar_genotypes_file = a.value("--dcvar-genotypes-file");
+  }
+  if(a.find("--dcvar-genotypes-locations-file")) {
+    par::dcvar_genotypes_locations_file = a.value("--dcvar-genotypes-locations-file");
+  }
+  if(a.find("--dcvar-methylation-file")) {
+    par::dcvar_methylation_file = a.value("--dcvar-methylation-file");
+  }
 
   // differential modularity analysis - bcw - 7/31/14
   if(a.find("--dmgain")) {
@@ -4466,7 +4476,10 @@ void setOptions(CArgs & a) {
             << "      --dcvar-pfilter                  Enable p-value filtering\n"
             << "      --dcvar-pfilter-value {value}    P-value filter value\n"
             << "      --dcvar-pfilter-type {bon,fdrbh} P-value filter type Bonferroni or FDR BH\n"
-            << "      --var-model {dom|rec|hom}        Allelic model\n"
+            << "      --dcvar-var-model {dom|rec|hom}  Allelic model\n"
+            << "      --dcvar-genotypes-file           Genotypes file SNPs by subject (0,1,2)\n"
+            << "      --dcvar-genotypes-locations-file Genotypes locations filename\n"
+            << "      --dcvar-methylation-file         Methylation expression filename\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"

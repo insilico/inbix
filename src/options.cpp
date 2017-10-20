@@ -260,6 +260,10 @@ bool par::do_dcvar_pfilter = false;
 double par::dcvar_pfilter_value = 0.05;
 string par::dcvar_pfilter_type = "bon";
 string par::dcvar_var_model = "dom";
+// added for an OMRF project - bcw - 10/18/17
+string par::dcvar_genotypes_file = "";
+string par::dcvar_genotypes_locations_file = "";
+string par::dcvar_methylation_file = "";
 
 // differential modularity analysis - bcw - 7/31/14
 bool par::do_differential_modularity = false;

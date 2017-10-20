@@ -357,6 +357,10 @@ public:
   static double dcvar_pfilter_value;
   static string dcvar_pfilter_type;
   static string dcvar_var_model;
+  // added for an OMRF project - bcw - 10/18/17
+  static string dcvar_genotypes_file;
+  static string dcvar_genotypes_locations_file;
+  static string dcvar_methylation_file;
   
   // differential modularity analysis - bcw - 7/31/14
   static bool do_differential_modularity;
