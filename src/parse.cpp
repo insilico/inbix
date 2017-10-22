@@ -2831,8 +2831,11 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar-genotypes-locations-file")) {
     par::dcvar_genotypes_locations_file = a.value("--dcvar-genotypes-locations-file");
   }
-  if(a.find("--dcvar-methylation-file")) {
-    par::dcvar_methylation_file = a.value("--dcvar-methylation-file");
+  if(a.find("--dcvar-gene-expression-file")) {
+    par::dcvar_gene_expression_file = a.value("--dcvar-gene-expression-file");
+  }
+  if(a.find("--dcvar-chip-seq-file")) {
+    par::dcvar_chip_seq_file = a.value("--dcvar-chip-seq-file");
   }
 
   // differential modularity analysis - bcw - 7/31/14
@@ -4479,7 +4482,8 @@ void setOptions(CArgs & a) {
             << "      --dcvar-var-model {dom|rec|hom}  Allelic model\n"
             << "      --dcvar-genotypes-file           Genotypes file SNPs by subject (0,1,2)\n"
             << "      --dcvar-genotypes-locations-file Genotypes locations filename\n"
-            << "      --dcvar-methylation-file         Methylation expression filename\n"
+            << "      --dcvar-gene-expression-file     Gene expression filename\n"
+            << "      --dcvar-chip-seq-file            ChIP-seq expression filename\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"
