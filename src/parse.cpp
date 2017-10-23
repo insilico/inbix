@@ -2828,8 +2828,8 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar-genotypes-file")) {
     par::dcvar_genotypes_file = a.value("--dcvar-genotypes-file");
   }
-  if(a.find("--dcvar-genotypes-locations-file")) {
-    par::dcvar_genotypes_locations_file = a.value("--dcvar-genotypes-locations-file");
+  if(a.find("--dcvar-snp-locations-file")) {
+    par::dcvar_snp_locations_file = a.value("--dcvar-snp-locations-file");
   }
   if(a.find("--dcvar-gene-expression-file")) {
     par::dcvar_gene_expression_file = a.value("--dcvar-gene-expression-file");
@@ -4478,12 +4478,12 @@ void setOptions(CArgs & a) {
             << "      --dcvar                          Perform a differential coexpression variant analysis\n"
             << "      --dcvar-pfilter                  Enable p-value filtering\n"
             << "      --dcvar-pfilter-value {value}    P-value filter value\n"
-            << "      --dcvar-pfilter-type {bon,fdrbh} P-value filter type Bonferroni or FDR BH\n"
-            << "      --dcvar-var-model {dom|rec|hom}  Allelic model\n"
-            << "      --dcvar-genotypes-file           Genotypes file SNPs by subject (0,1,2)\n"
-            << "      --dcvar-genotypes-locations-file Genotypes locations filename\n"
-            << "      --dcvar-gene-expression-file     Gene expression filename\n"
-            << "      --dcvar-chip-seq-file            ChIP-seq expression filename\n"
+            << "      --dcvar-pfilter-type {bon|fdrbh} P-value correction for filter Bonferroni or FDR BH\n"
+            << "      --dcvar-var-model {dom|rec|hom}  Allelic SNP model\n"
+            << "      --dcvar-genotypes-file           Genotypes file: SNPs by subject (0,1,2) - gzipped\n"
+            << "      --dcvar-snp-locations-file       SNP locations information filename - gzipped\n"
+            << "      --dcvar-gene-expression-file     Gene expression filename: gene by subject\n"
+            << "      --dcvar-chip-seq-file            ChIP-seq expression filename: SNPs by measures\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"

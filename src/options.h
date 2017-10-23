@@ -359,7 +359,7 @@ public:
   static string dcvar_var_model;
   // added for an OMRF project - bcw - 10/18/17
   static string dcvar_genotypes_file;
-  static string dcvar_genotypes_locations_file;
+  static string dcvar_snp_locations_file;
   static string dcvar_gene_expression_file;
   static string dcvar_chip_seq_file;
   

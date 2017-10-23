@@ -32,6 +32,10 @@
 // Plink object
 extern Plink* PP;
 
+bool pvalComparator(const matrixElement &l, const matrixElement &r) {
+  return l.first < r.first;
+}
+
 Regain::Regain(bool compr, double sifthr, bool compo) {
   writeCompressedFormat = compr;
   sifThresh = sifthr;

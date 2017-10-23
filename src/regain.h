@@ -19,11 +19,9 @@
 
 #include "zfstream.h"
 
-using namespace std;
+#include "Insilico.h"
 
-// type for storing p-value and matrix position (row,col) of
-// reGAIN interaction terms
-typedef pair< double, pair<int, int> > matrixElement;
+using namespace std;
 
 // output options - bcw - 4/30/13
 enum RegainOutputFormat {

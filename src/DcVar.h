@@ -13,6 +13,8 @@
 
 #include <armadillo>
 
+#include "Insilico.h"
+
 // handle PLINK (Caleb, et al paper) and OMRF (Courtney) separate files
 enum SNP_INPUT_TYPE {
   SNP_SRC_PLINK, SNP_SRC_FILE
@@ -50,9 +52,11 @@ private:
   bool SetDebugMode(bool debugFlag=true);
   void PrintState();
   bool ReadGenotypesFile();
-  bool ReadGenotypeLocationsFile();
+  bool ReadSnpLocationsFile();
   bool ReadGeneExpressionFile();
   bool ReadChipSeqFile();
+  bool RunPlink(bool debugFlag=false);
+  bool RunOMRF(bool debugFlag=false);
   // INPUTS
   bool chipSeq;
   bool debugFlag;
@@ -60,6 +64,7 @@ private:
   bool chipSeqMode;
   bool debugMode;
   std::vector<std::string> snpNames;
+  std::vector<std::string> genotypeSubjects;
   std::vector<std::string> geneNames;
   std::vector<std::string> geneExprSubjects;
   GENOTYPE_RECORDS genotypes;

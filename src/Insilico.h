@@ -63,6 +63,10 @@ bool scoresSortAsc(const ScoreVarPair& p1, const ScoreVarPair& p2);
 bool scoresSortAscByName(const ScoreVarPair& p1, const ScoreVarPair& p2);
 bool scoresSortDesc(const ScoreVarPair& p1, const ScoreVarPair& p2);
 
+// type for storing p-value and matrix position (row,col) of
+// GAIN matrix interaction terms
+typedef pair< double, pair<int, int> > matrixElement;
+
 /// C O N S T A N T S
 
 /// Error codes.
