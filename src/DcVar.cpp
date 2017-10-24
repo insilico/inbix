@@ -71,6 +71,9 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) 
   }
 }
 
+DcVar::~DcVar() {
+}
+
 bool DcVar::Run(bool debugFlag) {
   if(snpInputType == SNP_SRC_PLINK) {
     RunPlink(debugFlag);
@@ -367,57 +370,58 @@ bool DcVar::RunOMRF(bool debugFlag) {
   if(numGenes < 2) {
     error("Gene expression file must specified for this analysis!");
   }
-  PP->printLOG(int2str(numVariants) + " variants, and " + int2str(numGenes) + " genes\n");
+  PP->printLOG("[ " + int2str(numVariants) + " variants, and [ " + 
+               int2str(numGenes) + " ] genes\n");
 
   // for all variants
-  for(uint snpIdx = 0; snpIdx != snpNames.size(); ++snpIdx) {
+  for(uint snpIdx = 0; snpIdx != numVariants; ++snpIdx) {
     string snpName = snpNames[snpIdx];
-    if(debugFlag) {
-      PP->printLOG("SNP: " + snpName + "\n");
-    }
+    PP->printLOG("--------------------------------------------------------\n");
+    PP->printLOG("SNP: " + snpName + "\n");
+    PP->printLOG("\tcreating phenotype from SNP genotypes\n");
     vector<uint> snpGenotypes;
     for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
       snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[snpIdx][colIdx]));
     }
     // get variant genotypes for all subject and map to a genetic model
     MapPhenosToModel(snpGenotypes, "dom");
+    PP->printLOG("\tsplitting into case-control groups\n");
     matrix_t X;
     matrix_t Y;
     // split into case-control groups for testing DC
     if(!SplitExpressionCaseControl(X, Y)) {
       error("Could not split on case control status");
     }
+    
     // compute DC
-
-    // flatten your X into X_flat
+    PP->printLOG("\treformatting case-control matrices to Armadillo format\n");
+    // flatten X into X_flat
     vector<double> X_flat;
     for (auto vec : X) {
       for (auto el : vec) {
         X_flat.push_back(el);
       }
     }
-    // create your Armadillo matrix X_arma
+    // create Armadillo matrix X_arma
     mat X_arma(X_flat);
 
-    // flatten your Y into Y_flat
+    // flatten Y into Y_flat
     vector<double> Y_flat;
     for (auto vec : Y) {
       for (auto el : vec) {
         Y_flat.push_back(el);
       }
     }
-    // create your Armadillo matrix Y_arma
+    // create Armadillo matrix Y_arma
     mat Y_arma(Y_flat);
     
+    PP->printLOG("\tComputeDifferentialCorrelationZ\n");
     if(!ComputeDifferentialCorrelationZ(X_arma, Y_arma)) {
       error("ComputeDifferentialCorrelationZ failed");
     }
   } // end for all variants
   
   return true;
-}
-
-DcVar::~DcVar() {
 }
 
 bool DcVar::ComputeDifferentialCorrelationZ(mat& X, mat& Y) {
@@ -520,10 +524,11 @@ bool DcVar::ReadGenotypesFile() {
     ++lineCounter;
 	  vector<string> tok = zin.tokenizeLine();
     if(tok.size() < 2) {
-      cerr << "Error reading line [ " << lineCounter 
-              << " ] from " << par::dcvar_genotypes_file << endl;
+      cerr << "WARNING: line [ " << lineCounter 
+              << " ] from [ " << par::dcvar_genotypes_file << " ]" << endl;
       continue;
     }
+    snpNames.push_back(tok[0]);
     vector<double> lineGenotypes;
 	  for(int j=1; j < tok.size(); j++) {
       lineGenotypes.push_back(lexical_cast<double>(tok[j]));
@@ -547,9 +552,10 @@ bool DcVar::ReadSnpLocationsFile() {
     ++lineCounter;
 	  vector<string> tok = zin.tokenizeLine();
     if(tok.size() != 5) {
-      cerr << "Error reading line [ " << lineCounter 
+      cerr << "WARNING: reading line [ " << lineCounter 
               << " ] from " << par::dcvar_snp_locations_file 
               << " should have 5 columns, found " << tok.size()
+              << ". Blank line(s)?"
               << endl;
       continue;
     }
@@ -560,7 +566,8 @@ bool DcVar::ReadSnpLocationsFile() {
     snpLocations[tok[0]] = thisSnpInfo;
 	}
   zin.close();
-  PP->printLOG("Read subject SNP location info for " + int2str(lineCounter) + " SNPs\n");
+  PP->printLOG("Read subject SNP location info for [ " + 
+               int2str(lineCounter) + " ] SNPs\n");
 
   return true;
 }
@@ -602,9 +609,9 @@ bool DcVar::ReadGeneExpressionFile() {
 	}
   exprFile.close();
    
-  PP->printLOG("Read gene expression for " + 
-  int2str(geneExprSubjects.size()) + " subjects and " + 
-  int2str(geneExprNames.size()) + " genes\n");
+  PP->printLOG("Read gene expression for [ " + 
+  int2str(geneExprSubjects.size()) + " ] subjects and [ " + 
+  int2str(geneExprNames.size()) + " ] genes\n");
   
   return true;
 }
@@ -623,11 +630,11 @@ bool DcVar::ReadChipSeqFile() {
 	  vector<string> tok;
     split(tok, line, "\t");
     if(tok.size() != (CHIP_SEQ_SNP + 1)) {
-      cerr << "Error reading line [ " << lineCounter 
+      cerr << "WARNING: reading line [ " << lineCounter 
               << " ] from " << par::dcvar_chip_seq_file 
               << " should have 16 columns, found " << tok.size()
-              << endl;
-      return(false);
+              << ". Blank line(s)?" << endl;
+      continue;
     }
     CHIP_SEQ_INFO thisChipSeqInfo;
     thisChipSeqInfo.chrom = tok[CHIP_SEQ_CHROM];
