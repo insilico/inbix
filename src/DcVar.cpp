@@ -21,6 +21,7 @@
 #include "plink.h"
 #include "helper.h"
 #include "zed.h"
+#include "stats.h"
 
 // inbix
 #include "DcVar.h"
@@ -37,10 +38,11 @@ bool pvalComparatorAscending(const matrixElement &l, const matrixElement &r) {
   return l.first < r.first;
 }
 
-DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool useDebug) {
+DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) {
+  PP->printLOG("dcVar initializing\n");
   snpInputType = snpInputTypeParam;
   chipSeq = hasChipSeq;
-  debugMode = useDebug;
+  debugMode = debugFlag;
   if(snpInputTypeParam == SNP_SRC_FILE) {
     // OMRF data files gzipped and tab-delimited
     if(!ReadGenotypesFile()) {
@@ -58,10 +60,12 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool useDebug) {
         error("Reading ChIP-seq file failed. Exiting.");
       }
     }
+    PP->printLOG("Using separate tab-delimited files for input data sets\n");
   } else {
     // assume PLINK data structures accessible through PP pointer
+    PP->printLOG("Using PLINK files for input data sets\n");
   }
-  SetDebugMode(useDebug);
+  SetDebugMode(debugFlag);
   if(!CheckInputs()) {
     error("Checking data sets compatability failed. Exiting.");
   }
@@ -295,26 +299,191 @@ bool DcVar::RunPlink(bool debugFlag) {
   return true;
 }
 
+// build a new phenotype from variant genotypes
+bool DcVar::MapPhenosToModel(vector<uint> phenos, string varModel) {
+  caseIdxCol.clear();
+  ctrlIdxCol.clear();
+  for(uint i=0; i < phenos.size(); ++i) {
+    uint thisPheno = phenos[i];
+    uint thisMappedPheno = 0;
+    if(varModel == "dom") {
+      thisMappedPheno = (thisPheno == 2)? 1: 0;
+    } else {
+      if(varModel == "rec") {
+        thisMappedPheno = (thisPheno == 0)? 1: 0;
+      } else {
+        // hom
+        thisMappedPheno = (thisPheno == 1)? 1: -9;
+      }
+    }
+    if(thisMappedPheno) {
+      caseIdxCol.push_back(i);
+    } else {
+      ctrlIdxCol.push_back(i);
+    }
+    mappedPhenos.push_back(thisMappedPheno);
+  }
+  return true;
+}
+
+bool DcVar::SplitExpressionCaseControl(matrix_t& caseMatrix, 
+                                       matrix_t& ctrlMatrix) {
+  uint nGenes = geneExprNames.size();
+  uint nCases = caseIdxCol.size();
+  uint nCtrls = ctrlIdxCol.size();
+  caseMatrix.resize(nCases);
+  for(uint col=0; col < nCases; ++col) {
+    uint thisIndexCol = caseIdxCol[col];
+    for(uint row=0; row < nGenes; ++row) {
+      caseMatrix[col].push_back(expressionMatrix[row][thisIndexCol]);
+    }
+  }
+  ctrlMatrix.resize(nCtrls);
+  for(uint col=0; col < nCtrls; ++col) {
+    uint thisIndexCol = ctrlIdxCol[col];
+    for(uint row=0; row < nGenes; ++row) {
+      ctrlMatrix[col].push_back(expressionMatrix[row][thisIndexCol]);
+    }
+  }
+  
+  return true;
+}
+
 bool DcVar::RunOMRF(bool debugFlag) {
-  PP->printLOG("Performing dcVar analysis on OMRF supplied .gz and .tab files\n");
+  PP->printLOG("Performing dcVar analysis on .gz and .tab files\n");
+  uint numVariants = snpNames.size();
+  // expression
+  uint numGenes = geneExprNames.size();
+  // chipseq
+  uint numChipSeq = 0;
+  if(chipSeq) {
+    numChipSeq = chipSeqExpression.size();
+  }
+    // make sure we have variants
+  if(numVariants < 1) {
+    error("Variants file must specified at least one variant for this analysis!");
+  }
+  // make sure we have genes
+  if(numGenes < 2) {
+    error("Gene expression file must specified for this analysis!");
+  }
+  PP->printLOG(int2str(numVariants) + " variants, and " + int2str(numGenes) + " genes\n");
+
+  // for all variants
+  for(uint snpIdx = 0; snpIdx != snpNames.size(); ++snpIdx) {
+    string snpName = snpNames[snpIdx];
+    if(debugFlag) {
+      PP->printLOG("SNP: " + snpName + "\n");
+    }
+    vector<uint> snpGenotypes;
+    for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
+      snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[snpIdx][colIdx]));
+    }
+    // get variant genotypes for all subject and map to a genetic model
+    MapPhenosToModel(snpGenotypes, "dom");
+    matrix_t X;
+    matrix_t Y;
+    // split into case-control groups for testing DC
+    if(!SplitExpressionCaseControl(X, Y)) {
+      error("Could not split on case control status");
+    }
+    // compute DC
+
+    // flatten your X into X_flat
+    vector<double> X_flat;
+    for (auto vec : X) {
+      for (auto el : vec) {
+        X_flat.push_back(el);
+      }
+    }
+    // create your Armadillo matrix X_arma
+    mat X_arma(X_flat);
+
+    // flatten your Y into Y_flat
+    vector<double> Y_flat;
+    for (auto vec : Y) {
+      for (auto el : vec) {
+        Y_flat.push_back(el);
+      }
+    }
+    // create your Armadillo matrix Y_arma
+    mat Y_arma(Y_flat);
+    
+    if(!ComputeDifferentialCorrelationZ(X_arma, Y_arma)) {
+      error("ComputeDifferentialCorrelationZ failed");
+    }
+  } // end for all variants
+  
   return true;
 }
 
 DcVar::~DcVar() {
 }
 
-bool DcVar::CheckInputs() {
-  // do all the input data set dimensions make sense?
-  // SNPs/genotype
-  uint numSnp = snpLocations.size();
-  // expression
-  uint nunmExpr = geneNames.size();
-  // chipseq
-  uint numChipSeq = 0;
-  if(chipSeq) {
-    numChipSeq = chipSeqExpression.size();
+bool DcVar::ComputeDifferentialCorrelationZ(mat& X, mat& Y) {
+  // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
+  // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
+  // cout << "X" << endl << X.submat(0,0,4,4) << endl;
+  // cout << "Y" << endl << Y.submat(0,0,4,4) << endl;
+  // compute covariances/correlations
+  mat covMatrixX;
+  mat corMatrixX;
+  if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
+    error("Could not compute coexpression matrix for cases");
+  }
+  mat covMatrixY;
+  mat corMatrixY;
+  if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
+    error("Could not compute coexpression matrix for controls");
+  }
+
+  // DEBUG
+  // cout << corMatrixX.n_rows << " x " << corMatrixX.n_cols << endl;
+  // cout << "cor(X)" << endl << corMatrixX.submat(0,0,4,4) << endl;
+  // cout << "cor(Y)" << endl << corMatrixY.submat(0,0,4,4) << endl;
+
+  // algorithm from R script z_test.R
+  PP->printLOG("Performing Z-tests for interactions\n");
+  double n1 = caseIdxCol.size();
+  double n2 = ctrlIdxCol.size();
+  int goodFdrCount = 0;
+  double minP = 1.0;
+  double maxP = 0.0;
+  uint numVars = geneExprNames.size();
+  for(int i=0; i < numVars; ++i) {
+    for(int j=0; j < numVars; ++j) {
+      if(j <= i) {
+        continue;
+      }
+      double r_ij_1 = corMatrixX(i, j);
+      double r_ij_2 = corMatrixY(i, j);
+      double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
+      double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
+      double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
+      double p = 2 * normdist(-abs(Z_ij)); 
+      if(std::isinf(Z_ij)) {
+        cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
+      }
+      // if(i == 0 && j < 10) {
+      //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
+      // }
+      resultsMatrix[i][j] = Z_ij;
+      resultsMatrix[j][i] = Z_ij;
+      if(par::do_regain_pvalue_threshold) {
+        if(p > par::regainPvalueThreshold) {
+          resultsMatrix[i][j] = 0;
+          resultsMatrix[j][i] = 0;
+        }
+      }
+      resultsMatrixPvals[i][j] = p;
+      resultsMatrixPvals[j][i] = p;
+    }
   }
   
+  return true;
+}
+
+bool DcVar::CheckInputs() {
   return true;
 }
 
@@ -355,11 +524,11 @@ bool DcVar::ReadGenotypesFile() {
               << " ] from " << par::dcvar_genotypes_file << endl;
       continue;
     }
-    vector<uint> lineGenotypes(tok.size() - 1);
+    vector<double> lineGenotypes;
 	  for(int j=1; j < tok.size(); j++) {
-      lineGenotypes[j - 1] = lexical_cast<uint>(tok[j]);
+      lineGenotypes.push_back(lexical_cast<double>(tok[j]));
 	  }
-    genotypes[tok[0]] = lineGenotypes;
+    genotypeMatrix.push_back(lineGenotypes);
 	}
   zin.close();
   PP->printLOG("Read subject genotypes for " + int2str(lineCounter) + " SNPs\n");
@@ -398,6 +567,7 @@ bool DcVar::ReadSnpLocationsFile() {
 
 bool DcVar::ReadGeneExpressionFile() {
   checkFileExists(par::dcvar_gene_expression_file);
+
   PP->printLOG("Reading gene expression input from [ " + par::dcvar_gene_expression_file + " ]\n");
   ifstream exprFile(par::dcvar_gene_expression_file);
   PP->printLOG("Getting gene expression subject names from first line header\n");
@@ -408,6 +578,8 @@ bool DcVar::ReadGeneExpressionFile() {
   for(uint i=1; i < headerParts.size(); ++i) {
     geneExprSubjects.push_back(headerParts[i]);
   }
+
+  PP->printLOG("Getting gene names from first column, remaining columns gene expression\n");
   string line;
   uint lineCounter = 0;
   while(getline(exprFile, line)) {
@@ -419,17 +591,20 @@ bool DcVar::ReadGeneExpressionFile() {
               << " ] from " << par::dcvar_gene_expression_file 
               << " should have more than 2 columns (subjects)"
               << endl;
-      return(false);
+      continue;
     }
-    geneNames.push_back(tok[0]);
-    vector<double> newRow;
+    geneExprNames.push_back(tok[0]);
+    vector<double> thisExprRec;
     for(uint i=1; i < tok.size(); ++i) {
-      newRow.push_back(lexical_cast<double>(tok[i]));
+      thisExprRec.push_back(lexical_cast<double>(tok[i]));
     }
-    exprMatrix.push_back(newRow);
+    expressionMatrix.push_back(thisExprRec);
 	}
   exprFile.close();
-  PP->printLOG("Read gene expression for " + int2str(lineCounter) + " genes\n");
+   
+  PP->printLOG("Read gene expression for " + 
+  int2str(geneExprSubjects.size()) + " subjects and " + 
+  int2str(geneExprNames.size()) + " genes\n");
   
   return true;
 }

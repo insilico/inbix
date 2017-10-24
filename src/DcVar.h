@@ -13,6 +13,7 @@
 
 #include <armadillo>
 
+#include "plink.h"
 #include "Insilico.h"
 
 // handle PLINK (Caleb, et al paper) and OMRF (Courtney) separate files
@@ -24,14 +25,13 @@ enum CHIP_SEQ_EXTRACT_FIELD_IDX {
   CHIP_SEQ_CHROM=0, CHIP_SEQ_POS=1, CHIP_SEQ_EXPR=11, CHIP_SEQ_SNP=15
 };
 
-// SNPS/genotypes
-typedef std::map<std::string, std::vector<uint>> GENOTYPE_RECORDS;
 struct SNP_INFO {
   std::string chrom;
   uint location;
   char refAllele;
 };
 typedef std::map<std::string, SNP_INFO> SNP_INFO_MAP;
+typedef std::map<std::string, SNP_INFO>::const_iterator SNP_INFO_MAP_IT;
 
 // ChIP-seq expression
 struct CHIP_SEQ_INFO {
@@ -44,7 +44,7 @@ typedef std::map<std::string, CHIP_SEQ_INFO> CHIP_SEQ_INFO_MAP;
 class DcVar {
 public:
   DcVar(SNP_INPUT_TYPE snpInputTypeParam=SNP_SRC_PLINK,
-        bool hasChipSeq=false, bool useDebug=false);
+        bool hasChipSeq=false, bool debugFlag=false);
   bool Run(bool debugFlag=false);
   virtual ~DcVar();
 private:
@@ -56,6 +56,9 @@ private:
   bool ReadGeneExpressionFile();
   bool ReadChipSeqFile();
   bool RunPlink(bool debugFlag=false);
+  bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel);
+  bool SplitExpressionCaseControl(matrix_t& caseMatrix, matrix_t& ctrlMatrix);
+  bool ComputeDifferentialCorrelationZ(arma::mat& X, arma::mat& Y);
   bool RunOMRF(bool debugFlag=false);
   // INPUTS
   bool chipSeq;
@@ -64,16 +67,20 @@ private:
   bool chipSeqMode;
   bool debugMode;
   std::vector<std::string> snpNames;
-  std::vector<std::string> genotypeSubjects;
-  std::vector<std::string> geneNames;
-  std::vector<std::string> geneExprSubjects;
-  GENOTYPE_RECORDS genotypes;
   SNP_INFO_MAP snpLocations;
-  std::vector<std::vector<double>> exprMatrix;
+  std::vector<std::string> genotypeSubjects;
+  matrix_t genotypeMatrix;
+  std::vector<std::string> geneExprNames;
+  std::vector<std::string> geneExprSubjects;
+  matrix_t expressionMatrix;
   CHIP_SEQ_INFO_MAP chipSeqExpression;
   // OUTPUTS
-  arma::mat resultsMatrix;
-  arma::mat resultsMatrixPvals;
+  matrix_t resultsMatrix;
+  matrix_t resultsMatrixPvals;
+  // ALGORITHM VARIABLES
+  std::vector<uint> mappedPhenos;
+  std::vector<uint> caseIdxCol;
+  std::vector<uint> ctrlIdxCol;
 };
 
 #endif	/* DCVAR_H */
