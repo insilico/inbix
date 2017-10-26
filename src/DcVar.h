@@ -57,8 +57,9 @@ private:
   bool ReadChipSeqFile();
   bool RunPlink(bool debugFlag=false);
   bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel);
-  bool SplitExpressionCaseControl(matrix_t& caseMatrix, matrix_t& ctrlMatrix);
-  bool ComputeDifferentialCorrelationZ(arma::mat& X, arma::mat& Y);
+  bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
+  bool ComputeDifferentialCorrelationZnaive(arma::mat& X, arma::mat& Y);
+  bool ComputeDifferentialCorrelationZ(std::string variant, arma::mat& X, arma::mat& Y);
   bool RunOMRF(bool debugFlag=false);
   // INPUTS
   bool chipSeq;
@@ -74,9 +75,6 @@ private:
   std::vector<std::string> geneExprSubjects;
   matrix_t expressionMatrix;
   CHIP_SEQ_INFO_MAP chipSeqExpression;
-  // OUTPUTS
-  matrix_t resultsMatrix;
-  matrix_t resultsMatrixPvals;
   // ALGORITHM VARIABLES
   std::vector<uint> mappedPhenos;
   std::vector<uint> caseIdxCol;

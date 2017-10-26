@@ -329,23 +329,21 @@ bool DcVar::MapPhenosToModel(vector<uint> phenos, string varModel) {
   return true;
 }
 
-bool DcVar::SplitExpressionCaseControl(matrix_t& caseMatrix, 
-                                       matrix_t& ctrlMatrix) {
+bool DcVar::SplitExpressionCaseControl(mat& caseMatrix, 
+                                       mat& ctrlMatrix) {
   uint nGenes = geneExprNames.size();
   uint nCases = caseIdxCol.size();
   uint nCtrls = ctrlIdxCol.size();
-  caseMatrix.resize(nCases);
   for(uint col=0; col < nCases; ++col) {
     uint thisIndexCol = caseIdxCol[col];
     for(uint row=0; row < nGenes; ++row) {
-      caseMatrix[col].push_back(expressionMatrix[row][thisIndexCol]);
+      caseMatrix(col, row) = expressionMatrix[row][thisIndexCol];
     }
   }
-  ctrlMatrix.resize(nCtrls);
   for(uint col=0; col < nCtrls; ++col) {
     uint thisIndexCol = ctrlIdxCol[col];
     for(uint row=0; row < nGenes; ++row) {
-      ctrlMatrix[col].push_back(expressionMatrix[row][thisIndexCol]);
+      ctrlMatrix(col, row) = expressionMatrix[row][thisIndexCol];
     }
   }
   
@@ -378,6 +376,7 @@ bool DcVar::RunOMRF(bool debugFlag) {
     string snpName = snpNames[snpIdx];
     PP->printLOG("--------------------------------------------------------\n");
     PP->printLOG("SNP: " + snpName + "\n");
+    // ------------------------------------------------------------------------
     PP->printLOG("\tcreating phenotype from SNP genotypes\n");
     vector<uint> snpGenotypes;
     for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
@@ -385,38 +384,19 @@ bool DcVar::RunOMRF(bool debugFlag) {
     }
     // get variant genotypes for all subject and map to a genetic model
     MapPhenosToModel(snpGenotypes, "dom");
+    // ------------------------------------------------------------------------
     PP->printLOG("\tsplitting into case-control groups\n");
-    matrix_t X;
-    matrix_t Y;
+    uint nCases = caseIdxCol.size();
+    uint nCtrls = ctrlIdxCol.size();
+    mat X(nCases, numGenes);
+    mat Y(nCtrls, numGenes);
     // split into case-control groups for testing DC
     if(!SplitExpressionCaseControl(X, Y)) {
       error("Could not split on case control status");
     }
-    
-    // compute DC
-    PP->printLOG("\treformatting case-control matrices to Armadillo format\n");
-    // flatten X into X_flat
-    vector<double> X_flat;
-    for (auto vec : X) {
-      for (auto el : vec) {
-        X_flat.push_back(el);
-      }
-    }
-    // create Armadillo matrix X_arma
-    mat X_arma(X_flat);
-
-    // flatten Y into Y_flat
-    vector<double> Y_flat;
-    for (auto vec : Y) {
-      for (auto el : vec) {
-        Y_flat.push_back(el);
-      }
-    }
-    // create Armadillo matrix Y_arma
-    mat Y_arma(Y_flat);
-    
+    // ------------------------------------------------------------------------
     PP->printLOG("\tComputeDifferentialCorrelationZ\n");
-    if(!ComputeDifferentialCorrelationZ(X_arma, Y_arma)) {
+    if(!ComputeDifferentialCorrelationZ(snpName, X, Y)) {
       error("ComputeDifferentialCorrelationZ failed");
     }
   } // end for all variants
@@ -424,7 +404,48 @@ bool DcVar::RunOMRF(bool debugFlag) {
   return true;
 }
 
-bool DcVar::ComputeDifferentialCorrelationZ(mat& X, mat& Y) {
+bool DcVar::ComputeDifferentialCorrelationZ(string variant, mat& X, mat& Y) {
+  PP->printLOG("Performing Z-tests for interactions\n");
+  double n1 = static_cast<double>(caseIdxCol.size());
+  double n2 = static_cast<double>(ctrlIdxCol.size());
+  uint numVars = geneExprNames.size();
+  for(int i=0; i < numVars; ++i) {
+    for(int j=i + 1; j < numVars; ++j) {
+      // correlation between this interaction pair (i, j) in cases and controls
+      double r_ij_1 = as_scalar(cor(X.col(i), X.col(j)));
+      double r_ij_2 = as_scalar(cor(Y.col(i), Y.col(j)));
+      // differential correlation Z
+      double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
+      double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
+      double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
+      double p = 2 * normdist(-abs(Z_ij)); 
+      if(std::isinf(Z_ij)) {
+        cerr << "WARNING: Infinite Z found at (" << i << ", " << j << ")" << endl;
+      }
+      bool writeResults = false;
+      if(par::do_regain_pvalue_threshold) {
+        if(p < par::regainPvalueThreshold) {
+          writeResults = true;
+        }
+      } else {
+        writeResults = true;
+      }
+      if(writeResults) {
+        cout 
+                << variant << "\t"
+                << snpNames[i] << "\t" 
+                << snpNames[j] << "\t" 
+                << Z_ij  << "\t"
+                << p 
+                << endl;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool DcVar::ComputeDifferentialCorrelationZnaive(mat& X, mat& Y) {
   // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
   // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
   // cout << "X" << endl << X.submat(0,0,4,4) << endl;
@@ -471,16 +492,16 @@ bool DcVar::ComputeDifferentialCorrelationZ(mat& X, mat& Y) {
       // if(i == 0 && j < 10) {
       //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
       // }
-      resultsMatrix[i][j] = Z_ij;
-      resultsMatrix[j][i] = Z_ij;
-      if(par::do_regain_pvalue_threshold) {
-        if(p > par::regainPvalueThreshold) {
-          resultsMatrix[i][j] = 0;
-          resultsMatrix[j][i] = 0;
-        }
-      }
-      resultsMatrixPvals[i][j] = p;
-      resultsMatrixPvals[j][i] = p;
+//      resultsMatrix[i][j] = Z_ij;
+//      resultsMatrix[j][i] = Z_ij;
+//      if(par::do_regain_pvalue_threshold) {
+//        if(p > par::regainPvalueThreshold) {
+//          resultsMatrix[i][j] = 0;
+//          resultsMatrix[j][i] = 0;
+//        }
+//      }
+//      resultsMatrixPvals[i][j] = p;
+//      resultsMatrixPvals[j][i] = p;
     }
   }
   
