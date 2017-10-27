@@ -6,9 +6,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <iterator>
+#include <fstream>
 #include <string>
 #include <vector>
-#include <fstream>
 
 // Armadillo Linear Algebra/Matrices/Vectors
 #include <armadillo>
@@ -370,7 +370,15 @@ bool DcVar::RunOMRF(bool debugFlag) {
   }
   PP->printLOG("[ " + int2str(numVariants) + " variants, and [ " + 
                int2str(numGenes) + " ] genes\n");
-
+  
+  stringstream ssResultsFilename;
+  stringstream ssErrorsFilename;
+  ssResultsFilename << "dcvar." << par::output_file_name << ".pass.tab";
+  ssErrorsFilename << "dcvar." << par::output_file_name << ".err.tab";
+  string resultsFilename = ssResultsFilename.str();
+  string errorsFilename = ssErrorsFilename.str();
+  resultsFile.open(resultsFilename);
+  errorsFile.open(errorsFilename);
   // for all variants
   for(uint snpIdx = 0; snpIdx != numVariants; ++snpIdx) {
     string snpName = snpNames[snpIdx];
@@ -407,6 +415,8 @@ bool DcVar::RunOMRF(bool debugFlag) {
       error("ComputeDifferentialCorrelationZ failed");
     }
   } // end for all variants
+  resultsFile.close();
+  errorsFile.close();
   
   return true;
 }
@@ -429,17 +439,19 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
       vec ctrlVarVals2 = ctrls.col(j);
       vec r_ij_2_v = cor(ctrlVarVals1, ctrlVarVals2);
       double r_ij_2 = (double) r_ij_2_v[0];
-//      cout << caseVarVals1 << endl << caseVarVals2 << endl;
-//      cout << cor(caseVarVals1, caseVarVals2) << endl;
-//      cout << ctrlVarVals1 << endl << ctrlVarVals2 << endl;
-//      cout << cor(ctrlVarVals1, ctrlVarVals2) << endl;
       // differential correlation Z
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       double p = 2 * normdist(-abs(Z_ij)); 
       if(std::isinf(Z_ij)) {
-        cerr << "WARNING: Infinite Z found at (" << i << ", " << j << ")" << endl;
+        errorsFile << "InfiniteZ" << "\t"
+                << variant << "\t"
+                << geneExprNames[i] << "\t" 
+                << geneExprNames[j] << "\t" 
+                << Z_ij << "\t"
+                << p 
+                << endl;
       }
       bool writeResults = false;
       if(par::do_dcvar_pfilter) {
@@ -450,11 +462,11 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
         writeResults = true;
       }
       if(writeResults) {
-        cout 
+        resultsFile 
                 << variant << "\t"
                 << geneExprNames[i] << "\t" 
                 << geneExprNames[j] << "\t" 
-                << Z_ij  << "\t"
+                << Z_ij << "\t"
                 << p 
                 << endl;
       }
