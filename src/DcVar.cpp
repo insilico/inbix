@@ -383,11 +383,18 @@ bool DcVar::RunOMRF(bool debugFlag) {
       snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[snpIdx][colIdx]));
     }
     // get variant genotypes for all subject and map to a genetic model
+    cout << "Genotypes" << endl;
     MapPhenosToModel(snpGenotypes, "dom");
+    cout << "\tCases:    " << caseIdxCol.size() << "\t";
+    cout << "Controls: " << ctrlIdxCol.size() << endl;
     // ------------------------------------------------------------------------
     PP->printLOG("\tsplitting into case-control groups\n");
     uint nCases = caseIdxCol.size();
     uint nCtrls = ctrlIdxCol.size();
+    if((nCases == 0) || (nCtrls == 0)) {
+      PP->printLOG("\tWARNING: groups size must be greater than 0\n");
+      continue;
+    }
     mat X(nCases, numGenes);
     mat Y(nCtrls, numGenes);
     // split into case-control groups for testing DC
@@ -404,7 +411,9 @@ bool DcVar::RunOMRF(bool debugFlag) {
   return true;
 }
 
-bool DcVar::ComputeDifferentialCorrelationZ(string variant, mat& X, mat& Y) {
+bool DcVar::ComputeDifferentialCorrelationZ(string variant, 
+                                            mat& cases, 
+                                            mat& ctrls) {
   PP->printLOG("Performing Z-tests for interactions\n");
   double n1 = static_cast<double>(caseIdxCol.size());
   double n2 = static_cast<double>(ctrlIdxCol.size());
@@ -412,8 +421,18 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant, mat& X, mat& Y) {
   for(int i=0; i < numVars; ++i) {
     for(int j=i + 1; j < numVars; ++j) {
       // correlation between this interaction pair (i, j) in cases and controls
-      double r_ij_1 = as_scalar(cor(X.col(i), X.col(j)));
-      double r_ij_2 = as_scalar(cor(Y.col(i), Y.col(j)));
+      vec caseVarVals1 = cases.col(i);
+      vec caseVarVals2 = cases.col(j);
+      vec r_ij_1_v = cor(caseVarVals1, caseVarVals2);
+      double r_ij_1 = (double) r_ij_1_v[0];
+      vec ctrlVarVals1 = ctrls.col(i);
+      vec ctrlVarVals2 = ctrls.col(j);
+      vec r_ij_2_v = cor(ctrlVarVals1, ctrlVarVals2);
+      double r_ij_2 = (double) r_ij_2_v[0];
+//      cout << caseVarVals1 << endl << caseVarVals2 << endl;
+//      cout << cor(caseVarVals1, caseVarVals2) << endl;
+//      cout << ctrlVarVals1 << endl << ctrlVarVals2 << endl;
+//      cout << cor(ctrlVarVals1, ctrlVarVals2) << endl;
       // differential correlation Z
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
@@ -423,8 +442,8 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant, mat& X, mat& Y) {
         cerr << "WARNING: Infinite Z found at (" << i << ", " << j << ")" << endl;
       }
       bool writeResults = false;
-      if(par::do_regain_pvalue_threshold) {
-        if(p < par::regainPvalueThreshold) {
+      if(par::do_dcvar_pfilter) {
+        if(p < par::dcvar_pfilter_value) {
           writeResults = true;
         }
       } else {
@@ -433,8 +452,8 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant, mat& X, mat& Y) {
       if(writeResults) {
         cout 
                 << variant << "\t"
-                << snpNames[i] << "\t" 
-                << snpNames[j] << "\t" 
+                << geneExprNames[i] << "\t" 
+                << geneExprNames[j] << "\t" 
                 << Z_ij  << "\t"
                 << p 
                 << endl;
