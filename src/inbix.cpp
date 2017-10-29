@@ -1665,9 +1665,11 @@ int main(int argc, char* argv[]) {
                              par::dcvar_chip_seq_file != "",
                              par::verbose);
     if(dcvar) {
-  		P.printLOG("Running analysis\n");
+  		P.printLOG("Running DcVar::Run method\n");
       dcvar->Run(par::verbose);
       delete dcvar;
+    } else {
+      P.printLOG("ERORR: Unable to construct a DcVar object. Exiting\n");
     }
     
     shutdown();

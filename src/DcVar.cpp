@@ -185,7 +185,7 @@ bool DcVar::RunPlink(bool debugFlag) {
     string dcvarFilename = variantName + ".dcVarTest.txt";
     ofstream dcvarFile;
     PP->printLOG("Writing results to [ " + dcvarFilename + " ]\n");
-    dcvarFile.open(dcvarFilename.c_str());
+    dcvarFile.open(dcvarFilename);
     if(dcvarFile.fail()) {
       error("Cannot open dcVar test results file for writing.");
     }
@@ -368,22 +368,23 @@ bool DcVar::RunOMRF(bool debugFlag) {
   if(numGenes < 2) {
     error("Gene expression file must specified for this analysis!");
   }
-  PP->printLOG("[ " + int2str(numVariants) + " variants, and [ " + 
+  PP->printLOG("Read [ " + int2str(numVariants) + " ] variants, and [ " + 
                int2str(numGenes) + " ] genes\n");
   
-  stringstream ssResultsFilename;
-  stringstream ssErrorsFilename;
-  ssResultsFilename << "dcvar." << par::output_file_name << ".pass.tab";
-  ssErrorsFilename << "dcvar." << par::output_file_name << ".err.tab";
-  string resultsFilename = ssResultsFilename.str();
-  string errorsFilename = ssErrorsFilename.str();
+  double nVars = (double) numGenes;
+  double nCombs = (nVars * (nVars - 1.0)) / 2.0;
+  PP->printLOG("number of interactions [ " + dbl2str(nCombs) + " ]\n");
+  string resultsFilename = par::output_file_name + ".pass.tab";
+  string errorsFilename = par::output_file_name + ".err.tab";
+  PP->printLOG("\twriting interactions that pass p-value threshold to [ "  + resultsFilename + " ]\n");
+  PP->printLOG("\twriting interactions that fail due to errors to [ "  + errorsFilename + " ]\n");
   resultsFile.open(resultsFilename);
   errorsFile.open(errorsFilename);
   // for all variants
   for(uint snpIdx = 0; snpIdx != numVariants; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     PP->printLOG("--------------------------------------------------------\n");
-    PP->printLOG("SNP: " + snpName + "\n");
+    PP->printLOG("SNP [ " + snpName + " ]\n");
     // ------------------------------------------------------------------------
     PP->printLOG("\tcreating phenotype from SNP genotypes\n");
     vector<uint> snpGenotypes;
@@ -391,16 +392,16 @@ bool DcVar::RunOMRF(bool debugFlag) {
       snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[snpIdx][colIdx]));
     }
     // get variant genotypes for all subject and map to a genetic model
-    cout << "Genotypes" << endl;
+    PP->printLOG("\tgenotypes case-control status\n");    
     MapPhenosToModel(snpGenotypes, "dom");
-    cout << "\tCases:    " << caseIdxCol.size() << "\t";
-    cout << "Controls: " << ctrlIdxCol.size() << endl;
+    cout << "\tcases:    " << caseIdxCol.size() << "\t";
+    cout << "controls: " << ctrlIdxCol.size() << endl;
     // ------------------------------------------------------------------------
     PP->printLOG("\tsplitting into case-control groups\n");
     uint nCases = caseIdxCol.size();
     uint nCtrls = ctrlIdxCol.size();
-    if((nCases == 0) || (nCtrls == 0)) {
-      PP->printLOG("\tWARNING: groups size must be greater than 0\n");
+    if((nCases < 3) || (nCtrls < 3)) {
+      PP->printLOG("\tWARNING: groups size must be greater than 2, skipping...\n");
       continue;
     }
     mat X(nCases, numGenes);
@@ -424,10 +425,14 @@ bool DcVar::RunOMRF(bool debugFlag) {
 bool DcVar::ComputeDifferentialCorrelationZ(string variant, 
                                             mat& cases, 
                                             mat& ctrls) {
-  PP->printLOG("Performing Z-tests for interactions\n");
+  PP->printLOG("\tPerforming Z-tests for all rna-seq interactions\n");
   double n1 = static_cast<double>(caseIdxCol.size());
   double n2 = static_cast<double>(ctrlIdxCol.size());
   uint numVars = geneExprNames.size();
+  
+  double minP = 1.0;
+  double maxP = 0.0;
+  uint goodPvalCount = 0;
   for(int i=0; i < numVars; ++i) {
     for(int j=i + 1; j < numVars; ++j) {
       // correlation between this interaction pair (i, j) in cases and controls
@@ -462,6 +467,7 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
         writeResults = true;
       }
       if(writeResults) {
+        ++goodPvalCount;
         resultsFile 
                 << variant << "\t"
                 << geneExprNames[i] << "\t" 
@@ -473,6 +479,8 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
     }
   }
 
+  PP->printLOG("\t[ " + int2str(goodPvalCount) + " ] p-values passed threshold test\n");
+  
   return true;
 }
 
