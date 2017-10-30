@@ -374,6 +374,9 @@ bool DcVar::RunOMRF(bool debugFlag) {
   double nVars = (double) numGenes;
   double nCombs = (nVars * (nVars - 1.0)) / 2.0;
   PP->printLOG("number of interactions [ " + dbl2str(nCombs) + " ]\n");
+  PP->printLOG("Filtering using Bonferroni threshold\n");
+  // insure doubles used in all intermediate calculations
+  double correctedP = par::dcvar_pfilter_value / (nCombs * numVariants);
   string resultsFilename = par::output_file_name + ".pass.tab";
   string errorsFilename = par::output_file_name + ".err.tab";
   PP->printLOG("\twriting interactions that pass p-value threshold to [ "  + resultsFilename + " ]\n");
@@ -412,7 +415,7 @@ bool DcVar::RunOMRF(bool debugFlag) {
     }
     // ------------------------------------------------------------------------
     PP->printLOG("\tComputeDifferentialCorrelationZ\n");
-    if(!ComputeDifferentialCorrelationZ(snpName, X, Y)) {
+    if(!ComputeDifferentialCorrelationZ(snpName, X, Y, correctedP)) {
       error("ComputeDifferentialCorrelationZ failed");
     }
   } // end for all variants
@@ -424,7 +427,8 @@ bool DcVar::RunOMRF(bool debugFlag) {
 
 bool DcVar::ComputeDifferentialCorrelationZ(string variant, 
                                             mat& cases, 
-                                            mat& ctrls) {
+                                            mat& ctrls,
+                                            double correctedP) {
   PP->printLOG("\tPerforming Z-tests for all rna-seq interactions\n");
   double n1 = static_cast<double>(caseIdxCol.size());
   double n2 = static_cast<double>(ctrlIdxCol.size());
@@ -460,7 +464,7 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
       }
       bool writeResults = false;
       if(par::do_dcvar_pfilter) {
-        if(p < par::dcvar_pfilter_value) {
+        if(p < correctedP) {
           writeResults = true;
         }
       } else {

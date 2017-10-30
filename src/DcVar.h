@@ -58,7 +58,8 @@ private:
   bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel);
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
   bool ComputeDifferentialCorrelationZnaive(arma::mat& X, arma::mat& Y);
-  bool ComputeDifferentialCorrelationZ(std::string variant, arma::mat& X, arma::mat& Y);
+  bool ComputeDifferentialCorrelationZ(std::string variant, arma::mat& X, 
+                                       arma::mat& Y, double correctedP);
   bool RunPlink(bool debugFlag=false);
   bool RunOMRF(bool debugFlag=false);
   // INPUTS
