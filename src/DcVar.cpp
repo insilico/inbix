@@ -226,7 +226,6 @@ bool DcVar::RunPlink(bool debugFlag) {
             break;
           }
         }
-        // BH threshold condition not met with any p-values, so break out of this iteration
         if(threshold_index == -1) {
           PP->printLOG("No p-value meets BH threshold criteria, so nothing saved\n");
         } else {
@@ -274,7 +273,10 @@ bool DcVar::RunPlink(bool debugFlag) {
               // cout << gene1 << ", " << gene2 << " => p=" << p << " corrected=" 
               //  << correctedP << " Passed FDR test!" << endl;
               //printf("p-value [%g] < [%g] PASSED!\n", p, correctedP);
+#pragma omp critical 
+{
               dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+}
             }
           } // end pvals cols
         } // end pvals rows
@@ -437,8 +439,9 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
   double minP = 1.0;
   double maxP = 0.0;
   uint goodPvalCount = 0;
-  for(int i=0; i < numVars; ++i) {
-    for(int j=i + 1; j < numVars; ++j) {
+#pragma omp parallel for schedule(dynamic, 1)
+  for(uint i=0; i < numVars; ++i) {
+    for(uint j=i + 1; j < numVars; ++j) {
       // correlation between this interaction pair (i, j) in cases and controls
       vec caseVarVals1 = cases.col(i);
       vec caseVarVals2 = cases.col(j);
@@ -472,6 +475,8 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
       }
       if(writeResults) {
         ++goodPvalCount;
+#pragma omp critical 
+{
         resultsFile 
                 << variant << "\t"
                 << geneExprNames[i] << "\t" 
@@ -479,6 +484,7 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
                 << Z_ij << "\t"
                 << p 
                 << endl;
+}
       }
     }
   }
