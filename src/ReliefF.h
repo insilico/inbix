@@ -95,7 +95,7 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*snpDiff)(unsigned int attributeIndex,
+  double (*snpDiffFuncPtr)(unsigned int attributeIndex,
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
   /*************************************************************************//**
@@ -105,13 +105,13 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*numDiff)(unsigned int attributeIndex,
+  double (*numDiffFuncPtr)(unsigned int attributeIndex,
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
   /// the name of discrete diff(erence) function
-  std::string snpMetric;
+  std::string snpDiffMetricName;
   /// the name of continuous diff(erence) function
-  std::string numMetric;
+  std::string numDiffMetricName;
   /// number of instances to sample
   unsigned int m;
   /// are instances being randomly selected?
@@ -154,7 +154,7 @@ protected:
   /// best k by attribute
   std::map<std::string, unsigned int> bestKs;
   
-  bool ComputerGRM();
+  bool ComputeGRM();
 };
 
 #endif

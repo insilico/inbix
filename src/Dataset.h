@@ -577,7 +577,7 @@ public:
    * \param [in] newNumMetric name of the numeric metric
    * \return distance
    ****************************************************************************/
-  bool SetDistanceMetrics(std::string newSnpWeightMetric, std::string newSnpNNMetric,
+  bool SetDistanceMetrics(std::string newSnpDiffMetric, std::string newSnpNNMetric,
   		std::string newNumMetric="manhattan");
   /*************************************************************************//**
    * Get the the distance metrics used to compute instance-to-instance distances.
@@ -672,7 +672,7 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*snpDiff)(uint attributeIndex,
+  double (*snpDiffFuncPtr)(uint attributeIndex,
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
   /*************************************************************************//**
@@ -683,7 +683,7 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*snpDiffNN)(uint attributeIndex,
+  double (*snpNearestNeighborFuncPtr)(uint attributeIndex,
                       DatasetInstance* dsi1,
                       DatasetInstance* dsi2);
   /*************************************************************************//**
@@ -693,16 +693,16 @@ protected:
    * \param [in] dsi2 pointer to DatasetInstance 2
    * \return diff(erence)
    ****************************************************************************/
-  double (*numDiff)(uint attributeIndex,
+  double (*numDiffFuncPtr)(uint attributeIndex,
                     DatasetInstance* dsi1,
                     DatasetInstance* dsi2);
 
   /// the name of discrete diff(erence) function
-  std::string snpMetric;
-  /// the name of discrete diff(erence) function for nearest neighbors
-  std::string snpMetricNN;
+  std::string snpDiffMetricName;
+  /// the name of discrete distance function for nearest neighbors
+  std::string snpNearestNeighborMetricName;
   /// the name of continuous diff(erence) function
-  std::string numMetric;
+  std::string numDiffMetricName;
 
   /// file from which the discrete attributes (SNPSs) were read
   std::string snpsFilename;

@@ -112,7 +112,7 @@ bool RReliefF::ComputeAttributeScores() {
 			for (unsigned int attrIdx = 0; attrIdx < attributeIndicies.size();
 					++attrIdx) {
 				unsigned int A = attributeIndicies[attrIdx];
-				double attrScore = snpDiff(A, R_i, I_j) * d_ij;
+				double attrScore = snpDiffFuncPtr(A, R_i, I_j) * d_ij;
 				nda[scoresIndex] += attrScore;
 				ndcda[scoresIndex] += (diffPredicted * attrScore);
 //        cout << "(i, j) = (" << i << "," << j << ") =>"
@@ -131,7 +131,7 @@ bool RReliefF::ComputeAttributeScores() {
 					NUMERIC_TYPE);
 			for (unsigned int numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
 				unsigned int N = numericIndices[numIdx];
-				double numScore = numDiff(N, R_i, I_j) * d_ij;
+				double numScore = numDiffFuncPtr(N, R_i, I_j) * d_ij;
 				nda[scoresIndex] += numScore;
 				ndcda[scoresIndex] += (diffPredicted * numScore);
 				++scoresIndex;

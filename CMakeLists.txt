@@ -16,7 +16,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES}"
 #set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 # build shared
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
-#set(CMAKE_EXE_LINKER_FLAGS "-lgfortran -L/usr/lib/gcc/x86_64-linux-gnu/6")
 
 add_executable(inbix
 options.cpp parse.cpp lapackf.cpp zfstream.cpp zed.cpp whap.cpp webcheck.cpp
@@ -108,20 +107,5 @@ if(ARMADILLO_FOUND)
 else()
   message(FATAL_ERROR "Could not find the 'Armadillo' package")
 endif()
-
-#find_library(ARMADILLO_LIBRARY NAMES armadillo PATHS /usr/lib)
-#if(ARMADILLO-NOTFOUND)
-#  message(STATUS, "Armadillo find library unsuccessful; searching paths")
-#  find_path(ARMADILLO_PATH NAMES libarmadillo.so HINTS /usr/lib /usr/local/lib)
-#  if (ARMADILLO-PATH-NOTFOUND)
-#    message(FATAL_ERROR, "Armadillo find path unsuccessful")
-#  else()
-#    message(STATUS, "Armadillo find path successful: ${ARMADILLO_PATH}/libarmadillo.so")
-#    target_link_libraries(inbix ${ARMADILLO_PATH}/libarmadillo.so)
-#  endif()
-#else()
-#  message(STATUS, "Armadillo find library successful: ${ARMADILLO_LIBRARY}")
-#  target_link_libraries(inbix ${ARMADILLO_LIBRARY})
-#endif()
 
 INSTALL(TARGETS inbix RUNTIME DESTINATION bin)

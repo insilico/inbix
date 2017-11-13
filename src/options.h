@@ -443,10 +443,10 @@ public:
   static unsigned int koptEnd;
   static unsigned int koptStep;
 	static unsigned int m;
-	static string snpMetric;
-	static string snpMetricNN;
-	static string snpMetricWeights;
-	static string numMetric;
+	static string snpDiffMetricName;
+	static string snpNearestNeighborMetricName;
+	static string snpMetricWeightsName;
+	static string numDiffMetricName;
 	static string weightByDistanceMethod;
 	static double weightByDistanceSigma;
 	static string reliefMode;

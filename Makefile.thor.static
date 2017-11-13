@@ -1,21 +1,16 @@
 # -----------------------------------------------------------------
 #   Makefile for inbix - In Silico Bioinformatics
-#   Static build for OMRF cluster nodes. bcw - 11/2/17
-#   
-#   Compilation options
+#   Static build for our local server thor. bcw - 11/2/17
+#   Compilation options:
 #       R plugins                   WITH_R_PLUGINS
 #       Web-based version check     WITH_WEBCHECK
-#       Ensure 32-bit binary        FORCE_32BIT 
 #       (Ignored)                   WITH_ZLIB
 #       Link to LAPACK              WITH_LAPACK
 #       Force dynamic linking       FORCE_DYNAMIC
-#
 # ---------------------------------------------------------------------
-
 # Leave blank after "=" to disable; put "= 1" to enable
 WITH_R_PLUGINS = 1
 WITH_WEBCHECK = 
-FORCE_32BIT = 
 WITH_ZLIB = 1
 WITH_LAPACK = 1
 FORCE_DYNAMIC = 
@@ -23,7 +18,6 @@ FORCE_DYNAMIC =
 CXX = g++
 CXXFLAGS += -O2 -I. -DUNIX -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11 -fopenmp
 LDFLAGS = -L.
-
 OUTPUT = inbix_static
 
 ifndef FORCE_DYNAMIC
@@ -82,7 +76,7 @@ endif
 
 # Flags for web-based version check
 ifdef WITH_WEBCHECK
- CXXFLAGS += -DSKIP
+  CXXFLAGS += -DSKIP
 endif
 
 SRC = options.cpp parse.cpp lapackf.cpp zfstream.cpp zed.cpp whap.cpp webcheck.cpp \
@@ -220,4 +214,3 @@ install:
 
 dist:
 	zip inbix_src.zip $(SRC) $(HDR) Makefile COPYING.txt README.*
-

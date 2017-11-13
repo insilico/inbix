@@ -63,24 +63,17 @@ public:
 
 ReliefF::ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType):
 AttributeRanker::AttributeRanker(ds) {
-  PP->printLOG(Timestamp() + "---------------------------------------\n");
+  PP->printLOG(Timestamp() + "---------------------------------------------\n");
   PP->printLOG(Timestamp() + "ReliefF initialization from Plink parameters and Dataset pointer\n");
   PP = plinkPtr;
-  if(ds) {
-    dataset = ds;
-  } else {
-    error("ReliefF constructor dataset pointer is not initialized\n");
-  }
   analysisType = anaType;
-
   m = dataset->NumInstances();
-  randomlySelect = true;
   PP->printLOG(Timestamp() + "Number of samples: m = " + int2str(m) + "\n");
-  if(m == 0 || m == ds->NumInstances()) {
+  randomlySelect = true;
+  if(m == 0 || m == dataset->NumInstances()) {
     // sample deterministically unless a sample size has been set
     PP->printLOG(Timestamp() + "Sampling all instances deterministically\n");
     randomlySelect = false;
-    m = ds->NumInstances();
   } else {
     PP->printLOG(Timestamp() + "Sampling instances randomly\n");
     randomlySelect = true;
@@ -137,49 +130,48 @@ AttributeRanker::AttributeRanker(ds) {
   }
 
   /// set the SNP metric function pointer based on command line params or defaults
-  snpMetric = par::snpMetric;
-  numMetric = par::numMetric;
+  snpDiffMetricName = par::snpDiffMetricName;
+  numDiffMetricName = par::numDiffMetricName;
   bool snpMetricFunctionUnset = true;
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "GM") {
-    snpDiff = diffGMM;
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "GM") {
+    snpDiffFuncPtr = diffGMM;
     snpMetricFunctionUnset = false;
   }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "AM") {
-    snpDiff = diffAMM;
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "AM") {
+    snpDiffFuncPtr = diffAMM;
     snpMetricFunctionUnset = false;
   }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "NCA") {
-    snpDiff = diffNCA;
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "NCA") {
+    snpDiffFuncPtr = diffNCA;
     snpMetricFunctionUnset = false;
   }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "NCA6") {
-    snpDiff = diffNCA6;
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "NCA6") {
+    snpDiffFuncPtr = diffNCA6;
     snpMetricFunctionUnset = false;
   }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "GRM") {
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "GRM") {
     // no need to set a function pointer here for GRM
     error("GCTA GRM metric is not allowed in weight update metric, only nearest neighbors\n");
   }
-  if(snpMetricFunctionUnset && to_upper(snpMetric) == "KM") {
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "KM") {
     error("ERROR: KM is not supported as a ReliefF metric\n");
     // snpDiff = diffKM;
     // snpMetricFunctionUnset = false;
   }
   if(snpMetricFunctionUnset) {
-    error("Cannot set SNP metric to [" + snpMetric + "]\n");
+    error("Cannot set SNP metric to [" + snpDiffMetricName + "]\n");
   }
-  if(to_upper(numMetric) == "MANHATTAN") {
-    numDiff = diffManhattan;
+  if(to_upper(numDiffMetricName) == "MANHATTAN") {
+    numDiffFuncPtr = diffManhattan;
   } else {
-    if(to_upper(numMetric) == "EUCLIDEAN") {
-      numDiff = diffEuclidean;
+    if(to_upper(numDiffMetricName) == "EUCLIDEAN") {
+      numDiffFuncPtr = diffEuclidean;
     } else {
-      error("[" + numMetric + "] is not a valid numeric metric type\n");
+      error("[" + numDiffMetricName + "] is not a valid numeric metric type\n");
     }
   }
-
-  PP->printLOG(Timestamp() + "ReliefF SNP distance metric: " + snpMetric + "\n");
-  PP->printLOG(Timestamp() + "ReliefF continuous distance metric: " + numMetric + "\n");
+  PP->printLOG(Timestamp() + "ReliefF SNP difference metric: " + snpDiffMetricName + "\n");
+  PP->printLOG(Timestamp() + "ReliefF continuous difference metric: " + numDiffMetricName + "\n");
   
   weightByDistanceMethod = par::weightByDistanceMethod;
   if((weightByDistanceMethod != "exponential")
@@ -318,7 +310,7 @@ bool ReliefF::ComputeAttributeScores() {
         /// algorithm line 8
         for(unsigned int j = 0; j < k; j++) {
           DatasetInstance* H_j = dataset->GetInstance(hits[j]);
-          double rawDistance = snpDiff(A, R_i, H_j);
+          double rawDistance = snpDiffFuncPtr(A, R_i, H_j);
           hitSum += (rawDistance * one_over_m_times_k);
         }
         /// algorithm line 9
@@ -332,7 +324,7 @@ bool ReliefF::ComputeAttributeScores() {
           double tempSum = 0.0;
           for(unsigned int j = 0; j < k; j++) {
             DatasetInstance* M_j = dataset->GetInstance(missIds[j]);
-            double rawDistance = snpDiff(A, R_i, M_j);
+            double rawDistance = snpDiffFuncPtr(A, R_i, M_j);
             tempSum += (rawDistance * one_over_m_times_k);
           } // nearest neighbors
           missSum += (adjustmentFactor * tempSum);
@@ -353,7 +345,7 @@ bool ReliefF::ComputeAttributeScores() {
         double hitSum = 0.0, missSum = 0.0;
         for(unsigned int j = 0; j < k; j++) {
           DatasetInstance* H_j = dataset->GetInstance(hits[j]);
-          hitSum += (numDiff(A, R_i, H_j) * one_over_m_times_k);
+          hitSum += (numDiffFuncPtr(A, R_i, H_j) * one_over_m_times_k);
         }
 
         map<ClassLevel, vector<unsigned int> >::const_iterator mit;
@@ -366,7 +358,7 @@ bool ReliefF::ComputeAttributeScores() {
           double tempSum = 0.0;
           for(unsigned int j = 0; j < k; j++) {
             DatasetInstance* M_j = dataset->GetInstance(missIds[j]);
-            tempSum += (numDiff(A, R_i, M_j) * one_over_m_times_k);
+            tempSum += (numDiffFuncPtr(A, R_i, M_j) * one_over_m_times_k);
           } // nearest neighbors
           missSum += (adjustmentFactor * tempSum);
         }
@@ -600,7 +592,7 @@ void ReliefF::WriteAttributeScores(string baseFilename) {
   outFile.close();
 }
 
-bool ReliefF::ComputerGRM() {
+bool ReliefF::ComputeGRM() {
   if(dataset->NumNumerics()) {
     error("GRM distance metric is not available for numeric data");
   }
@@ -687,9 +679,9 @@ bool ReliefF::PreComputeDistances() {
   sizeMatrix(distanceMatrix, numInstances, numInstances);
   PP->printLOG(" done\n");
 
-  if(par::snpMetricNN == "grm") {
+  if(par::snpNearestNeighborMetricName == "grm") {
     // TCGA genetic relationship matrix (GRM))
-    this->ComputerGRM();
+    this->ComputeGRM();
   } else {
     // populate the matrix - upper triangular
     // NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
@@ -704,6 +696,8 @@ bool ReliefF::PreComputeDistances() {
         unsigned int dsi2Index = instancesMask[instanceIds[j]];
         //dataset->GetInstanceIndexForID(instanceIds[j], dsi2Index);
         /// be sure to call Dataset::ComputeInstanceToInstanceDistance
+#pragma omp critical
+      {
         distanceMatrix[i][j] = distanceMatrix[j][i] =
                 dataset->ComputeInstanceToInstanceDistance(
                 dataset->GetInstance(dsi1Index),
@@ -713,8 +707,12 @@ bool ReliefF::PreComputeDistances() {
 //          int2str(j) + " " + int2str(dsi2Index) + " => " + 
 //          dbl2str(distanceMatrix[i][j]) + "\n");
       }
+      }
+#pragma omp critical
+      {
       if(i && (i % 100 == 0)) {
         PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(numInstances) + "\n");
+      }
       }
     }
     PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");

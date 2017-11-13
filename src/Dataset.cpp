@@ -58,7 +58,7 @@ using namespace boost::math;
 using namespace arma;
 
 Dataset::Dataset() {
-	cout << Timestamp() << "Dataset: Default constructor" << endl;
+	PP->printLOG(Timestamp() +  "Dataset: Default constructor\n");
 	/// Set defaults.
 	snpsFilename = "";
 	hasGenotypes = false;
@@ -92,23 +92,24 @@ Dataset::Dataset() {
 	attributeMutationMap[make_pair('Y', 'X')] = UNKNOWN_MUTATION;
 
 	/// metric defaults
-	snpMetric = "gm";
-	snpDiff = diffGMM;
-	snpMetricNN = "gm";
-	snpDiffNN = diffGMM;
-	numMetric = "manhattan";
-	numDiff = diffManhattan;
+	snpDiffMetricName = "gm";
+	snpDiffFuncPtr = diffGMM;
+	snpNearestNeighborMetricName = "gm";
+	snpNearestNeighborFuncPtr = diffGMM;
+	numDiffMetricName = "manhattan";
+	numDiffFuncPtr = diffManhattan;
 
   if(par::verbose) {
     PP->printLOG(Timestamp() + 
-                 "Default SNP diff metric: " + snpMetric + "\n");
+                 "Default SNP diff metric: " + snpDiffMetricName + "\n");
     PP->printLOG(Timestamp() + 
                  "Default SNP nearest neighbors distance metric: " + 
-                 snpMetricNN + "\n");
+                 snpNearestNeighborMetricName + "\n");
     PP->printLOG(Timestamp() + 
                  "Default continuous distance metric: " + 
-                 numMetric + "\n");
+                 numDiffMetricName + "\n");
   }
+	PP->printLOG(Timestamp() +  "Dataset constructor done\n");
 }
 
 Dataset::~Dataset() {
@@ -2736,10 +2737,10 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 	double distance = 0;
 
 	if (HasGenotypes()) {
-		if (snpMetric == "KM") {
+		if (snpNearestNeighborMetricName == "KM") {
 			distance = GetKimuraDistance(dsi1, dsi2);
 		} else {
-			if (snpMetric == "JC") {
+			if (snpNearestNeighborMetricName == "JC") {
 				distance = GetJukesCantorDistance(dsi1, dsi2);
 			} else {
 				vector<uint> attributeIndices = MaskGetAttributeIndices(DISCRETE_TYPE);
@@ -2759,7 +2760,7 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 			  	AttributeLevel attrLevel2 = dsi2->GetAttribute(attributeIndices[i]);
 			  	string genotype1 = genotypeMap[attrLevel1];
 			  	string genotype2 = genotypeMap[attrLevel2];
-			  	double tempDistance = snpDiffNN(attributeIndices[i], dsi1, dsi2);
+			  	double tempDistance = snpNearestNeighborFuncPtr(attributeIndices[i], dsi1, dsi2);
 					distance += tempDistance;
 					// cout 
 					// 	<< a1 << "\t" << a2 << "\t" 
@@ -2780,7 +2781,7 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 		// cout << "\tNumber of numerics: " << numericIndices.size() << endl;
 		for (uint i = 0; i < numericIndices.size(); ++i) {
 			// cout << "\t\tNumeric index: " << numericIndices[i] << endl;
-			double numDistance = numDiff(numericIndices[i], dsi1, dsi2);
+			double numDistance = numDiffFuncPtr(numericIndices[i], dsi1, dsi2);
 			// cout << "Numeric distance " << i << " => " << numDistance << endl;
 			distance += numDistance;
 		}
@@ -2789,100 +2790,101 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 	return distance;
 }
 
-bool Dataset::SetDistanceMetrics(string newSnpWeightMetric, string newSnpNNMetric, 
+bool Dataset::SetDistanceMetrics(string newSnpDiffMetric, string newSnpNNMetric, 
 	string newNumMetric) {
 	/// set the SNP metric function pointer
-	bool snpMetricFunctionUnset = true;
-	if (snpMetricFunctionUnset && to_upper(newSnpWeightMetric) == "GM") {
-		snpDiff = diffGMM;
-		snpMetricFunctionUnset = false;
+	bool snpDiffMetricFunctionUnset = true;
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "GM") {
+		snpDiffFuncPtr = diffGMM;
+		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpMetricFunctionUnset && to_upper(newSnpWeightMetric) == "AM") {
-		snpDiff = diffAMM;
-		snpMetricFunctionUnset = false;
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "AM") {
+		snpDiffFuncPtr = diffAMM;
+		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpMetricFunctionUnset && to_upper(newSnpWeightMetric) == "NCA") {
-		snpDiff = diffNCA;
-		snpMetricFunctionUnset = false;
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "NCA") {
+		snpDiffFuncPtr = diffNCA;
+		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpMetricFunctionUnset && to_upper(newSnpWeightMetric) == "NCA6") {
-		snpDiff = diffNCA6;
-		snpMetricFunctionUnset = false;
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "NCA6") {
+		snpDiffFuncPtr = diffNCA6;
+		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpMetricFunctionUnset && to_upper(newSnpWeightMetric) == "KM") {
-		snpDiff = diffKM;
-		snpMetricFunctionUnset = false;
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "KM") {
+		snpDiffFuncPtr = diffKM;
+		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpMetricFunctionUnset) {
-		cerr << "ERROR: Cannot set SNP diff metric to ["
-				<< newSnpWeightMetric << "]" << endl;
+	if (snpDiffMetricFunctionUnset) {
+		cerr << "ERROR: Cannot set SNP diff metric to [ "
+				<< newSnpDiffMetric << " ]" << endl;
 		return false;
 	}
-	snpMetric = newSnpWeightMetric;
+	snpDiffMetricName = newSnpDiffMetric;
 
 	/// set the nearest neighbors metric
 	bool snpNNMetricFunctionUnset = true;
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "GM") {
-		snpDiffNN = diffGMM;
+		snpNearestNeighborFuncPtr = diffGMM;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "AM") {
-		snpDiffNN = diffAMM;
+		snpNearestNeighborFuncPtr = diffAMM;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "NCA") {
-		snpDiffNN = diffNCA;
+		snpNearestNeighborFuncPtr = diffNCA;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "NCA6") {
-		snpDiffNN = diffNCA6;
+		snpNearestNeighborFuncPtr = diffNCA6;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "KM") {
-		snpDiffNN = diffKM;
+		snpNearestNeighborFuncPtr = diffKM;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "GRM") {
-    // no need to set a function pointer for GRM
-		snpDiffNN = 0;
+    // no need to set a function pointer for GRM, matrix computed all at once
+		snpNearestNeighborFuncPtr = 0;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset) {
-		cerr << "ERROR: Cannot set SNP nearest neighbors metric to ["
-				<< newSnpNNMetric << "]" << endl;
+		cerr << "ERROR: Cannot set SNP nearest neighbors metric to [ "
+				<< newSnpNNMetric << " ]" << endl;
 		return false;
 	}
-	snpMetricNN = newSnpNNMetric;
+	snpNearestNeighborMetricName = newSnpNNMetric;
 
 	if (to_upper(newNumMetric) == "MANHATTAN") {
-		numDiff = diffManhattan;
+		numDiffFuncPtr = diffManhattan;
 	} else {
 		if (to_upper(newNumMetric) == "EUCLIDEAN") {
-			numDiff = diffEuclidean;
+			numDiffFuncPtr = diffEuclidean;
 		}
 		else {
-			cerr << "ERROR: [" << newNumMetric
-					<< "] is not a valid numeric metric type" << endl;
+			cerr << "ERROR: [ " << newNumMetric
+					<< " ] is not a valid numeric metric type" << endl;
 			return false;
 		}
 	}
-	numMetric = newNumMetric;
+	numDiffMetricName = newNumMetric;
 
 	cout << Timestamp() << "New SNP distance diff metric: "
-			<< snpMetric << " " << (void*) snpDiff << endl;
+			<< snpDiffMetricName << " " << (void*) snpDiffFuncPtr << endl;
 	cout << Timestamp() << "New SNP distance nearest neighbor metric: "
-			<< snpMetricNN << " " << (void *)snpDiffNN << endl;
-	cout << Timestamp() << "New continuous distance metric: " << numMetric
-			<< " " << (void *) numDiff << endl;
+			<< snpNearestNeighborMetricName << " " 
+          << (void *) snpNearestNeighborFuncPtr << endl;
+	cout << Timestamp() << "New continuous distance metric: " 
+      << numDiffMetricName << " " << (void *) numDiffFuncPtr << endl;
 
 	return true;
 }
 
 vector<string> Dataset::GetDistanceMetrics() {
 	vector<string> metrics;
-	metrics.push_back(snpMetric);
-	metrics.push_back(snpMetricNN);
-	metrics.push_back(numMetric);
+	metrics.push_back(snpDiffMetricName);
+	metrics.push_back(snpNearestNeighborMetricName);
+	metrics.push_back(numDiffMetricName);
 
 	return metrics;
 }
@@ -2906,6 +2908,7 @@ bool Dataset::WriteSnpTiTvInfo(string titvFilename) {
 		cerr
 				<< "Dataset::WriteSnpTiTvInfo Cannot write transition/transversion "
 						"for data with no allelic info" << endl;
+    
 		return false;
 	}
 
@@ -2943,8 +2946,9 @@ bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 
 	// populate the matrix - upper triangular
 	// NOTE: make complete symmetric matrix for neighbor-to-neighbor sums
-	cout << Timestamp() << "Computing instance-to-instance SNP distances with " 
-		<< snpMetricNN << "... " << endl;
+	cout << Timestamp() 
+          <<  "Computing instance-to-instance nearest neighbor distances with " 
+          << snpNearestNeighborMetricName << "... " << endl;
 	//  omp_set_nested(1);
 #pragma omp parallel for schedule(dynamic, 1)
 	for (int i = 0; i < numInstances; ++i) {
@@ -2955,17 +2959,27 @@ bool Dataset::CalculateDistanceMatrix(double** distanceMatrix,
 			GetInstanceIndexForID(instanceIds[i], dsi1Index);
 			uint dsi2Index = 0;
 			GetInstanceIndexForID(instanceIds[j], dsi2Index);
-			distanceMatrix[i][j] = distanceMatrix[j][i] =
-					ComputeInstanceToInstanceDistance(GetInstance(dsi1Index),
+#pragma omp critical
+      {
+			distanceMatrix[i][j] = 
+      distanceMatrix[j][i] =
+					ComputeInstanceToInstanceDistance(
+              GetInstance(dsi1Index),
 							GetInstance(dsi2Index));
 			// cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
-		}
-		distanceMatrix[i][i] = 0.0;
+      }
+    }
+    #pragma omp critical 
+{
+    if (i && (i % 100 == 0)) {
+      cout << Timestamp() << i << "/" << numInstances << endl;
+    }
+    distanceMatrix[i][i] = 0.0;
+}
+  }
+  // end parallel openMP section
 
-		if (i && (i % 100 == 0)) {
-			cout << Timestamp() << i << "/" << numInstances << endl;
-		}
-	}
+
 	cout << Timestamp() << numInstances << "/" << numInstances << " done"
 			<< endl;
 

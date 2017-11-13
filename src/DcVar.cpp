@@ -389,7 +389,7 @@ bool DcVar::RunOMRF(bool debugFlag) {
   for(uint snpIdx = 0; snpIdx != numVariants; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     PP->printLOG("--------------------------------------------------------\n");
-    PP->printLOG("SNP [ " + snpName + " ]\n");
+    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx) + " of " + int2str(numVariants) + "\n");
     // ------------------------------------------------------------------------
     PP->printLOG("\tcreating phenotype from SNP genotypes\n");
     vector<uint> snpGenotypes;
@@ -435,7 +435,6 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
   double n1 = static_cast<double>(caseIdxCol.size());
   double n2 = static_cast<double>(ctrlIdxCol.size());
   uint numVars = geneExprNames.size();
-  
   double minP = 1.0;
   double maxP = 0.0;
   uint goodPvalCount = 0;
@@ -494,7 +493,7 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
   return true;
 }
 
-bool DcVar::ComputeDifferentialCorrelationZnaive(mat& X, mat& Y) {
+bool DcVar::ComputeDifferentialCorrelationZnaive(string variant, mat& X, mat& Y) {
   // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
   // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
   // cout << "X" << endl << X.submat(0,0,4,4) << endl;
@@ -525,10 +524,7 @@ bool DcVar::ComputeDifferentialCorrelationZnaive(mat& X, mat& Y) {
   double maxP = 0.0;
   uint numVars = geneExprNames.size();
   for(int i=0; i < numVars; ++i) {
-    for(int j=0; j < numVars; ++j) {
-      if(j <= i) {
-        continue;
-      }
+    for(int j=i+1; j < numVars; ++j) {
       double r_ij_1 = corMatrixX(i, j);
       double r_ij_2 = corMatrixY(i, j);
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
@@ -537,23 +533,24 @@ bool DcVar::ComputeDifferentialCorrelationZnaive(mat& X, mat& Y) {
       double p = 2 * normdist(-abs(Z_ij)); 
       if(std::isinf(Z_ij)) {
         cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
+      } else {
+        if(par::do_regain_pvalue_threshold) {
+          if(p < par::regainPvalueThreshold) {
+            resultsFile 
+                    << variant << "\t"
+                    << geneExprNames[i] << "\t" 
+                    << geneExprNames[j] << "\t" 
+                    << Z_ij << "\t"
+                    << p 
+                    << endl;
+          }
+        }
       }
-      // if(i == 0 && j < 10) {
-      //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
-      // }
-//      resultsMatrix[i][j] = Z_ij;
-//      resultsMatrix[j][i] = Z_ij;
-//      if(par::do_regain_pvalue_threshold) {
-//        if(p > par::regainPvalueThreshold) {
-//          resultsMatrix[i][j] = 0;
-//          resultsMatrix[j][i] = 0;
-//        }
-//      }
-//      resultsMatrixPvals[i][j] = p;
-//      resultsMatrixPvals[j][i] = p;
     }
   }
   
+  PP->printLOG("\t[ " + int2str(goodFdrCount) + " ] p-values passed threshold test\n");
+
   return true;
 }
 

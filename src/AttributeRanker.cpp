@@ -19,7 +19,11 @@
 using namespace std;
 
 AttributeRanker::AttributeRanker(Dataset* ds) {
-	dataset = ds;
+  if(ds) {
+    dataset = ds;
+  } else {
+    error("AttributeRanker from ReliefF constructor: dataset pointer is not initialized\n");
+  }
 	classificationAccuracy = 1.0;
   normalizeScores = false;
   k = 10;

@@ -3109,13 +3109,13 @@ void setOptions(CArgs & a) {
 		par::relieffIterPercentToRemove = a.value_int("--iter-remove-percent");
   }
   if(a.find("--snp-metric-nn")) {
-    par::snpMetricNN = a.value("--snp-metric-nn");
+    par::snpNearestNeighborMetricName = a.value("--snp-metric-nn");
   }
   if(a.find("--snp-metric-weights")) {
-    par::snpMetricWeights = a.value("--snp-metric-weights");
+    par::snpMetricWeightsName = a.value("--snp-metric-weights");
   }
   if(a.find("--numeric-metric")) {
-    par::numMetric = a.value("--numeric-metric");
+    par::numDiffMetricName = a.value("--numeric-metric");
   }
   if(a.find("--k-nearest-neighbors")) {
     par::k = a.value_int("--k-nearest-neighbors");
