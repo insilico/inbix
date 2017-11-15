@@ -2790,84 +2790,85 @@ double Dataset::ComputeInstanceToInstanceDistance(DatasetInstance* dsi1,
 	return distance;
 }
 
-bool Dataset::SetDistanceMetrics(string newSnpDiffMetric, string newSnpNNMetric, 
-	string newNumMetric) {
+bool Dataset::SetDistanceMetrics(string newSnpDiffMetricName, 
+                                 string newSnpNNMetricName, 
+                                 string newNumMetricName) {
 	/// set the SNP metric function pointer
 	bool snpDiffMetricFunctionUnset = true;
-	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "GM") {
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "GM") {
 		snpDiffFuncPtr = diffGMM;
 		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "AM") {
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "AM") {
 		snpDiffFuncPtr = diffAMM;
 		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "NCA") {
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "NCA") {
 		snpDiffFuncPtr = diffNCA;
 		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "NCA6") {
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "NCA6") {
 		snpDiffFuncPtr = diffNCA6;
 		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetric) == "KM") {
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "KM") {
 		snpDiffFuncPtr = diffKM;
 		snpDiffMetricFunctionUnset = false;
 	}
 	if (snpDiffMetricFunctionUnset) {
 		cerr << "ERROR: Cannot set SNP diff metric to [ "
-				<< newSnpDiffMetric << " ]" << endl;
+				<< newSnpDiffMetricName << " ]" << endl;
 		return false;
 	}
-	snpDiffMetricName = newSnpDiffMetric;
+	snpDiffMetricName = newSnpDiffMetricName;
 
 	/// set the nearest neighbors metric
 	bool snpNNMetricFunctionUnset = true;
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "GM") {
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "GM") {
 		snpNearestNeighborFuncPtr = diffGMM;
 		snpNNMetricFunctionUnset = false;
 	}
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "AM") {
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "AM") {
 		snpNearestNeighborFuncPtr = diffAMM;
 		snpNNMetricFunctionUnset = false;
 	}
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "NCA") {
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "NCA") {
 		snpNearestNeighborFuncPtr = diffNCA;
 		snpNNMetricFunctionUnset = false;
 	}
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "NCA6") {
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "NCA6") {
 		snpNearestNeighborFuncPtr = diffNCA6;
 		snpNNMetricFunctionUnset = false;
 	}
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "KM") {
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "KM") {
 		snpNearestNeighborFuncPtr = diffKM;
 		snpNNMetricFunctionUnset = false;
 	}
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetric) == "GRM") {
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "GRM") {
     // no need to set a function pointer for GRM, matrix computed all at once
 		snpNearestNeighborFuncPtr = 0;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset) {
 		cerr << "ERROR: Cannot set SNP nearest neighbors metric to [ "
-				<< newSnpNNMetric << " ]" << endl;
+				<< newSnpNNMetricName << " ]" << endl;
 		return false;
 	}
-	snpNearestNeighborMetricName = newSnpNNMetric;
+	snpNearestNeighborMetricName = newSnpNNMetricName;
 
-	if (to_upper(newNumMetric) == "MANHATTAN") {
+	if (to_upper(newNumMetricName) == "MANHATTAN") {
 		numDiffFuncPtr = diffManhattan;
 	} else {
-		if (to_upper(newNumMetric) == "EUCLIDEAN") {
+		if (to_upper(newNumMetricName) == "EUCLIDEAN") {
 			numDiffFuncPtr = diffEuclidean;
 		}
 		else {
-			cerr << "ERROR: [ " << newNumMetric
+			cerr << "ERROR: [ " << newNumMetricName
 					<< " ] is not a valid numeric metric type" << endl;
 			return false;
 		}
 	}
-	numDiffMetricName = newNumMetric;
+	numDiffMetricName = newNumMetricName;
 
 	cout << Timestamp() << "New SNP distance diff metric: "
 			<< snpDiffMetricName << " " << (void*) snpDiffFuncPtr << endl;

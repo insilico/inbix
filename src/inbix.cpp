@@ -1289,7 +1289,9 @@ int main(int argc, char* argv[]) {
     P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // ---------------------------------------------------------------------------
-    ds->SetDistanceMetrics(par::snpMetricWeightsName, par::snpNearestNeighborMetricName, par::numDiffMetricName);
+    ds->SetDistanceMetrics(par::snpDiffMetricName, 
+                           par::snpNearestNeighborMetricName, 
+                           par::numDiffMetricName);
     AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;
@@ -1539,7 +1541,9 @@ int main(int argc, char* argv[]) {
     P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // -------------------------------------------------------------------------
-    ds->SetDistanceMetrics(par::snpMetricWeightsName, par::snpNearestNeighborMetricName, par::numDiffMetricName);
+    ds->SetDistanceMetrics(par::snpDiffMetricName, 
+                           par::snpNearestNeighborMetricName, 
+                           par::numDiffMetricName);
     AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;

@@ -3111,8 +3111,8 @@ void setOptions(CArgs & a) {
   if(a.find("--snp-metric-nn")) {
     par::snpNearestNeighborMetricName = a.value("--snp-metric-nn");
   }
-  if(a.find("--snp-metric-weights")) {
-    par::snpMetricWeightsName = a.value("--snp-metric-weights");
+  if(a.find("--snp-metric-diff")) {
+    par::snpDiffMetricName = a.value("--snp-metric-diff");
   }
   if(a.find("--numeric-metric")) {
     par::numDiffMetricName = a.value("--numeric-metric");
@@ -4521,7 +4521,7 @@ void setOptions(CArgs & a) {
             << "      --iter-remove-percent     Percentage of attributes to remove per iteration of backwards selection\n"
             << "      --normalize-scores        Normalize ReliefF scores? (0|1)\n"
             << "      --snp-metric-nn           Metric for determining the difference between subjects (gm|am|nca|nca6|km|grm)\n"
-            << "      --snp-metric-weights      Metric for determining the diff(erence) between SNPs (gm|am|nca|nca6|km)\n"
+            << "      --snp-metric-diff         Metric for determining the diff(erence) between SNPs (gm|am|nca|nca6|km)\n"
             << "      --numeric-metric          Metric for determining the difference between numeric attributes (manhattan|euclidean)\n"
             << "      --k-nearest-neighbors     Set k nearest neighbors (0=optimize k)\n"
             << "      --kopt-begin              Optimize k starting with kopt-begin\n"

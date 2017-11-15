@@ -445,7 +445,6 @@ public:
 	static unsigned int m;
 	static string snpDiffMetricName;
 	static string snpNearestNeighborMetricName;
-	static string snpMetricWeightsName;
 	static string numDiffMetricName;
 	static string weightByDistanceMethod;
 	static double weightByDistanceSigma;

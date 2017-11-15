@@ -349,7 +349,6 @@ uint par::koptStep = 1;
 uint par::m = 0;
 string par::snpDiffMetricName = "gm";
 string par::snpNearestNeighborMetricName = "gm";
-string par::snpMetricWeightsName = "gm";
 string par::numDiffMetricName = "manhattan";
 string par::weightByDistanceMethod = "equal";
 double par::weightByDistanceSigma = 2.0;

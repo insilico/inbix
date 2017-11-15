@@ -577,8 +577,9 @@ public:
    * \param [in] newNumMetric name of the numeric metric
    * \return distance
    ****************************************************************************/
-  bool SetDistanceMetrics(std::string newSnpDiffMetric, std::string newSnpNNMetric,
-  		std::string newNumMetric="manhattan");
+  bool SetDistanceMetrics(std::string newSnpDiffMetricName, 
+                          std::string newSnpNNMetricName,
+                          std::string newNumMetricName="manhattan");
   /*************************************************************************//**
    * Get the the distance metrics used to compute instance-to-instance distances.
    * \return pair<snp distance metric name, numeric distance metric name>
