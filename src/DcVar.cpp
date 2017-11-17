@@ -48,9 +48,9 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) 
     if(!ReadGenotypesFile()) {
       error("Reading genotypes failed. Exiting.");
     }
-    if(!ReadSnpLocationsFile()) {
-      error("Reading SNP location information file failed. Exiting.");
-    }
+//    if(!ReadSnpLocationsFile()) {
+//      error("Reading SNP location information file failed. Exiting.");
+//    }
     if(!ReadGeneExpressionFile()) {
       error("Reading gene expression file failed. Exiting.");
     }
@@ -308,8 +308,8 @@ bool DcVar::RunPlink(bool debugFlag) {
 bool DcVar::MapPhenosToModel(vector<uint> phenos, string varModel) {
   caseIdxCol.clear();
   ctrlIdxCol.clear();
-  for(uint i=0; i < phenos.size(); ++i) {
-    uint thisPheno = phenos[i];
+  for(uint phenoIdx=0; phenoIdx < phenos.size(); ++phenoIdx) {
+    uint thisPheno = phenos[phenoIdx];
     uint thisMappedPheno = 0;
     if(varModel == "dom") {
       thisMappedPheno = (thisPheno == 2)? 1: 0;
@@ -322,9 +322,9 @@ bool DcVar::MapPhenosToModel(vector<uint> phenos, string varModel) {
       }
     }
     if(thisMappedPheno) {
-      caseIdxCol.push_back(i);
+      caseIdxCol.push_back(phenoIdx);
     } else {
-      ctrlIdxCol.push_back(i);
+      ctrlIdxCol.push_back(phenoIdx);
     }
     mappedPhenos.push_back(thisMappedPheno);
   }
@@ -353,16 +353,17 @@ bool DcVar::SplitExpressionCaseControl(mat& caseMatrix,
 }
 
 bool DcVar::RunOMRF(bool debugFlag) {
+  // ---------------------------------------------------------------------------
   PP->printLOG("Performing dcVar analysis on .gz and .tab files\n");
   uint numVariants = snpNames.size();
   // expression
   uint numGenes = geneExprNames.size();
   // chipseq
   uint numChipSeq = 0;
-  if(chipSeq) {
-    numChipSeq = chipSeqExpression.size();
-  }
-    // make sure we have variants
+//  if(chipSeq) {
+//    numChipSeq = chipSeqExpression.size();
+//  }
+  // make sure we have variants
   if(numVariants < 1) {
     error("Variants file must specified at least one variant for this analysis!");
   }
@@ -372,57 +373,142 @@ bool DcVar::RunOMRF(bool debugFlag) {
   }
   PP->printLOG("Read [ " + int2str(numVariants) + " ] variants, and [ " + 
                int2str(numGenes) + " ] genes\n");
-  
+  // ---------------------------------------------------------------------------
+  PP->printLOG("Filtering using [ " +  par::dcvar_pfilter_type +  " ] correction\n");
   double nVars = (double) numGenes;
   double nCombs = (nVars * (nVars - 1.0)) / 2.0;
-  PP->printLOG("number of interactions [ " + dbl2str(nCombs) + " ]\n");
-  PP->printLOG("Filtering using Bonferroni threshold\n");
-  // insure doubles used in all intermediate calculations
+  PP->printLOG("Number of interactions [ " + dbl2str(nCombs) + " ]\n");
   double correctedP = par::dcvar_pfilter_value / (nCombs * numVariants);
+  PP->printLOG("Corrected p-value [ " + dbl2str(correctedP) + " ]\n");
   string resultsFilename = par::output_file_name + ".pass.tab";
-  string errorsFilename = par::output_file_name + ".err.tab";
-  PP->printLOG("\twriting interactions that pass p-value threshold to [ "  + resultsFilename + " ]\n");
-  PP->printLOG("\twriting interactions that fail due to errors to [ "  + errorsFilename + " ]\n");
+  PP->printLOG("Writing interactions that pass p-value threshold to [ "  + resultsFilename + " ]\n");
+  ofstream resultsFile;
   resultsFile.open(resultsFilename);
-  errorsFile.open(errorsFilename);
   // for all variants
   for(uint snpIdx = 0; snpIdx != numVariants; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     PP->printLOG("--------------------------------------------------------\n");
-    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx) + " of " + int2str(numVariants) + "\n");
+    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx + 1) + " of " + int2str(numVariants) + "\n");
     // ------------------------------------------------------------------------
-    PP->printLOG("\tcreating phenotype from SNP genotypes\n");
+    PP->printLOG("\tCreating phenotype from SNP genotypes\n");
     vector<uint> snpGenotypes;
     for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
       snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[snpIdx][colIdx]));
     }
     // get variant genotypes for all subject and map to a genetic model
-    PP->printLOG("\tgenotypes case-control status\n");    
-    MapPhenosToModel(snpGenotypes, "dom");
+    PP->printLOG("\tGenotypes case-control status\n");    
+    MapPhenosToModel(snpGenotypes, par::dcvar_var_model);
     cout << "\tcases:    " << caseIdxCol.size() << "\t";
     cout << "controls: " << ctrlIdxCol.size() << endl;
     // ------------------------------------------------------------------------
-    PP->printLOG("\tsplitting into case-control groups\n");
+    PP->printLOG("\tSplitting into case-control groups\n");
     uint nCases = caseIdxCol.size();
     uint nCtrls = ctrlIdxCol.size();
     if((nCases < 3) || (nCtrls < 3)) {
       PP->printLOG("\tWARNING: groups size must be greater than 2, skipping...\n");
       continue;
     }
-    mat X(nCases, numGenes);
-    mat Y(nCtrls, numGenes);
+    mat casesMatrix(nCases, numGenes);
+    mat ctrlsMatrix(nCtrls, numGenes);
     // split into case-control groups for testing DC
-    if(!SplitExpressionCaseControl(X, Y)) {
+    if(!SplitExpressionCaseControl(casesMatrix, ctrlsMatrix)) {
       error("Could not split on case control status");
     }
     // ------------------------------------------------------------------------
-    PP->printLOG("\tComputeDifferentialCorrelationZ\n");
-    if(!ComputeDifferentialCorrelationZ(snpName, X, Y, correctedP)) {
-      error("ComputeDifferentialCorrelationZ failed");
+    PP->printLOG("\tComputeDifferentialCorrelationZals\n");
+    sp_mat results;
+    sp_mat resultsP;
+    if(!ComputeDifferentialCorrelationZvals(snpName, 
+                                            casesMatrix, 
+                                            ctrlsMatrix, 
+                                            correctedP, 
+                                            results, 
+                                            resultsP)) {
+      error("ComputeDifferentialCorrelationZvals failed");
+    }
+    // ------------------------------------------------------------------------
+    // write nonzero matrix values
+    PP->printLOG("\tWriting z-values that passed p-value threshold\n");
+    sp_mat::const_iterator start = results.begin();
+    sp_mat::const_iterator end   = results.end();
+    for(sp_mat::const_iterator it = start; it != end; ++it) {
+      resultsFile 
+          << snpName << "\t"
+          << it.row() << "\t" 
+          << it.col() << "\t" 
+          << *it << "\t"
+          << resultsP(it.row(), it.col()) 
+          << endl;
     }
   } // end for all variants
   resultsFile.close();
-  errorsFile.close();
+  
+  return true;
+}
+
+bool DcVar::ComputeDifferentialCorrelationZvals(string variant, 
+                                                mat& cases, 
+                                                mat& ctrls, 
+                                                double correctedP,
+                                                sp_mat& zVals,
+                                                sp_mat& pVals) {
+  PP->printLOG("\tPerforming Z-tests for all rna-seq interactions\n");
+  double n1 = static_cast<double>(caseIdxCol.size());
+  double n2 = static_cast<double>(ctrlIdxCol.size());
+  uint numVars = geneExprNames.size();
+  double minP = 1.0;
+  double maxP = 0.0;
+  uint goodPvalCount = 0;
+  zVals.resize(numVars, numVars);
+  pVals.resize(numVars, numVars);
+  uint i, j;
+#pragma omp parallel for schedule(dynamic, 1) private(i, j)
+  for(i=0; i < numVars; ++i) {
+    for(j=i + 1; j < numVars; ++j) {
+      // correlation between this interaction pair (i, j) in cases and controls
+      vec caseVarVals1 = cases.col(i);
+      vec caseVarVals2 = cases.col(j);
+      vec r_ij_1_v = cor(caseVarVals1, caseVarVals2);
+      double r_ij_1 = (double) r_ij_1_v[0];
+      vec ctrlVarVals1 = ctrls.col(i);
+      vec ctrlVarVals2 = ctrls.col(j);
+      vec r_ij_2_v = cor(ctrlVarVals1, ctrlVarVals2);
+      double r_ij_2 = (double) r_ij_2_v[0];
+      // differential correlation Z
+      double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
+      double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
+      double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
+#pragma omp critical
+{
+      if(std::isinf(Z_ij)) {
+        cerr << "InfiniteZ" << "\t"
+                << variant << "\t"
+                << geneExprNames[i] << "\t" 
+                << geneExprNames[j] << "\t" 
+                << Z_ij << "\t"
+                << endl;
+      } else {
+        double p = 2 * normdist(-abs(Z_ij)); 
+        bool saveResult = false;
+        if(par::do_dcvar_pfilter) {
+          if(p < correctedP) {
+            saveResult = true;
+          }
+          else {
+          saveResult = true;
+          }
+        }
+        if(saveResult) {
+          ++goodPvalCount;
+          zVals(i, j) = Z_ij;
+          pVals(i, j) = p;
+}
+        }
+      }
+    } // j cols
+  } // i rows
+
+  PP->printLOG("\t[ " + int2str(goodPvalCount) + " ] p-values passed threshold test\n");
   
   return true;
 }
@@ -456,13 +542,14 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       double p = 2 * normdist(-abs(Z_ij)); 
       if(std::isinf(Z_ij)) {
-        errorsFile << "InfiniteZ" << "\t"
+        cerr << "InfiniteZ" << "\t"
                 << variant << "\t"
                 << geneExprNames[i] << "\t" 
                 << geneExprNames[j] << "\t" 
                 << Z_ij << "\t"
                 << p 
                 << endl;
+        continue;
       }
       bool writeResults = false;
       if(par::do_dcvar_pfilter) {
@@ -476,13 +563,12 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
         ++goodPvalCount;
 #pragma omp critical 
 {
-        resultsFile 
-                << variant << "\t"
-                << geneExprNames[i] << "\t" 
-                << geneExprNames[j] << "\t" 
-                << Z_ij << "\t"
-                << p 
-                << endl;
+      cout << variant << "\t"
+              << geneExprNames[i] << "\t" 
+              << geneExprNames[j] << "\t" 
+              << Z_ij << "\t"
+              << p 
+              << endl;
 }
       }
     }
@@ -493,7 +579,10 @@ bool DcVar::ComputeDifferentialCorrelationZ(string variant,
   return true;
 }
 
-bool DcVar::ComputeDifferentialCorrelationZnaive(string variant, mat& X, mat& Y) {
+bool DcVar::ComputeDifferentialCorrelationZnaive(string variant, 
+                                                 mat& X, 
+                                                 mat& Y,
+                                                 sp_mat& zVals) {
   // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
   // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
   // cout << "X" << endl << X.submat(0,0,4,4) << endl;
@@ -524,7 +613,7 @@ bool DcVar::ComputeDifferentialCorrelationZnaive(string variant, mat& X, mat& Y)
   double maxP = 0.0;
   uint numVars = geneExprNames.size();
   for(int i=0; i < numVars; ++i) {
-    for(int j=i+1; j < numVars; ++j) {
+    for(int j=i + 1; j < numVars; ++j) {
       double r_ij_1 = corMatrixX(i, j);
       double r_ij_2 = corMatrixY(i, j);
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
@@ -534,15 +623,9 @@ bool DcVar::ComputeDifferentialCorrelationZnaive(string variant, mat& X, mat& Y)
       if(std::isinf(Z_ij)) {
         cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
       } else {
-        if(par::do_regain_pvalue_threshold) {
-          if(p < par::regainPvalueThreshold) {
-            resultsFile 
-                    << variant << "\t"
-                    << geneExprNames[i] << "\t" 
-                    << geneExprNames[j] << "\t" 
-                    << Z_ij << "\t"
-                    << p 
-                    << endl;
+        if(par::do_dcvar_pfilter) {
+          if(p < par::dcvar_pfilter_value) {
+            zVals(i, j) = Z_ij;
           }
         }
       }
@@ -592,7 +675,8 @@ bool DcVar::ReadGenotypesFile() {
 	  vector<string> tok = zin.tokenizeLine();
     if(tok.size() < 2) {
       cerr << "WARNING: line [ " << lineCounter 
-              << " ] from [ " << par::dcvar_genotypes_file << " ]" << endl;
+              << " ] from [ " << par::dcvar_genotypes_file 
+              << " ] . . . skipping" << endl;
       continue;
     }
     snpNames.push_back(tok[0]);
@@ -603,7 +687,10 @@ bool DcVar::ReadGenotypesFile() {
     genotypeMatrix.push_back(lineGenotypes);
 	}
   zin.close();
-  PP->printLOG("Read subject genotypes for " + int2str(lineCounter) + " SNPs\n");
+
+  PP->printLOG("Read genotypes for [ " + 
+  int2str(genotypeSubjects.size()) + " ] subjects and [ " + 
+  int2str(snpNames.size()) + " ] SNPs\n");
   
   return true;
 }
@@ -668,7 +755,7 @@ bool DcVar::ReadGeneExpressionFile() {
       continue;
     }
     geneExprNames.push_back(tok[0]);
-    vector<double> thisExprRec;
+    vector_t thisExprRec;
     for(uint i=1; i < tok.size(); ++i) {
       thisExprRec.push_back(lexical_cast<double>(tok[i]));
     }

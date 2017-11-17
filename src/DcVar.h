@@ -57,9 +57,20 @@ private:
   bool ReadChipSeqFile();
   bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel);
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
-  bool ComputeDifferentialCorrelationZnaive(std::string variant, arma::mat& X, arma::mat& Y);
-  bool ComputeDifferentialCorrelationZ(std::string variant, arma::mat& X, 
-                                       arma::mat& Y, double correctedP);
+  bool ComputeDifferentialCorrelationZnaive(std::string variant, 
+                                            arma::mat& X, 
+                                            arma::mat& Y,
+                                            arma::sp_mat& zVals);
+  bool ComputeDifferentialCorrelationZ(std::string variant, 
+                                       arma::mat& X, 
+                                       arma::mat& Y, 
+                                       double correctedP);
+  bool ComputeDifferentialCorrelationZvals(std::string variant, 
+                                           arma::mat& X, 
+                                           arma::mat& Y, 
+                                           double correctedP,
+                                           arma::sp_mat& zVals,
+                                           arma::sp_mat& pVals);
   bool RunPlink(bool debugFlag=false);
   bool RunOMRF(bool debugFlag=false);
   // INPUTS
@@ -80,9 +91,6 @@ private:
   std::vector<uint> mappedPhenos;
   std::vector<uint> caseIdxCol;
   std::vector<uint> ctrlIdxCol;
-  // OUTPUTS
-  std::ofstream resultsFile;
-  std::ofstream errorsFile;
 };
 
 #endif	/* DCVAR_H */

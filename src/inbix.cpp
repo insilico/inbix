@@ -1659,8 +1659,9 @@ int main(int argc, char* argv[]) {
 	if(par::do_dcvar) {
 		P.printLOG("\nPerforming dcVar analysis\n");
     SNP_INPUT_TYPE commandLineSrcType = SNP_SRC_PLINK;
-    if(par::dcvar_genotypes_file != "" &&
-       par::dcvar_snp_locations_file != "") {
+//    if(par::dcvar_genotypes_file != "" &&
+//       par::dcvar_snp_locations_file != "") {
+    if(par::dcvar_genotypes_file != "") {
       commandLineSrcType = SNP_SRC_FILE;
     } else {
     	P.printLOG("Using PLINK bed/ped, bim/map and fam files\n");
@@ -1669,7 +1670,7 @@ int main(int argc, char* argv[]) {
                              par::dcvar_chip_seq_file != "",
                              par::verbose);
     if(dcvar) {
-  		P.printLOG("Running DcVar::Run method\n");
+  		P.printLOG("Initialization complete. Calling Run() method\n");
       dcvar->Run(par::verbose);
       delete dcvar;
     } else {
