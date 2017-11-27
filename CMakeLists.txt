@@ -6,7 +6,16 @@ project(inbix)
 
 enable_language(CXX Fortran)
 
-set(INBIX_CXX_FLAGS "-O2 -g -fopenmp -fno-var-tracking-assignments -Wno-write-strings -std=c++11")
+# enable either debugging mode with embedded symbols
+# or optimized with no debugging symbols
+# set(BUILD_DEBUG ON CACHE BOOL "" FORCE)
+set(BUILD_DEBUG OFF CACHE BOOL "" FORCE)
+
+if(BUILD_DEBUG)
+  set(INBIX_CXX_FLAGS "-g -fopenmp -fno-var-tracking-assignments -Wno-write-strings -std=c++11")
+else()
+  set(INBIX_CXX_FLAGS "-O2 -fopenmp -fno-var-tracking-assignments -Wno-write-strings -std=c++11")
+endif()
 set(INBIX_CXX_DEFINES "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DSYS=UNIX -DUNIX -DWITH_LAPACK=1 -DLAPCK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES}")
 

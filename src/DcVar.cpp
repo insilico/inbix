@@ -352,10 +352,115 @@ bool DcVar::SplitExpressionCaseControl(mat& caseMatrix,
   return true;
 }
 
+uint DcVar::BonferroniPrune() {
+  double correctedP = par::dcvar_pfilter_value / numCombs;
+  PP->printLOG("\tBonferroni pruning with correctedP [ " + 
+               dbl2str(correctedP) + " ]\n");
+  uint numPruned = 0;
+  for(uint row=0; row < resultsP.n_rows; ++row) {
+    for(uint col=row + 1; col < resultsP.n_cols; ++col) {
+      if(resultsP(row, col) > correctedP) {
+        results(row, col) = 0;
+        results(col, row) = 0;
+        resultsP(row, col) = 0;
+        resultsP(col, row) = 0;
+        ++numPruned;
+      }
+    }
+  }
+  PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
+  
+  return numPruned;
+}
+
+uint DcVar::FdrPrune(double fdr, vector_t pvals) {
+  // Adapted for code by Nick Davis in Encore, which became inbix.
+  PP->printLOG("\tCalculating FDR using Benjamini Hochberg for pruning\n");
+  uint m = pvals.size();
+  // sort interaction by p-value
+  sort(pvals.begin(), pvals.end());
+
+  // use rough FDR (RFDR) to estimate alpha based on input FDR
+  double alpha = 2 * m * fdr / (m + 1);
+  int R = -1;
+  // BH method
+  for(int i = 0; i < m; i++) {
+    double l = (i + 1) * alpha / (double) m;
+    // test whether current p-value < current l
+    if(pvals[i] < l) {
+      R = i;
+    } else {
+      break;
+    }
+  }
+
+  // BH threshold condition not met with any p-values, so exit
+  if(R == -1) {
+    PP->printLOG("\tWARNING: No p-value meets BH threshold criteria, so prune all\n");
+    uint numPruned = 0;
+    for(uint row=0; row < resultsP.n_rows; ++row) {
+      for(uint col=row + 1; col < resultsP.n_cols; ++col) {
+        results(row, col) = 0;
+        results(col, row) = 0;
+        ++numPruned;
+      }
+    }
+    return numPruned;
+  }
+
+  // BH rejection threshold
+  double T = pvals[R];
+  PP->printLOG("\tBH rejection threshold: T = [ " + dbl2str(T) + " ], R = " +
+    int2str(R) + "\n");
+  PP->printLOG("\tPruning interactions with p-values > T [ (" +
+    dbl2str(T) + " ])\n");
+
+  // now prune (set to 0.0) all values greater than threshold T
+  uint numPruned = 0;
+  for(uint row=0; row < resultsP.n_rows; ++row) {
+    for(uint col=row + 1; col < resultsP.n_cols; ++col) {
+      if(resultsP(row, col) > T) {
+        results(row, col) = 0;
+        results(col, row) = 0;
+        ++numPruned;
+      }
+    }
+  }
+  PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
+  
+  return numPruned;
+}
+
+bool DcVar::WriteResults(string filename) {
+  // ------------------------------------------------------------------------
+  // write nonzero matrix values, if any
+  sp_mat::const_iterator start = results.begin();
+  sp_mat::const_iterator end   = results.end();
+  if(start == end) { return false; }
+  
+  PP->printLOG("\tWriting interactions that passed p-value filter to [ "  + filename + " ]\n");
+  ofstream resultsFile;
+  resultsFile.open(filename);
+  for(sp_mat::const_iterator it = start; it != end; ++it) {
+    double pvalue = *it;
+    uint row = it.row();
+    uint col = it.col();
+    resultsFile 
+        << geneExprNames[row] << "\t" 
+        << geneExprNames[col] << "\t" 
+        << pvalue << "\t"
+        << resultsP(row, col) 
+        << endl;
+  }
+  resultsFile.close();
+  
+  return true;
+}
+
 bool DcVar::RunOMRF(bool debugFlag) {
   // ---------------------------------------------------------------------------
   PP->printLOG("Performing dcVar analysis on .gz and .tab files\n");
-  uint numVariants = snpNames.size();
+  uint numSnps = snpNames.size();
   // expression
   uint numGenes = geneExprNames.size();
   // chipseq
@@ -364,31 +469,28 @@ bool DcVar::RunOMRF(bool debugFlag) {
 //    numChipSeq = chipSeqExpression.size();
 //  }
   // make sure we have variants
-  if(numVariants < 1) {
-    error("Variants file must specified at least one variant for this analysis!");
+  if(numSnps < 1) {
+    error("SNP genotypes file must include at least one SNP for analysis!");
   }
   // make sure we have genes
-  if(numGenes < 2) {
-    error("Gene expression file must specified for this analysis!");
+  if(numGenes < MIN_NUM_GENES) {
+    error("Gene expression data must include at least [ " + int2str(MIN_NUM_GENES) + " ]\n");
   }
-  PP->printLOG("Read [ " + int2str(numVariants) + " ] variants, and [ " + 
+  PP->printLOG("Read [ " + int2str(numSnps) + " ] variants, and [ " + 
                int2str(numGenes) + " ] genes\n");
+
+  if(par::do_dcvar_pfilter) {
+    PP->printLOG("Filtering using [ " +  par::dcvar_pfilter_type +  " ] correction\n");
+  }
+  
   // ---------------------------------------------------------------------------
-  PP->printLOG("Filtering using [ " +  par::dcvar_pfilter_type +  " ] correction\n");
-  double nVars = (double) numGenes;
-  double nCombs = (nVars * (nVars - 1.0)) / 2.0;
-  PP->printLOG("Number of interactions [ " + dbl2str(nCombs) + " ]\n");
-  double correctedP = par::dcvar_pfilter_value / (nCombs * numVariants);
-  PP->printLOG("Corrected p-value [ " + dbl2str(correctedP) + " ]\n");
-  string resultsFilename = par::output_file_name + ".pass.tab";
-  PP->printLOG("Writing interactions that pass p-value threshold to [ "  + resultsFilename + " ]\n");
-  ofstream resultsFile;
-  resultsFile.open(resultsFilename);
-  // for all variants
-  for(uint snpIdx = 0; snpIdx != numVariants; ++snpIdx) {
+  // for all genotypes/SNPs across all subjects, make genotype into binary 
+  // phenotype and run differential correlation on the RNA-Seq gene pairs
+  for(uint snpIdx = 0; snpIdx != numSnps; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     PP->printLOG("--------------------------------------------------------\n");
-    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx + 1) + " of " + int2str(numVariants) + "\n");
+    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx + 1) + " of " + 
+                 int2str(numSnps) + "\n");
     // ------------------------------------------------------------------------
     PP->printLOG("\tCreating phenotype from SNP genotypes\n");
     vector<uint> snpGenotypes;
@@ -398,69 +500,93 @@ bool DcVar::RunOMRF(bool debugFlag) {
     // get variant genotypes for all subject and map to a genetic model
     PP->printLOG("\tGenotypes case-control status\n");    
     MapPhenosToModel(snpGenotypes, par::dcvar_var_model);
-    cout << "\tcases:    " << caseIdxCol.size() << "\t";
-    cout << "controls: " << ctrlIdxCol.size() << endl;
+    cout << "\tCases:    " << caseIdxCol.size() << "\t";
+    cout << "Controls: " << ctrlIdxCol.size() << endl;
     // ------------------------------------------------------------------------
     PP->printLOG("\tSplitting into case-control groups\n");
-    uint nCases = caseIdxCol.size();
-    uint nCtrls = ctrlIdxCol.size();
-    if((nCases < 3) || (nCtrls < 3)) {
-      PP->printLOG("\tWARNING: groups size must be greater than 2, skipping...\n");
+    uint numCases = caseIdxCol.size();
+    uint numCtrls = ctrlIdxCol.size();
+    if((numCases < MIN_NUM_SUBJ_PER_GROUP) || (numCtrls < MIN_NUM_SUBJ_PER_GROUP)) {
+      PP->printLOG("\tWARNING: groups sizes must be greater than [ " + 
+                   int2str(MIN_NUM_SUBJ_PER_GROUP - 1) + " ], skipping SNP\n");
       continue;
     }
-    mat casesMatrix(nCases, numGenes);
-    mat ctrlsMatrix(nCtrls, numGenes);
+    mat casesMatrix(numCases, numGenes);
+    mat ctrlsMatrix(numCtrls, numGenes);
     // split into case-control groups for testing DC
     if(!SplitExpressionCaseControl(casesMatrix, ctrlsMatrix)) {
       error("Could not split on case control status");
     }
     // ------------------------------------------------------------------------
-    PP->printLOG("\tComputeDifferentialCorrelationZals\n");
-    sp_mat results;
-    sp_mat resultsP;
+    PP->printLOG("\tComputeDifferentialCorrelationZals " 
+                 "and first pass p-value filter [ " + 
+                 dbl2str(DEFAULT_PVALUE) + " ]\n");
+    // NOTE: These variables are set by the ComputeDifferential* function below
+    // so clear them before calling it, just to be double safe.
+    results.clear();
+    resultsP.clear();
+    allP.clear();
     if(!ComputeDifferentialCorrelationZvals(snpName, 
                                             casesMatrix, 
-                                            ctrlsMatrix, 
-                                            correctedP, 
-                                            results, 
-                                            resultsP)) {
+                                            ctrlsMatrix)) {
       error("ComputeDifferentialCorrelationZvals failed");
     }
     // ------------------------------------------------------------------------
-    // write nonzero matrix values
-    PP->printLOG("\tWriting z-values that passed p-value threshold\n");
-    sp_mat::const_iterator start = results.begin();
-    sp_mat::const_iterator end   = results.end();
-    for(sp_mat::const_iterator it = start; it != end; ++it) {
-      resultsFile 
-          << snpName << "\t"
-          << it.row() << "\t" 
-          << it.col() << "\t" 
-          << *it << "\t"
-          << resultsP(it.row(), it.col()) 
-          << endl;
+    // adjust p-values
+    if(par::do_dcvar_pfilter) {
+      PP->printLOG("\tp-value filtering requested\n");
+      FilterPvalues();
+      PP->printLOG("\t[ " + int2str(results.n_nonzero) + 
+                   " ] values pass filtering\n");
+    } else {
+      PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
-  } // end for all variants
-  resultsFile.close();
+    // ------------------------------------------------------------------------
+    // write results, if there are any to write
+    string resultsFilename = 
+            par::output_file_name + "." + 
+            par::dcvar_pfilter_type + "." +
+            snpName + 
+            ".pass.tab";
+    WriteResults(resultsFilename);
+  } // end for all SNPs
   
   return true;
 }
+bool DcVar::FilterPvalues() {
+  PP->printLOG("\tFiltering p-values using [ " +  
+               par::dcvar_pfilter_type + " ] correction\n");
+  uint numPruned = 0;
+  PP->printLOG("\t[ " + int2str(results.n_nonzero) + " ] p-values before pruning\n");
+  if(par::dcvar_pfilter_type == "fdr") {
+    numPruned = FdrPrune(par::dcvar_pfilter_value, allP);
+  } else {
+    if(par::dcvar_pfilter_type == "bon") {
+      numPruned = BonferroniPrune();
+    } else {
+      error("Unknown p-value filter type. Expects \"bon\" or \"fdr\"."   
+            "Got [ " + par::dcvar_pfilter_type + " ]");
+    }
+    PP->printLOG("\t[ " + int2str(numPruned) + " ] p-values pruned\n");
+    PP->printLOG("\t[ " + int2str(results.n_nonzero) + " ] p-values after pruning\n");
+  }
 
+  return true;
+}
 bool DcVar::ComputeDifferentialCorrelationZvals(string variant, 
                                                 mat& cases, 
-                                                mat& ctrls, 
-                                                double correctedP,
-                                                sp_mat& zVals,
-                                                sp_mat& pVals) {
-  PP->printLOG("\tPerforming Z-tests for all rna-seq interactions\n");
+                                                mat& ctrls) {
+  PP->printLOG("\tPerforming Z-tests for all RNA-seq interactions\n");
   double n1 = static_cast<double>(caseIdxCol.size());
   double n2 = static_cast<double>(ctrlIdxCol.size());
   uint numVars = geneExprNames.size();
   double minP = 1.0;
   double maxP = 0.0;
   uint goodPvalCount = 0;
-  zVals.resize(numVars, numVars);
-  pVals.resize(numVars, numVars);
+  uint badPvalCount = 0;
+  uint infCount = 0;
+  results = sprandu<sp_mat>(numVars, numVars, 0);
+  resultsP = spones(results);
   uint i, j;
 #pragma omp parallel for schedule(dynamic, 1) private(i, j)
   for(i=0; i < numVars; ++i) {
@@ -479,36 +605,41 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string variant,
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
 #pragma omp critical
-{
-      if(std::isinf(Z_ij)) {
-        cerr << "InfiniteZ" << "\t"
-                << variant << "\t"
-                << geneExprNames[i] << "\t" 
-                << geneExprNames[j] << "\t" 
-                << Z_ij << "\t"
-                << endl;
-      } else {
-        double p = 2 * normdist(-abs(Z_ij)); 
-        bool saveResult = false;
-        if(par::do_dcvar_pfilter) {
-          if(p < correctedP) {
-            saveResult = true;
+      {
+        if(std::isinf(Z_ij)) {
+          cerr << "InfiniteZ" << "\t"
+                  << variant << "\t"
+                  << geneExprNames[i] << "\t" 
+                  << geneExprNames[j] << "\t" 
+                  << Z_ij << endl;
+          ++infCount;
+        } else {
+          double p = 2 * normdist(-abs(Z_ij));
+          if(p < minP) minP = p;
+          if(p > maxP) maxP = p;
+          if(p <= DEFAULT_PVALUE_THRESHOLD) {
+            results(i, j) = Z_ij;
+            resultsP(i, j) = p;
+            allP.push_back(p);
+            ++goodPvalCount;
+          } else {
+            results(i, j) = DEFAULT_ZVALUE;
+            resultsP(i, j) = DEFAULT_PVALUE;
+            allP.push_back(DEFAULT_PVALUE);
+            ++badPvalCount;
           }
-          else {
-          saveResult = true;
-          }
-        }
-        if(saveResult) {
-          ++goodPvalCount;
-          zVals(i, j) = Z_ij;
-          pVals(i, j) = p;
-}
-        }
-      }
+        } 
+      } // end openmp critical section
     } // j cols
   } // i rows
 
+  if(infCount) {
+    PP->printLOG("\tWARNING [ " + int2str(infCount) + 
+                 " ] infinite Z values/skipped p-value calculations\n");
+  }
   PP->printLOG("\t[ " + int2str(goodPvalCount) + " ] p-values passed threshold test\n");
+  PP->printLOG("\t[ " + int2str(badPvalCount) + " ] p-values failed threshold test\n");
+  PP->printLOG("\t[ " + int2str(allP.size()) + " ] total p-values tested\n");
   
   return true;
 }
@@ -767,6 +898,10 @@ bool DcVar::ReadGeneExpressionFile() {
   int2str(geneExprSubjects.size()) + " ] subjects and [ " + 
   int2str(geneExprNames.size()) + " ] genes\n");
   
+  double numGenes = (double) geneExprNames.size();
+  numCombs = (numGenes * (numGenes - 1.0)) / 2.0;
+  PP->printLOG("Number of gene interactions [ " + dbl2str(numCombs) + " ]\n");
+
   return true;
 }
 
@@ -801,6 +936,20 @@ bool DcVar::ReadChipSeqFile() {
 	}
   chipSeqFile.close();
   PP->printLOG("Read ChIP-seq expression for " + int2str(lineCounter) + " SNPs\n");
+  
+  return true;
+}
+
+bool DcVar::FlattenPvals(vector_t& retPvals) {
+  PP->printLOG("\tflattening p-values matrix into a vector\n");
+  retPvals.resize(numCombs);
+  for(uint i=0; i < resultsP.n_rows; ++i) {
+    for(uint j=i + 1; j < resultsP.n_cols; ++j) {
+      double thisP = resultsP(i, j);
+      uint thisIdx = i * resultsP.n_cols + j;
+      retPvals[thisIdx] = thisP;
+    }
+  }
   
   return true;
 }

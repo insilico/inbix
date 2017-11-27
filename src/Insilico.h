@@ -98,6 +98,13 @@ const static ClassLevel MISSING_DISCRETE_CLASS_VALUE = -9;
 /// stored value for missing numeric class
 const static NumericLevel MISSING_NUMERIC_CLASS_VALUE = -9;
 
+/// default p-value threshold
+const static double DEFAULT_PVALUE = 1.0;
+const static double DEFAULT_PVALUE_THRESHOLD = 0.05;
+const static double DEFAULT_ZVALUE = 0.0;
+const static uint MIN_NUM_GENES = 4;
+const static uint MIN_NUM_SUBJ_PER_GROUP = 4;
+
 /// E N U M S
 
 /**

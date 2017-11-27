@@ -6,10 +6,9 @@
 #ifndef DCVAR_H
 #define	DCVAR_H
 
-#include <fstream>
-#include <vector>
 #include <string>
 #include <map>
+#include <vector>
 
 #include <armadillo>
 
@@ -67,12 +66,14 @@ private:
                                        double correctedP);
   bool ComputeDifferentialCorrelationZvals(std::string variant, 
                                            arma::mat& X, 
-                                           arma::mat& Y, 
-                                           double correctedP,
-                                           arma::sp_mat& zVals,
-                                           arma::sp_mat& pVals);
+                                           arma::mat& Y);
+  bool FilterPvalues();
+  uint FdrPrune(double fdr, vector_t pvals);
+  uint BonferroniPrune();
   bool RunPlink(bool debugFlag=false);
   bool RunOMRF(bool debugFlag=false);
+  bool FlattenPvals(vector_t& retPvals);
+  bool WriteResults(std::string filename);
   // INPUTS
   bool chipSeq;
   bool debugFlag;
@@ -86,11 +87,15 @@ private:
   std::vector<std::string> geneExprNames;
   std::vector<std::string> geneExprSubjects;
   matrix_t expressionMatrix;
+  double numCombs;
   CHIP_SEQ_INFO_MAP chipSeqExpression;
   // ALGORITHM VARIABLES
   std::vector<uint> mappedPhenos;
   std::vector<uint> caseIdxCol;
   std::vector<uint> ctrlIdxCol;
+  arma::sp_mat results;
+  arma::sp_mat resultsP;
+  vector_t allP;
 };
 
 #endif	/* DCVAR_H */
