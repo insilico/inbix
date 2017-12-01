@@ -2807,7 +2807,7 @@ void setOptions(CArgs & a) {
     par::do_dcgain_abs = true;
   }
 
-  // hack for Caleb's project - bcw - 2/5/15
+  // for Caleb's project - bcw - 2/5/15
   // changed to dcvar - bcw - 2/22/15
   if(a.find("--dcvar")) {
     par::do_dcvar = true;
@@ -4478,7 +4478,7 @@ void setOptions(CArgs & a) {
             << "      --dcvar                         Perform a differential coexpression variant analysis\n"
             << "      --dcvar-pfilter                 Enable p-value filtering\n"
             << "      --dcvar-pfilter-value {value}   P-value filter value\n"
-            << "      --dcvar-pfilter-type {bon|fdr}  P-value correction for filter Bonferroni or FDR BH\n"
+            << "      --dcvar-pfilter-type {bon|fdr|custom}  P-value correction for filter Bonferroni or FDR BH\n"
             << "      --dcvar-var-model {dom|rec|hom} Allelic SNP model\n"
             << "      --dcvar-genotypes-file          Genotypes file: SNPs by subject (0,1,2) - gzipped\n"
             << "      --dcvar-snp-locations-file      SNP locations information filename - gzipped\n"

@@ -331,6 +331,9 @@ bool DcVar::RunOMRF(bool debugFlag) {
   // ---------------------------------------------------------------------------
   // for all genotypes/SNPs across all subjects, make genotype into binary 
   // phenotype and run differential correlation on the RNA-Seq gene pairs
+  string outFilename = par::output_file_name + ".pvals.gz";
+  PP->printLOG("Writing p-values to [ " + outFilename + " ]\n");
+  zout.open(outFilename, true);
   for(uint snpIdx = 0; snpIdx != numSnps; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     PP->printLOG("--------------------------------------------------------\n");
@@ -386,19 +389,21 @@ bool DcVar::RunOMRF(bool debugFlag) {
     } else {
       PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
-    // ------------------------------------------------------------------------
-    // write results, if there are any to write
-    if(interactionPvals.size()) {
-      string resultsFilename = 
-              par::output_file_name + "." + 
-              par::dcvar_pfilter_type + "." +
-              snpName + 
-              ".pass.tab";
-      WriteResults(resultsFilename);
-    } else {
-      PP->printLOG("\tWARNING: nothing to write, p-value filtering removed all SNPs\n");
-    }
+//    // ------------------------------------------------------------------------
+//    // write results, if there are any to write
+//    if(interactionPvals.size()) {
+//      string resultsFilename = 
+//              par::output_file_name + "." + 
+//              par::dcvar_pfilter_type + "." +
+//              snpName + 
+//              ".pass.tab";
+//      WriteResults(resultsFilename);
+//    } else {
+//      PP->printLOG("\tWARNING: nothing to write, p-value filtering removed all SNPs\n");
+//    }
   } // end for all SNPs
+  
+  zout.close();
   
   return true;
 }
@@ -637,7 +642,7 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
   uint infCount = 0;
   // results = sprandu<sp_mat>(numVars, numVars, 0);
   // resultsP.resize(numVars, numVars);
-  interactionPvals.clear();
+  //interactionPvals.clear();
   uint i, j;
 #pragma omp parallel for schedule(dynamic, 1) private(i, j)
   for(i=0; i < numVars; ++i) {
@@ -670,20 +675,26 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
           double p = 2 * normdist(-abs(Z_ij));
           if(p < minP) minP = p;
           if(p > maxP) maxP = p;
-          if(p <= DEFAULT_PVALUE_THRESHOLD) {
+          double pThreshold = 1;
+          if(par::dcvar_pfilter_type == "custom") {
+            pThreshold = par::dcvar_pfilter_value;
+          } else {
+            pThreshold = DEFAULT_PVALUE_THRESHOLD;
+          }
+          if(p <= pThreshold) {
             // results(i, j) = Z_ij;
             interactionPvalElement = make_pair(p, indexPair);
             // resultsP(i, j) = p;
             // allP.push_back(p);
             ++goodPvalCount;
+            zout.writeLine(dbl2str(interactionPvalElement.first));
           } else {
             // results(i, j) = DEFAULT_ZVALUE;
-            interactionPvalElement = make_pair(DEFAULT_PVALUE, indexPair);
+            //interactionPvalElement = make_pair(DEFAULT_PVALUE, indexPair);
             // resultsP(i, j) = DEFAULT_PVALUE;
             // allP.push_back(DEFAULT_PVALUE);
             ++badPvalCount;
           }
-          interactionPvals.push_back(interactionPvalElement);
         }
       } // end openmp critical section
     } // j cols
@@ -856,8 +867,13 @@ bool DcVar::FilterPvalues() {
     if(par::dcvar_pfilter_type == "bon") {
       numPruned = PruneBonferroni();
     } else {
-      error("Unknown p-value filter type. Expects \"bon\" or \"fdr\"."   
+      if(par::dcvar_pfilter_type == "custom") {
+        // numPruned = PruneCustom();
+        numPruned = 0;
+      } else {
+        error("Unknown p-value filter type. Expects \"bon\" or \"fdr\"."   
             "Got [ " + par::dcvar_pfilter_type + " ]");
+      }
     }
     PP->printLOG("\t[ " + int2str(numPruned) + " ] p-values pruned\n");
     PP->printLOG("\t[ " + int2str(interactionPvals.size()) + " ] p-values after pruning\n");
@@ -928,6 +944,25 @@ uint DcVar::PruneBonferroni() {
   uint numPruned = 0;
   for(uint interactionIdx=0; interactionIdx < interactionPvals.size(); ++interactionIdx) {
     if(interactionPvals[interactionIdx].first > correctedP) {
+      idxToPrune.push_back(interactionIdx);
+    }
+  }
+  //sort(idxToPrune.begin(), idxToPrune.end());
+  for(int i=idxToPrune.size() - 1; i >= 0; i--){
+      interactionPvals.erase(interactionPvals.begin() + idxToPrune[i]);
+      ++numPruned;
+  }
+  PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
+  
+  return numPruned;
+}
+
+uint DcVar::PruneCustom() {
+  // 1.96E-17
+  vector<uint> idxToPrune;
+  uint numPruned = 0;
+  for(uint interactionIdx=0; interactionIdx < interactionPvals.size(); ++interactionIdx) {
+    if(interactionPvals[interactionIdx].first > par::dcvar_pfilter_value) {
       idxToPrune.push_back(interactionIdx);
     }
   }

@@ -77,6 +77,7 @@ private:
   bool FilterPvalues();
   uint PruneFdrBH();
   uint PruneBonferroni();
+  uint PruneCustom();
   bool WriteResults(std::string filename);
   // INPUTS
   SNP_INPUT_TYPE snpInputType;
@@ -102,6 +103,8 @@ private:
 	std::vector<matrixElement> interactionPvals;
   // arma::sp_mat resultsP;
   uint totalTests;
+  // compressed output stream of p-values
+  ZOutput zout;
 };
 
 #endif	/* DCVAR_H */
