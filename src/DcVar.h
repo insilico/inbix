@@ -60,7 +60,7 @@ private:
   bool ReadSnpLocationsFile();
   bool ReadGeneExpressionFile();
   bool ReadChipSeqFile();
-  bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel);
+  bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel="dom");
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
   bool ComputeDifferentialCorrelationZnaive(std::string snp, 
                                             arma::mat& cases, 
