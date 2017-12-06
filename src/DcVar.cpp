@@ -9,6 +9,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <omp.h>
 
 // Armadillo Linear Algebra/Matrices/Vectors
 #include <armadillo>
@@ -69,6 +70,11 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) 
   if(!CheckInputs()) {
     error("Checking data sets compatability failed. Exiting.");
   }
+  // OpenMP parallelization
+  uint numThreads = omp_get_num_threads();
+  uint numProcs = omp_get_num_procs();
+  PP->printLOG("OpenMP: " + int2str(numThreads) + " threads available\n");
+  PP->printLOG("OpenMP: " + int2str(numProcs) + " processors available\n");
 }
 
 DcVar::~DcVar() {
@@ -189,8 +195,6 @@ bool DcVar::RunPlink(bool debugFlag) {
     if(dcvarFile.fail()) {
       error("Cannot open dcVar test results file for writing.");
     }
-    dcvarFile.precision(6);
-    dcvarFile.fixed;
 
     if(par::do_dcvar_pfilter) {
       double nVars = (double) numGenes;
@@ -332,9 +336,9 @@ bool DcVar::RunOMRF(bool debugFlag) {
   // ---------------------------------------------------------------------------
   // for all genotypes/SNPs across all subjects, make genotype into binary 
   // phenotype and run differential correlation on the RNA-Seq gene pairs
-  string outFilename = par::output_file_name + ".pvals.gz";
-  PP->printLOG("Writing p-values to [ " + outFilename + " ]\n");
-  zout.open(outFilename, true);
+//  string outFilename = par::output_file_name + ".pvals.gz";
+//  PP->printLOG("Writing p-values to [ " + outFilename + " ]\n");
+//  zout.open(outFilename, true);
   for(uint snpIdx = 0; snpIdx != numSnps; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     if(par::verbose) PP->printLOG("--------------------------------------------------------\n");
@@ -369,17 +373,20 @@ bool DcVar::RunOMRF(bool debugFlag) {
     // ------------------------------------------------------------------------
     if(par::verbose) PP->printLOG("\tComputeDifferentialCorrelationZals " 
                  "and first pass p-value filter [ " + 
-                 dbl2str(DEFAULT_PVALUE) + " ]\n");
-    // NOTE: These variables are set by the ComputeDifferential* function below
-    // so clear them before calling it, just to be double safe.
-    // results.clear();
-    // resultsP.clear();
-    // allP.clear();
-    if(!ComputeDifferentialCorrelationZvals(snpName, 
-                                            casesMatrix, 
-                                            ctrlsMatrix)) {
+                 dbl2str(DEFAULT_PVALUE_THRESHOLD) + " ]\n");
+    // sparse matrix of significant p-values
+    sp_mat resultsMatrix;
+    if(!ComputeDifferentialCorrelationZsparse(snpName, 
+                                              casesMatrix, 
+                                              ctrlsMatrix,
+                                              resultsMatrix)) {
       error("ComputeDifferentialCorrelationZvals failed");
     }
+//    if(!ComputeDifferentialCorrelationZvals(snpName, 
+//                                            casesMatrix, 
+//                                            ctrlsMatrix)) {
+//      error("ComputeDifferentialCorrelationZvals failed");
+//    }
     // ------------------------------------------------------------------------
     // adjust p-values
     if(par::do_dcvar_pfilter) {
@@ -390,21 +397,21 @@ bool DcVar::RunOMRF(bool debugFlag) {
     } else {
       if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
-//    // ------------------------------------------------------------------------
-//    // write results, if there are any to write
-//    if(interactionPvals.size()) {
-//      string resultsFilename = 
-//              par::output_file_name + "." + 
-//              par::dcvar_pfilter_type + "." +
-//              snpName + 
-//              ".pass.tab";
-//      WriteResults(resultsFilename);
-//    } else {
-//      PP->printLOG("\tWARNING: nothing to write, p-value filtering removed all SNPs\n");
-//    }
+    // ------------------------------------------------------------------------
+    // write results, if there are any to write
+    if(resultsMatrix.n_nonzero) {
+      string resultsFilename = 
+              par::output_file_name + "." + 
+              par::dcvar_pfilter_type + "." +
+              snpName + 
+              ".pass.tab";
+      WriteOneSnpResultToFile(resultsMatrix, resultsFilename);
+    } else {
+      PP->printLOG("\tWARNING: nothing to write for [ " + snpName + " ]\n");
+    }
   } // end for all SNPs
   
-  zout.close();
+//  zout.close();
   
   return true;
 }
@@ -641,10 +648,15 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
   uint goodPvalCount = 0;
   uint badPvalCount = 0;
   uint infCount = 0;
-  // results = sprandu<sp_mat>(numVars, numVars, 0);
-  // resultsP.resize(numVars, numVars);
-  //interactionPvals.clear();
-  uint i, j;
+  double pThreshold = DEFAULT_PVALUE_THRESHOLD;
+  if(par::dcvar_pfilter_type == "custom") {
+    pThreshold = par::dcvar_pfilter_value;
+  }
+  if(par::verbose) PP->printLOG("\tFirst pass filter threshold [ " + 
+     dbl2str(pThreshold) + " ]\n");
+  if(par::verbose) PP->printLOG("\tEntering OpenMP parallel section for [ ");
+  if(par::verbose) PP->printLOG(int2str(numCombs) + " ] dcvar combination\n");
+  uint i=0, j=0;
 #pragma omp parallel for schedule(dynamic, 1) private(i, j)
   for(i=0; i < numGenes; ++i) {
     for(j=i + 1; j < numGenes; ++j) {
@@ -661,63 +673,44 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
-#pragma omp critical
+      #pragma omp critical 
       {
+        // !NOTE! critical section for writing to an already opened file 'zout'!
+        // and to keep track of counts, min/max p-values in public scope
+        double p = DEFAULT_PVALUE;
         if(std::isinf(Z_ij)) {
-          if(par::verbose)  {
-            cerr << "InfiniteZ" << "\t"
-                    << snp << "\t"
-                    << geneExprNames[i] << "\t" 
-                    << geneExprNames[j] << "\t" 
-                    << Z_ij << endl;
-          }
+          // bad Z
           ++infCount;
         } else {
-          matrixElement interactionPvalElement;
-          pair<uint, uint> indexPair = make_pair(i, j);
-          double p = 2 * normdist(-abs(Z_ij));
+          //matrixElement interactionPvalElement;
+          //pair<uint, uint> indexPair = make_pair(i, j);
+          p = 2 * normdist(-abs(Z_ij));
+
           if(p < minP) minP = p;
           if(p > maxP) maxP = p;
-          double pThreshold = 1;
-          if(par::dcvar_pfilter_type == "custom") {
-            pThreshold = par::dcvar_pfilter_value;
-          } else {
-            pThreshold = DEFAULT_PVALUE_THRESHOLD;
-          }
           if(p <= pThreshold) {
-            // results(i, j) = Z_ij;
-            interactionPvalElement = make_pair(p, indexPair);
-            // resultsP(i, j) = p;
-            // allP.push_back(p);
             ++goodPvalCount;
             string outString = snp +  "\t"  +
                     geneExprNames[i] + "\t"  +
                     geneExprNames[j] + "\t"  +
                     dbl2str(p);
-            zout.writeLine(outString);
+            //zout.writeLine(outString);
           } else {
-            // results(i, j) = DEFAULT_ZVALUE;
-            //interactionPvalElement = make_pair(DEFAULT_PVALUE, indexPair);
-            // resultsP(i, j) = DEFAULT_PVALUE;
-            // allP.push_back(DEFAULT_PVALUE);
             ++badPvalCount;
-          }
-        }
+          } // end else good p
+        } // end else good Z
       } // end openmp critical section
-    } // j cols
-  } // i rows
-
-  totalTests = goodPvalCount + badPvalCount;
-  if(par::verbose) PP->printLOG("\t[ " + int2str(totalTests) + " ] total tests\n");
+    } // end for j cols
+  } // end for i rows
+  if(par::verbose) PP->printLOG("End OpenMP parallel section");
+  if(par::verbose) PP->printLOG("\tminp [" + dbl2str(minP) + " ] "
+                                "maxp [ " + dbl2str(maxP) + " ]\n");
   
-  if(infCount) {
-    if(par::verbose) PP->printLOG("\tWARNING [ " + int2str(infCount) + 
-                 " ] infinite Z values/skipped p-value calculations\n");
-  }
-  if(par::verbose) PP->printLOG("\tminp [" + dbl2str(minP) + " ] maxp [ " + dbl2str(maxP) + " ]\n");
-  if(par::verbose) PP->printLOG("\t[ " + int2str(goodPvalCount) + " ] p-values passed threshold test\n");
+  if(par::verbose) PP->printLOG("\t[ " + int2str(infCount) + " ] infinite Z values, no p-values\n");
   if(par::verbose) PP->printLOG("\t[ " + int2str(badPvalCount) + " ] p-values failed threshold test\n");
-  // PP->printLOG("\t[ " + int2str(allP.size()) + " ] total p-values tested\n");
+  if(par::verbose) PP->printLOG("\t[ " + int2str(goodPvalCount) + " ] p-values passed threshold test\n");
+  totalTests = goodPvalCount + badPvalCount + infCount;
+  if(par::verbose) PP->printLOG("\t[ " + int2str(totalTests) + " ] total tests\n");
   
   return true;
 }
@@ -788,68 +781,84 @@ bool DcVar::ComputeDifferentialCorrelationZ(string snp,
   return true;
 }
 
-bool DcVar::ComputeDifferentialCorrelationZnaive(string snp, 
+bool DcVar::ComputeDifferentialCorrelationZsparse(string snp, 
                                                  mat& cases, 
                                                  mat& ctrls,
                                                  sp_mat& zVals) {
-  if(debugFlag) {
-    cout << "cases: " << cases.n_rows << " x " << cases.n_cols << endl;
-    cout << "ctrls: " << ctrls.n_rows << " x " << ctrls.n_cols << endl;
-    cout << "cases submatrix" << endl << cases.submat(0, 0, 4, 4) << endl;
-    cout << "ctrls submatrix" << endl << ctrls.submat(0, 0, 4, 4) << endl;
-  }
-  // compute covariances/correlations
-  mat covMatrixX;
-  mat corMatrixX;
-  if(!armaComputeCovariance(cases, covMatrixX, corMatrixX)) {
-    error("Could not compute coexpression matrix for cases");
-  }
-  mat covMatrixY;
-  mat corMatrixY;
-  if(!armaComputeCovariance(ctrls, covMatrixY, corMatrixY)) {
-    error("Could not compute coexpression matrix for controls");
-  }
-
-  if(debugFlag) {
-    cout << corMatrixX.n_rows << " x " << corMatrixX.n_cols << endl;
-    cout << "cor(cases)" << endl << corMatrixX.submat(0,0,4,4) << endl;
-    cout << "cor(ctrls)" << endl << corMatrixY.submat(0,0,4,4) << endl;
-  }
-  
-  // algorithm from R script z_test.R
-  PP->printLOG("Performing Z-tests for interactions\n");
-  double n1 = caseIdxCol.size();
-  double n2 = ctrlIdxCol.size();
-  int goodCount = 0;
+  if(par::verbose) PP->printLOG("\tPerforming Z-tests for all RNA-seq interactions\n");
+  double n1 = static_cast<double>(caseIdxCol.size());
+  double n2 = static_cast<double>(ctrlIdxCol.size());
+  uint numGenes = geneExprNames.size();
   double minP = 1.0;
   double maxP = 0.0;
-  uint numVars = geneExprNames.size();
-  zVals.resize(numVars, numVars);
-  for(int i=0; i < numVars; ++i) {
-    for(int j=i + 1; j < numVars; ++j) {
-      double r_ij_1 = corMatrixX(i, j);
-      double r_ij_2 = corMatrixY(i, j);
+  uint goodPvalCount = 0;
+  uint badPvalCount = 0;
+  uint infCount = 0;
+  double pThreshold = DEFAULT_PVALUE_THRESHOLD;
+  if(par::dcvar_pfilter_type == "custom") {
+    pThreshold = par::dcvar_pfilter_value;
+  }
+  if(par::verbose) PP->printLOG("\tFirst pass filter threshold [ " + 
+     dbl2str(pThreshold) + " ]\n");
+  if(par::verbose) PP->printLOG("\tEntering OpenMP parallel section for [ ");
+  if(par::verbose) PP->printLOG(int2str(numCombs) + " ] dcvar combination\n");
+  uint i=0, j=0;
+  zVals.zeros(numGenes, numGenes);
+#pragma omp parallel for schedule(dynamic, 1) private(i, j)
+  for(i=0; i < numGenes; ++i) {
+    for(j=i + 1; j < numGenes; ++j) {
+      // correlation between this interaction pair (i, j) in cases and controls
+      vec caseVarVals1 = cases.col(i);
+      vec caseVarVals2 = cases.col(j);
+      vec r_ij_1_v = cor(caseVarVals1, caseVarVals2);
+      double r_ij_1 = (double) r_ij_1_v[0];
+      vec ctrlVarVals1 = ctrls.col(i);
+      vec ctrlVarVals2 = ctrls.col(j);
+      vec r_ij_2_v = cor(ctrlVarVals1, ctrlVarVals2);
+      double r_ij_2 = (double) r_ij_2_v[0];
+      // differential correlation Z
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
-      double p = 2 * normdist(-abs(Z_ij)); 
-      if(std::isinf(Z_ij)) {
-        cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
-      } else {
-        if(par::do_dcvar_pfilter) {
-          if(p < par::dcvar_pfilter_value) {
-            zVals(i, j) = Z_ij;
-            ++goodCount;
-          }
-          if(p < minP) { minP = p; }
-          if(p > maxP) { maxP = p; }
-        }
-      }
-    }
-  }
+      #pragma omp critical 
+      {
+        // !NOTE! critical section for writing to an already opened file 'zout'!
+        // and to keep track of counts, min/max p-values in public scope
+        double p = DEFAULT_PVALUE;
+        if(std::isinf(Z_ij)) {
+          // bad Z
+          ++infCount;
+        } else {
+          //matrixElement interactionPvalElement;
+          //pair<uint, uint> indexPair = make_pair(i, j);
+          p = 2 * normdist(-abs(Z_ij));
+          if(p < minP) minP = p;
+          if(p > maxP) maxP = p;
+          if(p <= pThreshold) {
+            ++goodPvalCount;
+//            string outString = snp +  "\t"  +
+//                    geneExprNames[i] + "\t"  +
+//                    geneExprNames[j] + "\t"  +
+//                    dbl2str(p);
+//            zout.writeLine(outString);
+            zVals(i, j) = p;
+          } else {
+            ++badPvalCount;
+          } // end else good p
+        } // end else good Z
+      } // end openmp critical section
+    } // end for j cols
+  } // end for i rows
+  if(par::verbose) PP->printLOG("End OpenMP parallel section");
+  if(par::verbose) PP->printLOG("\tminp [" + dbl2str(minP) + " ] "
+                                "maxp [ " + dbl2str(maxP) + " ]\n");
   
-  PP->printLOG("\t[ " + int2str(goodCount) + " ] p-values passed threshold test\n");
-
+  if(par::verbose) PP->printLOG("\t[ " + int2str(infCount) + " ] infinite Z values, no p-values\n");
+  if(par::verbose) PP->printLOG("\t[ " + int2str(badPvalCount) + " ] p-values failed threshold test\n");
+  if(par::verbose) PP->printLOG("\t[ " + int2str(goodPvalCount) + " ] p-values passed threshold test\n");
+  totalTests = goodPvalCount + badPvalCount + infCount;
+  if(par::verbose) PP->printLOG("\t[ " + int2str(totalTests) + " ] total tests\n");
+  
   return true;
 }
 
@@ -878,7 +887,7 @@ bool DcVar::FilterPvalues() {
         // numPruned = PruneCustom();
         numPruned = 0;
       } else {
-        error("Unknown p-value filter type. Expects \"bon\" or \"fdr\"."   
+        error("Unknown p-value filter type. Expects \"bon\" or \"fdr\" or \"custom\"."   
             "Got [ " + par::dcvar_pfilter_type + " ]");
       }
     }
@@ -983,6 +992,8 @@ uint DcVar::PruneCustom() {
   return numPruned;
 }
 
+
+
 bool DcVar::WriteResults(string filename) {
   if(par::verbose) PP->printLOG("\tWriting interactions that passed p-value filter to [ "  + filename + " ]\n");
   ofstream resultsFile;
@@ -998,6 +1009,28 @@ bool DcVar::WriteResults(string filename) {
         << endl;
   }
   resultsFile.close();
-  
+  return true;
+}
+
+bool DcVar::WriteOneSnpResultToFile(sp_mat& resultsMatrix, 
+                               string resultsFilename) {
+  if(par::verbose) {
+    PP->printLOG("\tWriting SNP interaction results to [ "  + 
+                 resultsFilename + " ]\n");
+  }
+  ofstream resultsFile;
+  resultsFile.open(resultsFilename);
+  sp_mat::const_iterator sit = resultsMatrix.begin();
+  for(; sit != resultsMatrix.end(); ++ sit) {
+    double pvalue = *sit;
+    uint row = sit.row();
+    uint col = sit.col();
+    resultsFile 
+        << geneExprNames[row] << "\t" 
+        << geneExprNames[col] << "\t" 
+        << pvalue << "\t"
+        << endl;
+  }
+  resultsFile.close();
   return true;
 }

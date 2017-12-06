@@ -62,7 +62,7 @@ private:
   bool ReadChipSeqFile();
   bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel="dom");
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
-  bool ComputeDifferentialCorrelationZnaive(std::string snp, 
+  bool ComputeDifferentialCorrelationZsparse(std::string snp, 
                                             arma::mat& cases, 
                                             arma::mat& ctrls,
                                             arma::sp_mat& zVals);
@@ -79,6 +79,8 @@ private:
   uint PruneBonferroni();
   uint PruneCustom();
   bool WriteResults(std::string filename);
+  bool WriteOneSnpResultToFile(arma::sp_mat& resultsMatrix, 
+                               std::string resultsFilename);
   // INPUTS
   SNP_INPUT_TYPE snpInputType;
   bool chipSeq;
@@ -99,12 +101,12 @@ private:
   std::vector<uint> caseIdxCol;
   std::vector<uint> ctrlIdxCol;
   // arma::sp_mat results;
-  // collection of all interaction terms as mat_el types
+  // collection of all interaction terms as matrixElement types
 	std::vector<matrixElement> interactionPvals;
   // arma::sp_mat resultsP;
   uint totalTests;
   // compressed output stream of p-values
-  ZOutput zout;
+  // ZOutput zout;
 };
 
 #endif	/* DCVAR_H */
