@@ -60,12 +60,12 @@ private:
   bool ReadSnpLocationsFile();
   bool ReadGeneExpressionFile();
   bool ReadChipSeqFile();
-  bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel="dom");
+  bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel,
+                        std::vector<uint>& mappedPhenos);
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
   bool ComputeDifferentialCorrelationZsparse(std::string snp, 
                                             arma::mat& cases, 
-                                            arma::mat& ctrls,
-                                            arma::sp_mat& zVals);
+                                            arma::mat& ctrls);
   bool ComputeDifferentialCorrelationZ(std::string snp, 
                                        arma::mat& cases, 
                                        arma::mat& ctrls, 
@@ -74,13 +74,11 @@ private:
                                            arma::mat& cases, 
                                            arma::mat& ctrls);
   bool FlattenPvals(vector_t& retPvals);
-  bool FilterPvalues();
+  bool FilterPvalues(arma::sp_mat& pVals);
   uint PruneFdrBH();
   uint PruneBonferroni();
   uint PruneCustom();
   bool WriteResults(std::string filename);
-  bool WriteOneSnpResultToFile(arma::sp_mat& resultsMatrix, 
-                               std::string resultsFilename);
   // INPUTS
   SNP_INPUT_TYPE snpInputType;
   bool chipSeq;
@@ -94,19 +92,15 @@ private:
   std::vector<std::string> geneExprNames;
   std::vector<std::string> geneExprSubjects;
   matrix_t expressionMatrix;
-  double numCombs;
   CHIP_SEQ_INFO_MAP chipSeqExpression;
-  // ALGORITHM VARIABLES
-  std::vector<uint> mappedPhenos;
+  // ALGORITHM
+  double numCombs;
+  uint totalTests;
   std::vector<uint> caseIdxCol;
   std::vector<uint> ctrlIdxCol;
-  // arma::sp_mat results;
-  // collection of all interaction terms as matrixElement types
-	std::vector<matrixElement> interactionPvals;
-  // arma::sp_mat resultsP;
-  uint totalTests;
-  // compressed output stream of p-values
-  // ZOutput zout;
+  // OUTPUTS
+  arma::sp_mat zVals;
+  arma::sp_mat pVals;
 };
 
 #endif	/* DCVAR_H */

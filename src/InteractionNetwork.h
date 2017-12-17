@@ -105,7 +105,7 @@ public:
 	// apply a power transform with exponent
 	bool ApplyFisherTransform();
   // deconvolution - 10/22/13
-  bool Deconvolve(arma::mat& nd, double alpha=1, double beta=0.9, int control=0);
+  bool Deconvolve(arma::sp_mat& nd, double alpha=1, double beta=0.9, int control=0);
   // debugging mode for algorithm development
   void SetDebugMode(bool debugFlag=true);
 private:

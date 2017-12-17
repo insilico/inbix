@@ -24,7 +24,7 @@ using namespace arma;
 using namespace std;
 
 // differential coexpression
-bool armaDcgain(mat& results, mat& pvals) {
+bool armaDcgain(sp_mat& results, sp_mat& pvals) {
   // t-test for diagonal
   int nAff = 0;
   int nUnaff = 0;
@@ -69,13 +69,13 @@ bool armaDcgain(mat& results, mat& pvals) {
   // cout << "X" << endl << X.submat(0,0,4,4) << endl;
   // cout << "Y" << endl << Y.submat(0,0,4,4) << endl;
   // compute covariances/correlations
-  mat covMatrixX;
-  mat corMatrixX;
+  sp_mat covMatrixX;
+  sp_mat corMatrixX;
   if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
     error("Could not compute coexpression matrix for cases");
   }
-  mat covMatrixY;
-  mat corMatrixY;
+  sp_mat covMatrixY;
+  sp_mat corMatrixY;
   if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
     error("Could not compute coexpression matrix for controls");
   }
@@ -125,7 +125,7 @@ bool armaDcgain(mat& results, mat& pvals) {
   return true;
 }
 
-bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
+bool armaComputeCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
 
 //	N <- nrow(X)
 //	p <- ncol(X)
@@ -239,9 +239,9 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
   return true;
 }
 
-bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
+bool armaWriteMatrix(sp_mat& m, string mFilename, vector<string> variableNames) {
   PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
-  ofstream outFile(mFilename.c_str());
+  ofstream outFile(mFilename);
   if(outFile.fail()) {
     return false;
   }

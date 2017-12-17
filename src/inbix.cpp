@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
     P.printLOG("Creating network\n");
     InteractionNetwork* network = 
       new InteractionNetwork(matrixFile, fileType, isUpperTriangular, &P);
-    mat nd;
+    sp_mat nd;
     P.printLOG("Running deconvolve\n");
     if(!network->Deconvolve(nd, par::deconvolutionAlpha, 
       par::deconvolutionBeta, par::deconvolutionControl)) {
@@ -305,8 +305,8 @@ int main(int argc, char* argv[]) {
 				error("Cannot read matrix file: " + par::numeric_filename);
 			}
 			// compute covariances/correlations
-			mat covMatrix;
-			mat corMatrix;
+			sp_mat covMatrix;
+			sp_mat corMatrix;
 			if(armaComputeCovariance(X, covMatrix, corMatrix)) {
 				// write results
 				string covFilename = par::output_file_name + ".covariance";
@@ -821,8 +821,8 @@ int main(int argc, char* argv[]) {
 				error("Cannot read numeric data into matrix");
 			}
 			// compute covariances/correlations
-			mat covMatrix;
-			mat corMatrix;
+			sp_mat covMatrix;
+			sp_mat corMatrix;
 			if(armaComputeCovariance(X, covMatrix, corMatrix)) {
 				// write results
 				string coexpFilename = par::output_file_name + ".coexpression";
@@ -838,8 +838,8 @@ int main(int argc, char* argv[]) {
 				error("Cannot read numeric data into case-control matrices");
 			}
 			// compute covariances/correlations
-			mat covMatrixX;
-			mat corMatrixX;
+			sp_mat covMatrixX;
+			sp_mat corMatrixX;
 			if(armaComputeCovariance(X, covMatrixX, corMatrixX)) {
 				// write results
 				string coexpFilename = par::output_file_name + ".coexpression.cases";
@@ -847,8 +847,8 @@ int main(int argc, char* argv[]) {
 			} else {
 				error("Could not compute coexpression matrix for cases");
 			}
-			mat covMatrixY;
-			mat corMatrixY;
+			sp_mat covMatrixY;
+			sp_mat corMatrixY;
 			if(armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
 				// write results
 				string coexpFilename = par::output_file_name + ".coexpression.controls";
@@ -858,7 +858,7 @@ int main(int argc, char* argv[]) {
 			}
       // write difference matrix - bcw - 10/18/13
       string coexpFilename = par::output_file_name + ".coexpression.ccdiff";
-      mat diffMatrix = corMatrixX - corMatrixY; 
+      sp_mat diffMatrix = corMatrixX - corMatrixY; 
       armaWriteMatrix(diffMatrix, coexpFilename, P.nlistname);
 		}
 		shutdown();
@@ -1003,8 +1003,7 @@ int main(int argc, char* argv[]) {
 
 		int M = P.nlistname.size();
 		int N = P.sample.size();
-		mat permResults;
-		permResults.resize(par::rankerPermNum, M);
+		sp_mat permResults(par::rankerPermNum, M);
 		int numPerms = par::rankerPermNum;
 		for(int perm = 0; perm < numPerms; ++perm)	{
 
@@ -1080,13 +1079,13 @@ int main(int argc, char* argv[]) {
 		    }
 
 		    // compute covariances/correlations
-		    mat covMatrixX;
-		    mat corMatrixX;
+		    sp_mat covMatrixX;
+		    sp_mat corMatrixX;
 		    if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
 		      error("Could not compute coexpression matrix for cases");
 		    }
-		    mat covMatrixY;
-		    mat corMatrixY;
+		    sp_mat covMatrixY;
+		    sp_mat corMatrixY;
 		    if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
 		      error("Could not compute coexpression matrix for controls");
 		    }
@@ -1148,13 +1147,15 @@ int main(int argc, char* argv[]) {
 		// 	<< endl;
 	 	string saveFilename = par::output_file_name + "_thresholds.txt";
 	 	P.printLOG("Writing permutation thresholds to [" + saveFilename + "]\n");
-		ofstream outputFileHandle(saveFilename.c_str());
+		ofstream outputFileHandle(saveFilename);
 		for(int col=0; col < M; ++col) {
-			colvec colScores = permResults.col(col);
+			SpSubview<double> colScoresView = permResults.col(col);
+      vector_t colScores(M);
+      copy(colScoresView.begin(), colScoresView.end(), colScores.begin());
 			// sort the scores
 			sort(colScores.begin(), colScores.end());
 			// get the threshold value
-			outputFileHandle << P.nlistname[col] << "\t" << colScores(thresholdIndex) << endl;
+			outputFileHandle << P.nlistname[col] << "\t" << colScores[thresholdIndex] << endl;
 		}
 		outputFileHandle.close();
 
@@ -1686,8 +1687,8 @@ int main(int argc, char* argv[]) {
 	if(par::do_differential_coexpression) {
 		P.printLOG("Performing dcGAIN analysis\n");
     int numVars = P.nlistname.size();
-    mat results(numVars, numVars);
-    mat pvals(numVars, numVars);
+    sp_mat results(numVars, numVars);
+    sp_mat pvals(numVars, numVars);
 
     armaDcgain(results, pvals);
     
@@ -1712,8 +1713,8 @@ int main(int argc, char* argv[]) {
 	if(par::do_differential_modularity) {
 		P.printLOG("Performing dmGAIN analysis\n");
     int numVars = P.nlistname.size();
-    mat results(numVars, numVars);
-    mat pvals(numVars, numVars);
+    sp_mat results(numVars, numVars);
+    sp_mat pvals(numVars, numVars);
 
     // t-test for diagonal
     int nAff = 0;
@@ -1753,21 +1754,21 @@ int main(int argc, char* argv[]) {
       error("Cannot read numeric data into case-control matrices");
     }
     // compute covariances/correlations
-    mat covMatrixX;
-    mat corMatrixX;
+    sp_mat covMatrixX;
+    sp_mat corMatrixX;
     if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
       error("Could not compute coexpression matrix for cases");
     }
-    mat covMatrixY;
-    mat corMatrixY;
+    sp_mat covMatrixY;
+    sp_mat corMatrixY;
     if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
       error("Could not compute coexpression matrix for controls");
     }
 
     // algorithm from R script z_test.R, modified by bam email 7/29/14
-    colvec k_1 = sum(corMatrixX, 1);
+    colvec k_1 = sum(mat(corMatrixX), 1);
 		double two_m_1 = sum(k_1);
-		colvec k_2 = sum(corMatrixY, 1);
+		colvec k_2 = sum(mat(corMatrixY), 1);
 		double two_m_2 = sum(k_2);
 
 		P.printLOG("Performing Z-tests for interactions\n");
