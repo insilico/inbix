@@ -378,9 +378,12 @@ bool DcVar::RunOMRF(bool debugFlag) {
     // adjust p-values
     if(par::do_dcvar_pfilter) {
       if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
-      FilterPvalues();
-      if(par::verbose) PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + 
-                   " ] values pass filtering\n");
+      uint numFiltered;
+      FilterPvalues(numFiltered);
+      if(par::verbose) {
+        PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
+        PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+      }
     } else {
       if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
@@ -867,44 +870,58 @@ bool DcVar::FlattenPvals(vector_t& retPvals) {
   return true;
 }
 
-bool DcVar::FilterPvalues() {
-  vector_t interactionPvals;
-  FlattenPvals(interactionPvals);
-  if(par::verbose) PP->printLOG("\tFiltering p-values using [ " +  
-               par::dcvar_pfilter_type + " ] correction\n");
-  uint numPruned = 0;
-  if(par::verbose) PP->printLOG("\t[ " + int2str(interactionPvals.size()) + " ] p-values before pruning\n");
+bool DcVar::FilterPvalues(uint& numFiltered) {
+  double filterThreshold = par::dcvar_pfilter_value;
   if(par::dcvar_pfilter_type == "fdr") {
-    numPruned = PruneFdrBH();
+    filterThreshold = CalculateFdrBHThreshold();
   } else {
     if(par::dcvar_pfilter_type == "bon") {
-      numPruned = PruneBonferroni();
+      filterThreshold = par::dcvar_pfilter_value / (numCombs * snpNames.size());
     } else {
       if(par::dcvar_pfilter_type == "custom") {
-        numPruned = PruneCustom();
+        // do nothing, but include for later mods context
+        filterThreshold = par::dcvar_pfilter_value;
       } else {
         error("Unknown p-value filter type. Expects \"bon\" or \"fdr\" or \"custom\"."   
-            "Got [ " + par::dcvar_pfilter_type + " ]");
+              "Got [ " + par::dcvar_pfilter_type + " ]");
       }
     }
-    if(par::verbose) PP->printLOG("\t[ " + int2str(numPruned) + " ] p-values pruned\n");
-    if(par::verbose) PP->printLOG("\t[ " + int2str(interactionPvals.size()) + " ] p-values after pruning\n");
   }
 
+  if(par::verbose) {
+    PP->printLOG("\tCustom pruning with method [ " + par::dcvar_pfilter_type + " ]\n");
+    PP->printLOG("\tCustom pruning with correctedP [ " + 
+                 dbl2str(filterThreshold) + " ]\n");
+  }
+  uint numPruned = 0;
+  uint numGenes = geneExprNames.size();
+  for(uint i=0; i < numGenes; ++i) {
+    for(uint j=i + 1; j < numGenes; ++j) {
+      if(pVals(i, j) > filterThreshold) {
+        zVals(i, j) = 0;
+        zVals(j, i) = 0;
+        ++numPruned;
+      }
+    }
+  }
+
+  if(par::verbose) PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
+
+  numFiltered = numPruned;
+  
   return true;
 }
 
-uint DcVar::PruneFdrBH() {
+double DcVar::CalculateFdrBHThreshold() {
   vector_t interactionPvals;
   FlattenPvals(interactionPvals);
-  uint numPruned = 0;
-  // Adapted for code by Nick Davis in Encore, which became inbix.
-  if(par::verbose) PP->printLOG("\tCalculating FDR using Benjamini-Hochberg for pruning\n");
+  if(par::verbose) 
+    PP->printLOG("\tCalculating FDR using Benjamini-Hochberg (BH) for pruning\n");
   uint m = interactionPvals.size() * snpNames.size();
   // sort interaction by p-value
   sort(interactionPvals.begin(), interactionPvals.end());
-
-  // use rough FDR (RFDR) to estimate alpha based on input FDR
+  // use rough FDR (RFDR) to estimate alpha based on input FDR 
+  // from encore, Nick Davis code
   double alpha = 2 * m * DEFAULT_FDR / (m + 1);
   int R = -1;
   // BH method
@@ -917,79 +934,19 @@ uint DcVar::PruneFdrBH() {
       break;
     }
   }
-
   // BH threshold condition not met with any p-values, so exit
   if(R == -1) {
     if(par::verbose) PP->printLOG("\tWARNING: No p-value meets BH threshold criteria, so no pruning\n");
-    numPruned = numCombs;
-    interactionPvals.clear();
-    return numPruned;
+    return 0.0;
   }
-
   // BH rejection threshold
   double T = interactionPvals[R];
-  if(par::verbose) PP->printLOG("\tBH rejection threshold: T = [ " + dbl2str(T) + " ], R = " +
-    int2str(R) + "\n");
-  if(par::verbose) PP->printLOG("\tPruning interactions with p-values > T [ (" +
-    dbl2str(T) + " ])\n");
-  // now prune (set to 0.0) all values greater than threshold T
-  uint numGenes = geneExprNames.size();
-  for(uint i=0; i < numGenes; ++i) {
-    for(uint j=i + 1; j < numGenes; ++j) {
-      if(pVals(i, j) > T) {
-        zVals(i, j) = 0;
-        zVals(j, i) = 0;
-        ++numPruned;
-      }
-    }
+  if(par::verbose)  {
+    PP->printLOG("\tBH rejection threshold: T = [ " + dbl2str(T) + " ], R = " + int2str(R) + "\n");
+    PP->printLOG("\tPruning interactions with p-values > T [ (" + dbl2str(T) + " ])\n");
   }
-      
-  if(par::verbose) PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
-
-  return numPruned;
-}
-
-uint DcVar::PruneBonferroni() {
-  double correctedP = par::dcvar_pfilter_value / (numCombs * snpNames.size());
-  if(par::verbose) PP->printLOG("\tBonferroni pruning with correctedP [ " + 
-               dbl2str(correctedP) + " ]\n");
-  uint numPruned = 0;
-  uint numGenes = geneExprNames.size();
-  for(uint i=0; i < numGenes; ++i) {
-    for(uint j=i + 1; j < numGenes; ++j) {
-      if(pVals(i, j) > correctedP) {
-        zVals(i, j) = 0;
-        zVals(j, i) = 0;
-        ++numPruned;
-      }
-    }
-  }
-      
-  if(par::verbose) PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
   
-  return numPruned;
-}
-
-uint DcVar::PruneCustom() {
-  uint numPruned = 0;
-  sp_mat::const_iterator matIt = zVals.begin();
-  for(; matIt != zVals.end(); ++matIt) {
-    uint row = matIt.row();
-    uint col = matIt.col();
-    double pvalue = pVals(row, col);
-    if(pvalue > par::dcvar_pfilter_value) {
-      zVals(row, col) = 0;
-      zVals(col, row) = 0;
-      ++numPruned;
-    }
-  }
-  if(par::verbose) {
-    PP->printLOG("\tz-values pruned [ " + int2str(numPruned) + " ]\n");
-    PP->printLOG("\tnon-zero z-values [ " + int2str(zVals.n_nonzero) + " ]\n");
-  }
-  PP->printLOG("\tnon-zero z-values [ " + int2str(zVals.n_nonzero) + " ]\n");
-  
-  return numPruned;
+  return T;
 }
 
 bool DcVar::WriteCheckpoint(uint snpIndex, string snpName) {

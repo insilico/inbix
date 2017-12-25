@@ -76,10 +76,8 @@ private:
                                            arma::mat& cases, 
                                            arma::mat& ctrls);
   bool FlattenPvals(vector_t& retPvals);
-  bool FilterPvalues();
-  uint PruneFdrBH();
-  uint PruneBonferroni();
-  uint PruneCustom();
+  bool FilterPvalues(uint& numFiltered);
+  double CalculateFdrBHThreshold();
   bool WriteCheckpoint(uint snpIndex, std::string snpName);
   bool ReadCheckpoint(std::pair<uint, string>& lastSnp);
   bool WriteResults(std::string filename);
