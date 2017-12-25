@@ -8,8 +8,8 @@ enable_language(CXX Fortran)
 
 # enable either debugging mode with embedded symbols
 # or optimized with no debugging symbols
-# set(BUILD_DEBUG ON CACHE BOOL "" FORCE)
-set(BUILD_DEBUG OFF CACHE BOOL "" FORCE)
+set(BUILD_DEBUG ON CACHE BOOL "" FORCE)
+# set(BUILD_DEBUG OFF CACHE BOOL "" FORCE)
 
 if(BUILD_DEBUG)
   set(INBIX_CXX_FLAGS "-g -fopenmp -fno-var-tracking-assignments -Wno-write-strings -std=c++11")

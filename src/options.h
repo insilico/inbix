@@ -362,6 +362,7 @@ public:
   static string dcvar_snp_locations_file;
   static string dcvar_gene_expression_file;
   static string dcvar_chip_seq_file;
+  static bool dcvar_resume_snp;
   
   // differential modularity analysis - bcw - 7/31/14
   static bool do_differential_modularity;

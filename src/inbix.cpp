@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
     P.printLOG("Creating network\n");
     InteractionNetwork* network = 
       new InteractionNetwork(matrixFile, fileType, isUpperTriangular, &P);
-    sp_mat nd;
+    mat nd;
     P.printLOG("Running deconvolve\n");
     if(!network->Deconvolve(nd, par::deconvolutionAlpha, 
       par::deconvolutionBeta, par::deconvolutionControl)) {
@@ -305,8 +305,8 @@ int main(int argc, char* argv[]) {
 				error("Cannot read matrix file: " + par::numeric_filename);
 			}
 			// compute covariances/correlations
-			sp_mat covMatrix;
-			sp_mat corMatrix;
+			mat covMatrix;
+			mat corMatrix;
 			if(armaComputeCovariance(X, covMatrix, corMatrix)) {
 				// write results
 				string covFilename = par::output_file_name + ".covariance";
@@ -821,8 +821,8 @@ int main(int argc, char* argv[]) {
 				error("Cannot read numeric data into matrix");
 			}
 			// compute covariances/correlations
-			sp_mat covMatrix;
-			sp_mat corMatrix;
+			mat covMatrix;
+			mat corMatrix;
 			if(armaComputeCovariance(X, covMatrix, corMatrix)) {
 				// write results
 				string coexpFilename = par::output_file_name + ".coexpression";
@@ -838,8 +838,8 @@ int main(int argc, char* argv[]) {
 				error("Cannot read numeric data into case-control matrices");
 			}
 			// compute covariances/correlations
-			sp_mat covMatrixX;
-			sp_mat corMatrixX;
+			mat covMatrixX;
+			mat corMatrixX;
 			if(armaComputeCovariance(X, covMatrixX, corMatrixX)) {
 				// write results
 				string coexpFilename = par::output_file_name + ".coexpression.cases";
@@ -847,8 +847,8 @@ int main(int argc, char* argv[]) {
 			} else {
 				error("Could not compute coexpression matrix for cases");
 			}
-			sp_mat covMatrixY;
-			sp_mat corMatrixY;
+			mat covMatrixY;
+			mat corMatrixY;
 			if(armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
 				// write results
 				string coexpFilename = par::output_file_name + ".coexpression.controls";
@@ -858,7 +858,7 @@ int main(int argc, char* argv[]) {
 			}
       // write difference matrix - bcw - 10/18/13
       string coexpFilename = par::output_file_name + ".coexpression.ccdiff";
-      sp_mat diffMatrix = corMatrixX - corMatrixY; 
+      mat diffMatrix = corMatrixX - corMatrixY; 
       armaWriteMatrix(diffMatrix, coexpFilename, P.nlistname);
 		}
 		shutdown();
@@ -955,7 +955,7 @@ int main(int argc, char* argv[]) {
 			}
 			string outFile = par::output_file_name + ".ranks";
 			P.printLOG("Writing scores to [" + outFile + "]\n");
-			ofstream outputFileHandle(outFile.c_str());
+			ofstream outputFileHandle(outFile);
 			int numToWrite = ranks.size();
 			int topN = par::ranker_top_n;
 			if((topN > 0) && (topN <= ranks.size())) {
@@ -1003,7 +1003,7 @@ int main(int argc, char* argv[]) {
 
 		int M = P.nlistname.size();
 		int N = P.sample.size();
-		sp_mat permResults(par::rankerPermNum, M);
+		mat permResults(par::rankerPermNum, M);
 		int numPerms = par::rankerPermNum;
 		for(int perm = 0; perm < numPerms; ++perm)	{
 
@@ -1079,13 +1079,13 @@ int main(int argc, char* argv[]) {
 		    }
 
 		    // compute covariances/correlations
-		    sp_mat covMatrixX;
-		    sp_mat corMatrixX;
+		    mat covMatrixX;
+		    mat corMatrixX;
 		    if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
 		      error("Could not compute coexpression matrix for cases");
 		    }
-		    sp_mat covMatrixY;
-		    sp_mat corMatrixY;
+		    mat covMatrixY;
+		    mat corMatrixY;
 		    if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
 		      error("Could not compute coexpression matrix for controls");
 		    }
@@ -1149,9 +1149,7 @@ int main(int argc, char* argv[]) {
 	 	P.printLOG("Writing permutation thresholds to [" + saveFilename + "]\n");
 		ofstream outputFileHandle(saveFilename);
 		for(int col=0; col < M; ++col) {
-			SpSubview<double> colScoresView = permResults.col(col);
-      vector_t colScores(M);
-      copy(colScoresView.begin(), colScoresView.end(), colScores.begin());
+      vec colScores(permResults.col(col));
 			// sort the scores
 			sort(colScores.begin(), colScores.end());
 			// get the threshold value
@@ -1688,7 +1686,7 @@ int main(int argc, char* argv[]) {
 		P.printLOG("Performing dcGAIN analysis\n");
     int numVars = P.nlistname.size();
     sp_mat results(numVars, numVars);
-    sp_mat pvals(numVars, numVars);
+    mat pvals(numVars, numVars);
 
     armaDcgain(results, pvals);
     
@@ -1701,7 +1699,7 @@ int main(int argc, char* argv[]) {
       }
     }
     string dcgainFilename = par::output_file_name + ".dcgain";
-    armaWriteMatrix(results, dcgainFilename, P.nlistname);
+    armaWriteSparseMatrix(results, dcgainFilename, P.nlistname);
     string dcgainPvalsFilename = par::output_file_name + ".pvals.dcgain";
     armaWriteMatrix(pvals, dcgainPvalsFilename, P.nlistname);
     shutdown();
@@ -1714,7 +1712,7 @@ int main(int argc, char* argv[]) {
 		P.printLOG("Performing dmGAIN analysis\n");
     int numVars = P.nlistname.size();
     sp_mat results(numVars, numVars);
-    sp_mat pvals(numVars, numVars);
+    mat pvals(numVars, numVars);
 
     // t-test for diagonal
     int nAff = 0;
@@ -1754,13 +1752,13 @@ int main(int argc, char* argv[]) {
       error("Cannot read numeric data into case-control matrices");
     }
     // compute covariances/correlations
-    sp_mat covMatrixX;
-    sp_mat corMatrixX;
+    mat covMatrixX;
+    mat corMatrixX;
     if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
       error("Could not compute coexpression matrix for cases");
     }
-    sp_mat covMatrixY;
-    sp_mat corMatrixY;
+    mat covMatrixY;
+    mat corMatrixY;
     if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
       error("Could not compute coexpression matrix for controls");
     }
@@ -1806,7 +1804,7 @@ int main(int argc, char* argv[]) {
       }
     }
     string dmgainFilename = par::output_file_name + ".dmgain";
-    armaWriteMatrix(results, dmgainFilename, P.nlistname);
+    armaWriteSparseMatrix(results, dmgainFilename, P.nlistname);
     string dmgainPvalsFilename = par::output_file_name + ".pvals.dmgain";
     armaWriteMatrix(pvals, dmgainPvalsFilename, P.nlistname);
     shutdown();

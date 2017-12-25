@@ -2837,7 +2837,10 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar-chip-seq-file")) {
     par::dcvar_chip_seq_file = a.value("--dcvar-chip-seq-file");
   }
-
+  if(a.find("--dcvar-resume-snp")) {
+    par::dcvar_resume_snp = true;
+  }
+  
   // differential modularity analysis - bcw - 7/31/14
   if(a.find("--dmgain")) {
     par::do_differential_modularity = true;
@@ -4476,6 +4479,7 @@ void setOptions(CArgs & a) {
             << "      --dmgain-abs              Take absolute value of dmgain matrix\n"
             << "\n"
             << "      --dcvar                         Perform a differential coexpression variant analysis\n"
+            << "      --dcvar-resume-snp              Resume SNP phenotype loop from checkpoint file\n"
             << "      --dcvar-pfilter                 Enable p-value filtering\n"
             << "      --dcvar-pfilter-value {value}   P-value filter value\n"
             << "      --dcvar-pfilter-type {bon|fdr|custom}  P-value correction for filter Bonferroni or FDR BH\n"

@@ -1448,7 +1448,7 @@ vector<unsigned int> InteractionNetwork::FlattenModules() {
 	return flatModules;
 }
 
-bool InteractionNetwork::Deconvolve(sp_mat& nd, double alpha, double beta, int control) {
+bool InteractionNetwork::Deconvolve(mat& nd, double alpha, double beta, int control) {
 
   // --------------------------------------------------------------------------
   // check parameters

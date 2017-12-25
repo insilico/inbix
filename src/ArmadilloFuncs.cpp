@@ -24,7 +24,7 @@ using namespace arma;
 using namespace std;
 
 // differential coexpression
-bool armaDcgain(sp_mat& results, sp_mat& pvals) {
+bool armaDcgain(sp_mat& results, mat& pvals) {
   // t-test for diagonal
   int nAff = 0;
   int nUnaff = 0;
@@ -69,13 +69,13 @@ bool armaDcgain(sp_mat& results, sp_mat& pvals) {
   // cout << "X" << endl << X.submat(0,0,4,4) << endl;
   // cout << "Y" << endl << Y.submat(0,0,4,4) << endl;
   // compute covariances/correlations
-  sp_mat covMatrixX;
-  sp_mat corMatrixX;
+  mat covMatrixX;
+  mat corMatrixX;
   if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
     error("Could not compute coexpression matrix for cases");
   }
-  sp_mat covMatrixY;
-  sp_mat corMatrixY;
+  mat covMatrixY;
+  mat corMatrixY;
   if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
     error("Could not compute coexpression matrix for controls");
   }
@@ -125,7 +125,7 @@ bool armaDcgain(sp_mat& results, sp_mat& pvals) {
   return true;
 }
 
-bool armaComputeCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
+bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
 
 //	N <- nrow(X)
 //	p <- ncol(X)
@@ -140,6 +140,31 @@ bool armaComputeCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
 //	D <- sqrt(diag(V))
 //	R <- D %*% V %*% D
 	
+  int n = X.n_rows;
+
+  // compute covariances
+	PP->printLOG("Computing covariance matrix\n");
+	vec one = ones<vec>(n);
+  mat P = one * one.t() / n;
+	mat diag1(n, n);
+	diag1.eye();
+	mat Q = diag1 - P;
+  mat xStar = Q * X;
+	covMatrix = xStar.t() * xStar / (n - 1);
+
+  // compute correlations from covariances
+	PP->printLOG("Computing correlation matrix\n");
+	mat D = zeros<mat>(covMatrix.n_cols, covMatrix.n_cols);
+	for(int i=0; i < covMatrix.n_cols; ++i) {
+		D(i, i) = 1.0 / sqrt(covMatrix(i, i));
+	}
+	corMatrix = D * covMatrix * D;
+  
+  return true;
+}
+
+bool armaComputeSparseCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
+
   int n = X.n_rows;
 
   // compute covariances
@@ -239,7 +264,47 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
   return true;
 }
 
-bool armaWriteMatrix(sp_mat& m, string mFilename, vector<string> variableNames) {
+bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
+  PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
+  ofstream outFile(mFilename);
+  if(outFile.fail()) {
+    return false;
+  }
+  outFile.precision(6);
+  outFile.fixed;
+
+  // write the variables header
+  int hIdx = 0;
+  for(vector<string>::const_iterator hIt = variableNames.begin();
+          hIt != variableNames.end(); ++hIt, ++hIdx) {
+    if(hIdx) {
+      outFile << "\t" << *hIt;
+    }
+    else {
+      outFile << *hIt;
+    }
+  }
+  outFile << endl;
+
+  // write the matrix
+  for(int i=0; i < m.n_rows; ++i) {
+    for(int j=0; j < m.n_cols; ++j) {
+      if(j) {
+        outFile << "\t" << m(i, j);
+      }
+      else {
+        outFile << m(i, j);
+      }
+    }
+    outFile << endl;
+  }
+  
+  outFile.close();
+
+	return true;
+}
+
+bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector<string> variableNames) {
   PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
   ofstream outFile(mFilename);
   if(outFile.fail()) {

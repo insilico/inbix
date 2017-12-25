@@ -44,6 +44,8 @@ struct CHIP_SEQ_INFO {
 };
 typedef std::map<std::string, CHIP_SEQ_INFO> CHIP_SEQ_INFO_MAP;
 
+const string CHECKPOINT_FILENAME = "dcvar.chk";
+
 class DcVar {
 public:
   DcVar(SNP_INPUT_TYPE snpInputTypeParam=SNP_SRC_PLINK,
@@ -74,10 +76,12 @@ private:
                                            arma::mat& cases, 
                                            arma::mat& ctrls);
   bool FlattenPvals(vector_t& retPvals);
-  bool FilterPvalues(arma::sp_mat& pVals);
+  bool FilterPvalues();
   uint PruneFdrBH();
   uint PruneBonferroni();
   uint PruneCustom();
+  bool WriteCheckpoint(uint snpIndex, std::string snpName);
+  bool ReadCheckpoint(std::pair<uint, string>& lastSnp);
   bool WriteResults(std::string filename);
   // INPUTS
   SNP_INPUT_TYPE snpInputType;
@@ -100,7 +104,7 @@ private:
   std::vector<uint> ctrlIdxCol;
   // OUTPUTS
   arma::sp_mat zVals;
-  arma::sp_mat pVals;
+  arma::mat pVals;
 };
 
 #endif	/* DCVAR_H */

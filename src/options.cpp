@@ -265,6 +265,7 @@ string par::dcvar_genotypes_file = "";
 string par::dcvar_snp_locations_file = "";
 string par::dcvar_gene_expression_file = "";
 string par::dcvar_chip_seq_file = "";
+bool par::dcvar_resume_snp = false;
 
 // differential modularity analysis - bcw - 7/31/14
 bool par::do_differential_modularity = false;

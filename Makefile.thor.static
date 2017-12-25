@@ -16,7 +16,7 @@ WITH_LAPACK = 1
 FORCE_DYNAMIC = 
 
 CXX = g++
-CXXFLAGS += -O2 -I. -DUNIX -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11 -fopenmp
+CXXFLAGS += -O3 -I. -DUNIX -D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Wno-write-strings -std=c++11 -fopenmp
 LDFLAGS = -L.
 OUTPUT = inbix_static
 

@@ -317,14 +317,20 @@ bool DcVar::RunOMRF(bool debugFlag) {
                int2str(numGenes) + " ] genes\n");
 
   if(par::do_dcvar_pfilter) {
-    PP->printLOG("Filtering using [ " +  par::dcvar_pfilter_type +  " ] correction\n");
-    PP->printLOG("Filtering parameter [ " +  dbl2str(par::dcvar_pfilter_value) +  " ]\n");
+    PP->printLOG("Filtering p-values using [ " +  par::dcvar_pfilter_type +  " ] correction\n");
+    PP->printLOG("Filtering p-values parameter [ " +  dbl2str(par::dcvar_pfilter_value) +  " ]\n");
   }
   
   // ---------------------------------------------------------------------------
   // for all genotypes/SNPs across all subjects, make genotype into binary 
   // phenotype and run differential correlation on the RNA-Seq gene pairs
-  for(uint snpIdx = 0; snpIdx < numSnps; ++snpIdx) {
+  uint initSnpIdx = 0;
+  if(par::dcvar_resume_snp) {
+    pair <uint, string> snpInfo;
+    ReadCheckpoint(snpInfo);
+    initSnpIdx = snpInfo.first;
+  }
+  for(uint snpIdx = initSnpIdx; snpIdx < numSnps; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     if(par::verbose) PP->printLOG("--------------------------------------------------------\n");
     PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx + 1) + " of " + 
@@ -372,10 +378,8 @@ bool DcVar::RunOMRF(bool debugFlag) {
     // adjust p-values
     if(par::do_dcvar_pfilter) {
       if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
-      sp_mat newPvalsMatrix;
-      newPvalsMatrix.zeros(numGenes, numGenes);
-      FilterPvalues(newPvalsMatrix);
-      if(par::verbose) PP->printLOG("\t[ " + int2str(newPvalsMatrix.n_nonzero) + 
+      FilterPvalues();
+      if(par::verbose) PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + 
                    " ] values pass filtering\n");
     } else {
       if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
@@ -392,6 +396,9 @@ bool DcVar::RunOMRF(bool debugFlag) {
     } else {
       PP->printLOG("\tWARNING: nothing to write for [ " + snpName + " ]\n");
     }
+
+    // write in case the job fails in this loop; resume with command line flag
+    WriteCheckpoint(snpIdx, snpName);
   } // end for all SNPs
   
 //  zout.close();
@@ -787,7 +794,8 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
   if(par::verbose) PP->printLOG("\tEntering OpenMP parallel section for [ ");
   if(par::verbose) PP->printLOG(int2str(numCombs) + " ] dcvar combination\n");
   uint i=0, j=0;
-  zVals.zeros(numGenes, numGenes);
+  zVals.set_size(numGenes, numGenes);
+  pVals.ones(numGenes, numGenes);
 #pragma omp parallel for schedule(dynamic, 1) private(i, j)
   for(i=0; i < numGenes; ++i) {
     for(j=i + 1; j < numGenes; ++j) {
@@ -825,7 +833,8 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
 //                    geneExprNames[j] + "\t"  +
 //                    dbl2str(p);
 //            zout.writeLine(outString);
-            zVals(i, j) = p;
+            zVals(i, j) = Z_ij;
+            pVals(i, j) = p;
           } else {
             ++badPvalCount;
           } // end else good p
@@ -847,7 +856,7 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
 }
 
 bool DcVar::FlattenPvals(vector_t& retPvals) {
-  PP->printLOG("\tflattening p-values list into a vector\n");
+  if(par::verbose) PP->printLOG("\tflattening p-values list into a vector\n");
   retPvals.clear();
   for(uint i=0; i < pVals.n_rows; ++i) {
     for(uint j=i + 1; j < pVals.n_rows; ++j) {
@@ -858,7 +867,7 @@ bool DcVar::FlattenPvals(vector_t& retPvals) {
   return true;
 }
 
-bool DcVar::FilterPvalues(sp_mat& pVals) {
+bool DcVar::FilterPvalues() {
   vector_t interactionPvals;
   FlattenPvals(interactionPvals);
   if(par::verbose) PP->printLOG("\tFiltering p-values using [ " +  
@@ -872,8 +881,7 @@ bool DcVar::FilterPvalues(sp_mat& pVals) {
       numPruned = PruneBonferroni();
     } else {
       if(par::dcvar_pfilter_type == "custom") {
-        // numPruned = PruneCustom();
-        numPruned = 0;
+        numPruned = PruneCustom();
       } else {
         error("Unknown p-value filter type. Expects \"bon\" or \"fdr\" or \"custom\"."   
             "Got [ " + par::dcvar_pfilter_type + " ]");
@@ -925,88 +933,121 @@ uint DcVar::PruneFdrBH() {
   if(par::verbose) PP->printLOG("\tPruning interactions with p-values > T [ (" +
     dbl2str(T) + " ])\n");
   // now prune (set to 0.0) all values greater than threshold T
-  vector<uint> idxToPrune;
-  for(uint interactionIdx=0; interactionIdx < interactionPvals.size(); ++interactionIdx) {
-    if(interactionPvals[interactionIdx] > T) {
-      idxToPrune.push_back(interactionIdx);
+  uint numGenes = geneExprNames.size();
+  for(uint i=0; i < numGenes; ++i) {
+    for(uint j=i + 1; j < numGenes; ++j) {
+      if(pVals(i, j) > T) {
+        zVals(i, j) = 0;
+        zVals(j, i) = 0;
+        ++numPruned;
+      }
     }
   }
-  // https://stackoverflow.com/questions/6609547/erasing-elements-in-stlvector-by-using-indexes
-  sort(idxToPrune.begin(), idxToPrune.end());
-  for(int i=idxToPrune.size() - 1; i >= 0; i--){
-      interactionPvals.erase(interactionPvals.begin() + idxToPrune[i]);
-      ++numPruned;
-  }
+      
   if(par::verbose) PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
-  
+
   return numPruned;
 }
 
 uint DcVar::PruneBonferroni() {
-  vector_t interactionPvals;
-  FlattenPvals(interactionPvals);
   double correctedP = par::dcvar_pfilter_value / (numCombs * snpNames.size());
   if(par::verbose) PP->printLOG("\tBonferroni pruning with correctedP [ " + 
                dbl2str(correctedP) + " ]\n");
-  vector<uint> idxToPrune;
   uint numPruned = 0;
-  for(uint interactionIdx=0; interactionIdx < interactionPvals.size(); ++interactionIdx) {
-    if(interactionPvals[interactionIdx] > correctedP) {
-      idxToPrune.push_back(interactionIdx);
+  uint numGenes = geneExprNames.size();
+  for(uint i=0; i < numGenes; ++i) {
+    for(uint j=i + 1; j < numGenes; ++j) {
+      if(pVals(i, j) > correctedP) {
+        zVals(i, j) = 0;
+        zVals(j, i) = 0;
+        ++numPruned;
+      }
     }
   }
-  //sort(idxToPrune.begin(), idxToPrune.end());
-  for(int i=idxToPrune.size() - 1; i >= 0; i--){
-      interactionPvals.erase(interactionPvals.begin() + idxToPrune[i]);
-      ++numPruned;
-  }
+      
   if(par::verbose) PP->printLOG("\tPruned [ " + int2str(numPruned) + " ] values from interaction terms\n");
   
   return numPruned;
 }
 
 uint DcVar::PruneCustom() {
-  // 1.96E-17
-  uint numVars = geneExprNames.size();
-  sp_mat newPMatrix;
-  newPMatrix.zeros(numVars, numVars);
-  sp_mat newZMatrix;
-  newZMatrix.zeros(numVars, numVars);
   uint numPruned = 0;
-  sp_mat::const_iterator matIt = pVals.begin();
-  for(; matIt != pVals.end(); ++matIt) {
-    double pvalue = *matIt;
+  sp_mat::const_iterator matIt = zVals.begin();
+  for(; matIt != zVals.end(); ++matIt) {
     uint row = matIt.row();
     uint col = matIt.col();
-    if(pvalue < par::dcvar_pfilter_value) {
-      newPMatrix(row, col) = pvalue;
-      newZMatrix(row, col) = zVals(row, col);
-    } else {
+    double pvalue = pVals(row, col);
+    if(pvalue > par::dcvar_pfilter_value) {
+      zVals(row, col) = 0;
+      zVals(col, row) = 0;
       ++numPruned;
     }
   }
-  pVals = newPMatrix;
-  zVals = newZMatrix;
-  if(par::verbose) PP->printLOG("\tPruned [ " + int2str(numPruned) + 
-                                " ] values from interaction terms\n");
+  if(par::verbose) {
+    PP->printLOG("\tz-values pruned [ " + int2str(numPruned) + " ]\n");
+    PP->printLOG("\tnon-zero z-values [ " + int2str(zVals.n_nonzero) + " ]\n");
+  }
+  PP->printLOG("\tnon-zero z-values [ " + int2str(zVals.n_nonzero) + " ]\n");
   
   return numPruned;
+}
+
+bool DcVar::WriteCheckpoint(uint snpIndex, string snpName) {
+  ofstream checkpointFile(CHECKPOINT_FILENAME);
+  checkpointFile << snpIndex << endl << snpName << endl;
+  checkpointFile.close();
+  
+  return true;
+}
+
+bool DcVar::ReadCheckpoint(std::pair<uint, string>& lastSnp) {
+  ifstream checkpointFile(CHECKPOINT_FILENAME);
+  uint snpIndex;
+  string snpName;
+  string fileLine;
+  getline(checkpointFile, fileLine);
+  snpIndex = lexical_cast<uint>(fileLine);
+  getline(checkpointFile, snpName);
+  checkpointFile.close();
+  lastSnp.first = snpIndex;
+  lastSnp.second = snpName;
+  
+  return true;
 }
 
 bool DcVar::WriteResults(string filename) {
   if(par::verbose) 
     PP->printLOG("\tWriting interactions that passed p-value filter to [ "  + 
                  filename + " ]\n");
-  ofstream resultsFile;
-  resultsFile.open(filename);
-  sp_mat::const_iterator matIt = pVals.begin();
-  for(; matIt != pVals.end(); ++matIt) {
-    double pvalue = *matIt;
-    uint row = matIt.row();
-    uint col = matIt.col();
+  // avoid writing empty matrix/zero-byte file
+  // make no assumption that called has checked; display warning and return
+  sp_mat::const_iterator zmatItCurrent = zVals.begin();
+  sp_mat::const_iterator zmatItEnd = zVals.end();
+  // no elements to write for this SNP?
+  if(zmatItCurrent == zmatItEnd) {
+    PP->printLOG("\tWARNING: DcVar::WriteResults method attempt to write "
+                 "empty z-values sparse matrix\n");
+    return false;
+  }
+  if((zVals.n_rows != pVals.n_rows) ||
+     (zVals.n_cols != pVals.n_cols)) {
+    PP->printLOG("\tWARNING: DcVar::WriteResults method attempt to write "
+                 "z-values matrix dimensions not equal to the p-values matrix\n");
+    PP->printLOG("\tZ: " + int2str(zVals.n_rows) + " x " + int2str(zVals.n_cols) + "\n");
+    PP->printLOG("\tp: " + int2str(pVals.n_rows) + " x " + int2str(pVals.n_cols) + "\n");
+    return false;
+  }
+  ofstream resultsFile(filename);
+  resultsFile << "Gene1\tGene2\tZ\tP" << endl;
+  for(; zmatItCurrent != zmatItEnd; ++zmatItCurrent) {
+    double zvalue = *zmatItCurrent;
+    uint row = zmatItCurrent.row();
+    uint col = zmatItCurrent.col();
+    double pvalue = pVals(row, col);
     resultsFile 
         << geneExprNames[row] << "\t" 
         << geneExprNames[col] << "\t" 
+        << zvalue << "\t"
         << pvalue << "\t"
         << endl;
   }
