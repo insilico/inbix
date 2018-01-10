@@ -1658,19 +1658,16 @@ int main(int argc, char* argv[]) {
 	if(par::do_dcvar) {
 		P.printLOG("\nPerforming dcVar analysis\n");
     SNP_INPUT_TYPE commandLineSrcType = SNP_SRC_PLINK;
-//    if(par::dcvar_genotypes_file != "" &&
-//       par::dcvar_snp_locations_file != "") {
-    if(par::dcvar_genotypes_file != "") {
+    if(par::dcvar_chip_seq_file != "") {
+    	P.printLOG("Using OMRF formatted filenames\n");
       commandLineSrcType = SNP_SRC_FILE;
     } else {
     	P.printLOG("Using PLINK bed/ped, bim/map and fam files\n");
     }
-    DcVar* dcvar = new DcVar(commandLineSrcType, 
-                             par::dcvar_chip_seq_file != "",
-                             par::verbose);
+    DcVar* dcvar = new DcVar(commandLineSrcType, par::dcvar_chip_seq_file != "");
     if(dcvar) {
   		P.printLOG("Initialization complete. Calling Run() method\n");
-      dcvar->Run(par::verbose);
+      dcvar->Run();
       delete dcvar;
     } else {
       P.printLOG("ERORR: Unable to construct a DcVar object. Exiting\n");

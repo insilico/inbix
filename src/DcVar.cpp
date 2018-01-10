@@ -35,23 +35,23 @@ using namespace insilico;
 using namespace boost;
 using namespace arma;
 
-bool pvalComparatorAscending(const matrixElement &l, const matrixElement &r) {
+bool pvalComparatorAscending(const matrixElement& l, const matrixElement& r) {
   return l.first < r.first;
 }
 
-DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) {
+bool chipseqComparatorAscending(const CHIP_SEQ_INFO& l, const CHIP_SEQ_INFO& r) {
+  string chromStr1(l.chrom.begin() + 3, l.chrom.end());
+  uint chromNum1 = lexical_cast<uint>(chromStr1);
+  string chromStr2(r.chrom.begin() + 3, r.chrom.end());
+  uint chromNum2 = lexical_cast<uint>(chromStr2);
+  return chromNum1 < chromNum2;
+}
+
+DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq) {
   PP->printLOG("dcVar initializing\n");
   snpInputType = snpInputTypeParam;
   chipSeq = hasChipSeq;
-  debugMode = debugFlag;
   if(snpInputTypeParam == SNP_SRC_FILE) {
-    // OMRF data files gzipped and tab-delimited
-    if(!ReadGenotypesFile()) {
-      error("Reading genotypes failed. Exiting.");
-    }
-//    if(!ReadSnpLocationsFile()) {
-//      error("Reading SNP location information file failed. Exiting.");
-//    }
     if(!ReadGeneExpressionFile()) {
       error("Reading gene expression file failed. Exiting.");
     }
@@ -66,7 +66,6 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) 
     // assume PLINK data structures accessible through PP pointer
     PP->printLOG("Using PLINK files for input data sets\n");
   }
-  SetDebugMode(debugFlag);
   if(!CheckInputs()) {
     error("Checking data sets compatability failed. Exiting.");
   }
@@ -80,17 +79,22 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq, bool debugFlag) 
 DcVar::~DcVar() {
 }
 
-bool DcVar::Run(bool debugFlag) {
+bool DcVar::Run() {
+  bool runSuccess = false;
   if(snpInputType == SNP_SRC_PLINK) {
-    RunPlink(debugFlag);
+    runSuccess = RunPlink();
   }
   if(snpInputType == SNP_SRC_FILE) {
-    RunOMRF(debugFlag);
+    if(chipSeq) {
+      runSuccess = RunOMRFChipSeq();
+    } else {
+      runSuccess = RunOMRF();
+    }
   }
-  return true;
+  return runSuccess;
 }
 
-bool DcVar::RunPlink(bool debugFlag) {
+bool DcVar::RunPlink() {
   if(chipSeqMode) {
     PP->printLOG("ChIP-seq not supported with PLINK files (yet)\n");
     return false;
@@ -289,12 +293,12 @@ bool DcVar::RunPlink(bool debugFlag) {
       }
     }
     dcvarFile.close();
-  } // END all snps loop
+  } // END all ChIP-Seq loop
 
   return true;
 }
 
-bool DcVar::RunOMRF(bool debugFlag) {
+bool DcVar::RunOMRF() {
   // ---------------------------------------------------------------------------
   PP->printLOG("DcVar::RunOMRF: Performing dcVar analysis on .gz and .tab files\n");
   uint numSnps = snpNames.size();
@@ -302,9 +306,9 @@ bool DcVar::RunOMRF(bool debugFlag) {
   uint numGenes = geneExprNames.size();
   // chipseq
   uint numChipSeq = 0;
-//  if(chipSeq) {
-//    numChipSeq = chipSeqExpression.size();
-//  }
+  if(chipSeq) {
+    numChipSeq = chipSeqExpression.size();
+  }
   // make sure we have variants
   if(numSnps < 1) {
     error("SNP genotypes file must include at least one SNP for analysis!");
@@ -409,45 +413,165 @@ bool DcVar::RunOMRF(bool debugFlag) {
   return true;
 }
 
-bool DcVar::CheckInputs() {
+bool DcVar::RunOMRFChipSeq() {
+  // ---------------------------------------------------------------------------
+  PP->printLOG("DcVar::RunOMRF: Performing dcVar analysis on .gz and .tab files\n");
+  uint numGenes = geneExprNames.size();
+  if(chipSeq) {
+  } else {
+    return false;
+  }
+  uint numChipseq = chipSeqExpression.size();
+  // make sure we have ChIP-Seq
+  if(numChipseq < 1) {
+    error("ChIP-Seq expression file must include at least one for analysis!");
+  }
+  // make sure we have genes
+  if(numGenes < MIN_NUM_GENES) {
+    error("Gene expression data must include at least [ " + int2str(MIN_NUM_GENES) + " ]\n");
+  }
+  PP->printLOG("Read [ " + int2str(numChipseq) + " ] ChIP-Seq, and [ " + 
+               int2str(numGenes) + " ] genes\n");
+  // how to filter output
+  if(par::do_dcvar_pfilter) {
+    PP->printLOG("Filtering p-values using [ " +  par::dcvar_pfilter_type +  " ] correction\n");
+    PP->printLOG("Filtering p-values parameter [ " +  dbl2str(par::dcvar_pfilter_value) +  " ]\n");
+  }
+  
+  // ---------------------------------------------------------------------------
+  // for all genotypes/SNPs across all subjects, make genotype into binary 
+  // phenotype and run differential correlation on the RNA-Seq gene pairs
+  uint initChipseqIdx = 0;
+  if(par::dcvar_resume_snp) {
+    pair <uint, string> snpInfo;
+    ReadCheckpoint(snpInfo);
+    initChipseqIdx = snpInfo.first;
+  } else {
+      initChipseqIdx = 1;
+  }
+  CHIP_SEQ_INFO chipseqInfo = chipSeqExpression[initChipseqIdx];
+  string preChrom = "";
+  string curChrom = chipseqInfo.chrom;
+  for(uint chipseqIdx = initChipseqIdx; chipseqIdx < numChipseq; ++chipseqIdx) {
+    chipseqInfo = chipSeqExpression[chipseqIdx];
+    string snpName = chipseqInfo.rsnum;
+    curChrom = chipseqInfo.chrom;
+    if(curChrom != preChrom) {
+      PP->printLOG("\tChromosome [ " + curChrom + " ]\n");
+      ReadGenotypesFile(curChrom);
+      ReadSnpLocationsFile(curChrom);
+    }
+    if(par::verbose) PP->printLOG("--------------------------------------------------------\n");
+    PP->printLOG("SNP [ " + snpName + " ] " + int2str(chipseqIdx + 1) + " of " + 
+                 int2str(numChipseq) + "\n");
+    // ------------------------------------------------------------------------
+    if(par::verbose) PP->printLOG("\tCreating phenotype from SNP genotypes\n");
+    vector<uint> snpGenotypes;
+    for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
+      snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[chipseqIdx][colIdx]));
+    }
+    // get variant genotypes for all subject and map to a genetic model
+    if(par::verbose) PP->printLOG("\tGenotypes case-control status\n");    
+    vector<uint> mappedPhenos;
+    MapPhenosToModel(snpGenotypes, 
+                     par::dcvar_var_model, 
+                     mappedPhenos);
+    if(par::verbose) cout << "\tCases:    " << caseIdxCol.size() << "\t";
+    if(par::verbose) cout << "Controls: " << ctrlIdxCol.size() << endl;
+    // ------------------------------------------------------------------------
+    if(par::verbose) PP->printLOG("\tSplitting into case-control groups\n");
+    uint numCases = caseIdxCol.size();
+    uint numCtrls = ctrlIdxCol.size();
+    if((numCases < MIN_NUM_SUBJ_PER_GROUP) || (numCtrls < MIN_NUM_SUBJ_PER_GROUP)) {
+      if(par::verbose) PP->printLOG("\tWARNING: groups sizes must be greater than [ " + 
+                   int2str(MIN_NUM_SUBJ_PER_GROUP - 1) + " ], skipping SNP\n");
+      continue;
+    }
+    mat casesMatrix(numCases, numGenes);
+    mat ctrlsMatrix(numCtrls, numGenes);
+    // split into case-control groups for testing DC
+    if(!SplitExpressionCaseControl(casesMatrix, ctrlsMatrix)) {
+      error("Could not split on case control status");
+    }
+    // ------------------------------------------------------------------------
+    if(par::verbose) PP->printLOG("\tComputeDifferentialCorrelationZals " 
+                 "and first pass p-value filter [ " + 
+                 dbl2str(DEFAULT_PVALUE_THRESHOLD) + " ]\n");
+    // sparse matrix of significant p-values
+    if(!ComputeDifferentialCorrelationZsparse(snpName, 
+                                              casesMatrix, 
+                                              ctrlsMatrix)) {
+      error("ComputeDifferentialCorrelationZvals failed");
+    }
+    // ------------------------------------------------------------------------
+    // adjust p-values
+    if(par::do_dcvar_pfilter) {
+      if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
+      uint numFiltered;
+      FilterPvalues(numFiltered);
+      if(par::verbose) {
+        PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
+        PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+      }
+    } else {
+      if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
+    }
+    // ------------------------------------------------------------------------
+    // write results, if there are any to write
+    if(zVals.n_nonzero) {
+      string resultsFilename = 
+              par::output_file_name + "." + 
+              par::dcvar_pfilter_type + "." +
+              snpName + 
+              ".pass.tab";
+      WriteResults(resultsFilename);
+    } else {
+      PP->printLOG("\tWARNING: nothing to write for [ " + snpName + " ]\n");
+    }
+    // write in case the job fails in this loop; resume with command line flag
+    WriteCheckpoint(chipseqIdx, snpName);
+    
+    preChrom = curChrom;
+  } // end for all SNPs
+  
+//  zout.close();
+  
   return true;
 }
 
-// TODO: remove this? what was the thinking? public interface? delete?
-bool DcVar::SetDebugMode(bool debugFlag) {
-  debugMode = debugFlag;
+bool DcVar::CheckInputs() {
   return true;
 }
 
 void DcVar::PrintState() {
   PP->printLOG("-----------------------------------------------------------\n");
-  string debugFlag = debugMode? "on": "off";
-  PP->printLOG("debug mode:                     " + debugFlag + "\n");
-  PP->printLOG("SNPs file:                      " + par::dcvar_genotypes_file + "\n");
-  PP->printLOG("SNP locations file:             " + par::dcvar_snp_locations_file + "\n");
   PP->printLOG("CHiP-seq expression file:       " + par::dcvar_chip_seq_file + "\n");
   PP->printLOG("p-value adjust method:          " + par::dcvar_pfilter_type + "\n");
   PP->printLOG("p-value cutoff for file output: " + dbl2str(par::dcvar_pfilter_value) + "\n");
   PP->printLOG("-----------------------------------------------------------\n");
 }
 
-bool DcVar::ReadGenotypesFile() {
-  checkFileExists(par::dcvar_genotypes_file);
-  PP->printLOG("Reading genotypes input from [ " + par::dcvar_genotypes_file + " ]\n");
-  ZInput zin(par::dcvar_genotypes_file, compressed(par::dcvar_genotypes_file));
+bool DcVar::ReadGenotypesFile(string chrom) {
+  string genotypesFilename = "data/genotype." + chrom + ".txt.gz";
+  checkFileExists(genotypesFilename);
+  PP->printLOG("Reading genotypes input from [ " + genotypesFilename + " ]\n");
+  ZInput zin(genotypesFilename, compressed(genotypesFilename));
   // read header line
   PP->printLOG("Getting genotype subject names from first line header\n");
   vector<string> tok = zin.tokenizeLine();
+  genotypeSubjects.clear();
 	for(int i=1; i < tok.size(); i++) {
     genotypeSubjects.push_back(tok[i]);
   }
+  genotypeMatrix.clear();
+  snpNames.clear();
   uint lineCounter = 1;
   while(!zin.endOfFile()) {
     ++lineCounter;
 	  vector<string> tok = zin.tokenizeLine();
     if(tok.size() < 2) {
       cerr << "WARNING: line [ " << lineCounter 
-              << " ] from [ " << par::dcvar_genotypes_file 
+              << " ] from [ " << genotypesFilename
               << " ] . . . skipping" << endl;
       continue;
     }
@@ -467,29 +591,31 @@ bool DcVar::ReadGenotypesFile() {
   return true;
 }
 
-bool DcVar::ReadSnpLocationsFile() {
-  checkFileExists(par::dcvar_snp_locations_file);
-  PP->printLOG("Reading SNP locations input from [ " + par::dcvar_snp_locations_file + " ]\n");
-  ZInput zin(par::dcvar_snp_locations_file, compressed(par::dcvar_snp_locations_file));
+bool DcVar::ReadSnpLocationsFile(string chrom) {
+  string locationsFilename = "data/SNP_location." + chrom + ".txt.gz";
+  checkFileExists(locationsFilename);
+  PP->printLOG("Reading SNP locations input from [ " + locationsFilename + " ]\n");
+  ZInput zin(locationsFilename, compressed(locationsFilename));
   PP->printLOG("Reading and discarding first line header\n");
   zin.tokenizeLine();
-  uint lineCounter = 0;
+  uint lineCounter = 1;
+  snpLocations.clear();
   while(!zin.endOfFile()) {
     ++lineCounter;
-	  vector<string> tok = zin.tokenizeLine();
-    if(tok.size() != 5) {
+	  vector<string> parsedFileLine = zin.tokenizeLine();
+    if(parsedFileLine.size() != (SNP_DBSNP_ALLELE + 1)) {
       cerr << "WARNING: reading line [ " << lineCounter 
               << " ] from " << par::dcvar_snp_locations_file 
-              << " should have 5 columns, found " << tok.size()
+              << " should have 5 columns, found " << parsedFileLine.size()
               << ". Blank line(s)?"
               << endl;
       continue;
     }
     SNP_INFO thisSnpInfo;
-    thisSnpInfo.chrom = tok[1];
-    thisSnpInfo.location = lexical_cast<uint>(tok[2]);
-    thisSnpInfo.refAllele = tok[4][0];
-    snpLocations[tok[0]] = thisSnpInfo;
+    thisSnpInfo.chrom = parsedFileLine[SNP_CHROM];
+    thisSnpInfo.position = lexical_cast<uint>(parsedFileLine[SNP_POS]);
+    thisSnpInfo.refAllele = parsedFileLine[SNP_DBSNP_ALLELE][0];
+    snpLocations[parsedFileLine[SNP_ID]] = thisSnpInfo;
 	}
   zin.close();
   PP->printLOG("Read subject SNP location info for [ " + 
@@ -514,22 +640,22 @@ bool DcVar::ReadGeneExpressionFile() {
 
   PP->printLOG("Getting gene names from first column, remaining columns gene expression\n");
   string line;
-  uint lineCounter = 0;
+  uint lineCounter = 1;
   while(getline(exprFile, line)) {
     ++lineCounter;
-	  vector<string> tok;
-    split(tok, line, "\t");
-    if(tok.size() < 2) {
+	  vector<string> parsedFileLine;
+    split(parsedFileLine, line, "\t");
+    if(parsedFileLine.size() < 2) {
       cerr << "Error reading line [ " << lineCounter 
               << " ] from " << par::dcvar_gene_expression_file 
               << " should have more than 2 columns (subjects)"
               << endl;
       continue;
     }
-    geneExprNames.push_back(tok[0]);
+    geneExprNames.push_back(parsedFileLine[0]);
     vector_t thisExprRec;
-    for(uint i=1; i < tok.size(); ++i) {
-      thisExprRec.push_back(lexical_cast<double>(tok[i]));
+    for(uint i=1; i < parsedFileLine.size(); ++i) {
+      thisExprRec.push_back(lexical_cast<double>(parsedFileLine[i]));
     }
     expressionMatrix.push_back(thisExprRec);
 	}
@@ -553,30 +679,32 @@ bool DcVar::ReadChipSeqFile() {
   PP->printLOG("Reading and discarding first line header\n");
   string header;
   getline(chipSeqFile, header);
-  uint lineCounter = 0;
+  uint lineCounter = 1;
   string line;
   while(getline(chipSeqFile, line)) {
     ++lineCounter;
-	  vector<string> tok;
-    split(tok, line, "\t");
-    if(tok.size() != (CHIP_SEQ_SNP + 1)) {
+	  vector<string> parsedFileLine;
+    split(parsedFileLine, line, "\t");
+    if(parsedFileLine.size() != (CHIP_SEQ_SNP + 1)) {
       cerr << "WARNING: reading line [ " << lineCounter 
               << " ] from " << par::dcvar_chip_seq_file 
-              << " should have 16 columns, found " << tok.size()
-              << ". Blank line(s)?" << endl;
+              << " should have 16 columns, found " << parsedFileLine.size()
+              << ". Blank line(s)? Attempting to continuing reading" << endl;
       continue;
     }
     CHIP_SEQ_INFO thisChipSeqInfo;
-    thisChipSeqInfo.chrom = tok[CHIP_SEQ_CHROM];
-    thisChipSeqInfo.position = lexical_cast<uint>(tok[CHIP_SEQ_POS]);
-    thisChipSeqInfo.totalRegionReads = lexical_cast<double>(tok[CHIP_SEQ_EXPR]);
+    thisChipSeqInfo.chrom = parsedFileLine[CHIP_SEQ_CHROM];
+    thisChipSeqInfo.position = lexical_cast<uint>(parsedFileLine[CHIP_SEQ_POS]);
+    thisChipSeqInfo.totalRegionReads = lexical_cast<uint>(parsedFileLine[CHIP_SEQ_EXPR]);
     // rs28469609:38367404:C:T
     vector<string> rsnumParts;
-    split(rsnumParts, tok[CHIP_SEQ_SNP], ":");
-    chipSeqExpression[rsnumParts[0]] = thisChipSeqInfo;
+    split(rsnumParts, parsedFileLine[CHIP_SEQ_SNP], ":");
+    thisChipSeqInfo.rsnum = rsnumParts[0];
+    chipSeqExpression.push_back(thisChipSeqInfo);
 	}
   chipSeqFile.close();
   PP->printLOG("Read ChIP-seq expression for " + int2str(lineCounter) + " SNPs\n");
+  sort(chipSeqExpression.begin(), chipSeqExpression.end(), chipseqComparatorAscending);
   
   return true;
 }
@@ -1010,5 +1138,133 @@ bool DcVar::WriteResults(string filename) {
   }
   resultsFile.close();
   
+  return true;
+}
+
+// from EpistasisEQtl - bcw - 1/3/18
+
+bool DcVar::SetRadius(int newRadius) {
+  if(newRadius < 1) {
+    cerr << "Error setting cis radius to: " << newRadius << endl;
+    return false;
+  }
+  // newRadius is in kilobases, but need to store a bases
+  radius = newRadius * 1000;
+  return true;
+}
+
+bool DcVar::SetLocalCis(bool localCisFlag) {
+  localCis = localCisFlag;
+  return true;
+}
+
+bool DcVar::SetTFRadius(int newRadius) {
+  if(newRadius < 0) {
+    cerr << "Error setting TF radius to: " << newRadius << endl;
+    return false;
+  }
+  // newRadius is in kilobases, but need to store a bases
+  tfRadius = newRadius * 1000;
+  return true;
+}
+
+bool DcVar::SetTF(bool tfFlag) {
+  tfMode = tfFlag;
+  return true;
+}
+
+bool DcVar::GetSnpsForTranscript(string transcript, 
+  vector<int>& snpIndices) {
+
+  // get transcript info
+  int chromosome = coordinates[transcript][COORD_CHROM];
+  int bpStart = coordinates[transcript][COORD_BP_START];
+  int bpEnd = coordinates[transcript][COORD_BP_END];
+  int lowerThreshold = bpStart - radius;
+  int upperThreshold = bpEnd + radius;
+  
+ // cout 
+ //   << "GetSnpsForTranscript: chrom: " << chromosome  << ", radius: " 
+ //   << radius  << ", " 
+ //   << "(" << lowerThreshold << "), "
+ //   << bpStart  << ", " 
+ //   << bpEnd << ", "
+ //   << "(" << upperThreshold << ")"
+ //   << endl;
+  
+  // find SNPs matching criteria
+  for(int j=0; j < PP->locus.size(); ++j) {
+    Locus* thisSnp = PP->locus[j];
+    if(thisSnp->chr == chromosome) {
+      if(localCis) {
+        // on the same chromosome and within radius of transcript
+        if((thisSnp->bp >= lowerThreshold) && 
+           (thisSnp->bp <= upperThreshold)) {
+          snpIndices.push_back(j);
+        }
+      }
+      else {
+        // simply on the same chromosome
+        snpIndices.push_back(j);
+      }
+    }
+  }
+
+  return true;
+}
+
+bool DcVar::GetSnpsForTFs(vector<int>& snpIndices, vector<string>& tfs) {
+
+  int allSnps = PP->locus.size();
+  PP->printLOG("Searching transcription factors in " + int2str(allSnps) + " SNPs\n");
+  // for all SNPs
+  for(int thisSnpIndex=0; thisSnpIndex < allSnps; ++thisSnpIndex) {
+    if(thisSnpIndex && (thisSnpIndex % 100000 == 0)) {
+      cout << thisSnpIndex << "/" << allSnps << endl;
+    }
+    Locus* thisSnp = PP->locus[thisSnpIndex];
+    int chr = thisSnp->chr;
+    int bp = thisSnp->bp;
+    // is this bp in range of any transcription factors?
+    string tf;
+    if(IsSnpInTFs(chr, bp, tf)) {
+      snpIndices.push_back(thisSnpIndex);
+      tfs.push_back(tf);
+    }
+  }
+
+  return true;
+}
+
+bool DcVar::IsSnpInTFs(int chr, int bp, string& tf) {
+  // linear search through the transcription factor lookup table for SNP at
+  // chr/bp, returning the transcription factor if true, else return false
+  bool found = false;
+  TranscriptFactorTableCIt lutIt = transcriptFactorLUT.begin();
+  while((lutIt != transcriptFactorLUT.end()) && (!found)) {
+    string thisTF = (*lutIt).first;
+    int thisTfChr = transcriptFactorLUT[thisTF][COORD_CHROM];
+    int thisTfBpBeg = transcriptFactorLUT[thisTF][COORD_BP_START];
+    int thisTfBpEnd = transcriptFactorLUT[thisTF][COORD_BP_END];
+    int rangeStart = thisTfBpBeg - tfRadius;
+    int rangeEnd = thisTfBpEnd + tfRadius;
+    if((chr == thisTfChr) && ((bp >= rangeStart) &&  (bp <= rangeEnd))) {
+      tf = thisTF;
+      return true;
+    }
+    ++lutIt;
+  }
+  return false;
+}
+
+bool DcVar::GetTFInfo(string tf, vector<int>& tfInfo) {
+  TranscriptFactorTableCIt lutInfo = transcriptFactorLUT.find(tf);
+  if(lutInfo == transcriptFactorLUT.end()) {
+    cerr << "GetTFRange failed to find: " << tf << endl;
+    return false;
+  }
+  for(int i=0; i < lutInfo->second.size(); ++i) {
+    tfInfo.push_back(lutInfo->second[i]);
+  }
   return true;
 }
