@@ -96,9 +96,9 @@ int main(int argc, char* argv[]) {
 
 	// ssstream versionString;
 	// versionString << inbix_VERSION_MAJOR << "." << inbix_VERSION_MINOR;
-	PVERSION = "0.05"; // 4 chars
+	PVERSION = "0.06"; // 4 chars
 	PREL = "p"; // space or p (full, or prelease) 
-	PDATE = "2017       "; // 11 chars
+	PDATE = "2018       "; // 11 chars
 
 	//////////////////
 	// The major class
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
 					"|----------------------------------------------------------|\n"
-					"|  (C) 2017 Bill White, GNU General Public License, v2     |\n"
+					"|  (C) 2018 Bill White, GNU General Public License, v2     |\n"
 					"@----------------------------------------------------------@\n"
 					"\n");
   

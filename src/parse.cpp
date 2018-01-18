@@ -2840,6 +2840,9 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar-resume-snp")) {
     par::dcvar_resume_snp = true;
   }
+  if(a.find("--dcvar-radius")) {
+    par::dcvar_radius = a.value_int("--dcvar-radius");
+  }
   
   // differential modularity analysis - bcw - 7/31/14
   if(a.find("--dmgain")) {
@@ -4488,6 +4491,7 @@ void setOptions(CArgs & a) {
             << "      --dcvar-snp-locations-file      SNP locations information filename - gzipped\n"
             << "      --dcvar-gene-expression-file    Gene expression filename: gene by subject\n"
             << "      --dcvar-chip-seq-file           ChIP-seq expression filename: SNPs by measures\n"
+            << "      --dcvar-radius {value}          Radius around ChIP-Seq SNP position to search\n"
             << "\n"
             << "      --deconvolve               Deconvolve a matrix\n"
             << "      --deconvolve-alpha {alpha} Deconvolve alpha parameter\n"

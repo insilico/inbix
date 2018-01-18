@@ -32,10 +32,11 @@ enum SNP_EXTRACT_FIELD_IDX {
 struct SNP_INFO {
   std::string chrom;
   uint position;
+  std::string rsnum;
   char refAllele;
 };
-typedef std::map<std::string, SNP_INFO> SNP_INFO_MAP;
-typedef std::map<std::string, SNP_INFO>::const_iterator SNP_INFO_MAP_IT;
+typedef std::vector<SNP_INFO> SNP_INFO_LIST;
+typedef std::vector<SNP_INFO>::const_iterator SNP_INFO_LIST_IT;
 
 // ChIP-Seq histone modification site record fields of interest
 // ChIP-seq expression = histone modification site reads
@@ -81,10 +82,11 @@ private:
   bool RunOMRF();
   bool RunOMRFChipSeq();
   void PrintState();
-  bool ReadGenotypesFile(std::string chrom);
-  bool ReadSnpLocationsFile(std::string chrom);
+  bool ReadGenotypesFile(uint chrom);
+  bool ReadSnpLocationsFile(uint chrom);
   bool ReadGeneExpressionFile();
   bool ReadChipSeqFile();
+  bool FindSnps(uint pos, std::vector<uint>& inRadius);
   bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel,
                         std::vector<uint>& mappedPhenos);
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
@@ -103,7 +105,7 @@ private:
   double CalculateFdrBHThreshold();
   bool WriteCheckpoint(uint snpIndex, std::string snpName);
   bool ReadCheckpoint(std::pair<uint, string>& lastSnp);
-  bool WriteResults(std::string filename);
+  bool WriteResults(std::string filename, std::string curSnp);
   // INPUTS
   // ChIP-Seq
   bool chipSeq;
@@ -112,7 +114,7 @@ private:
   // SNP meta data
   SNP_INPUT_TYPE snpInputType;
   std::vector<std::string> snpNames;
-  SNP_INFO_MAP snpLocations;
+  SNP_INFO_LIST snpLocations;
   // SNP genotypes
   std::vector<std::string> genotypeSubjects;
   matrix_t genotypeMatrix;

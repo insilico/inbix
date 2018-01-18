@@ -39,6 +39,10 @@ bool pvalComparatorAscending(const matrixElement& l, const matrixElement& r) {
   return l.first < r.first;
 }
 
+bool snpinfoComparatorAscending(const SNP_INFO& l, const SNP_INFO& r) {
+  return l.position < r.position;
+}
+
 bool chipseqComparatorAscending(const CHIP_SEQ_INFO& l, const CHIP_SEQ_INFO& r) {
   string chromStr1(l.chrom.begin() + 3, l.chrom.end());
   uint chromNum1 = lexical_cast<uint>(chromStr1);
@@ -69,6 +73,7 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq) {
   if(!CheckInputs()) {
     error("Checking data sets compatability failed. Exiting.");
   }
+  radius = par::dcvar_radius * 1000;
   // OpenMP parallelization
   uint numThreads = omp_get_num_threads();
   uint numProcs = omp_get_num_procs();
@@ -399,7 +404,7 @@ bool DcVar::RunOMRF() {
               par::dcvar_pfilter_type + "." +
               snpName + 
               ".pass.tab";
-      WriteResults(resultsFilename);
+      WriteResults(resultsFilename, snpName);
     } else {
       PP->printLOG("\tWARNING: nothing to write for [ " + snpName + " ]\n");
     }
@@ -450,89 +455,104 @@ bool DcVar::RunOMRFChipSeq() {
       initChipseqIdx = 1;
   }
   CHIP_SEQ_INFO chipseqInfo = chipSeqExpression[initChipseqIdx];
-  string preChrom = "";
+  string prevChrom = "";
   string curChrom = chipseqInfo.chrom;
   for(uint chipseqIdx = initChipseqIdx; chipseqIdx < numChipseq; ++chipseqIdx) {
     chipseqInfo = chipSeqExpression[chipseqIdx];
-    string snpName = chipseqInfo.rsnum;
+    string chipseqSnpName = chipseqInfo.rsnum;
     curChrom = chipseqInfo.chrom;
-    if(curChrom != preChrom) {
+    if(curChrom != prevChrom) {
       PP->printLOG("\tChromosome [ " + curChrom + " ]\n");
-      ReadGenotypesFile(curChrom);
-      ReadSnpLocationsFile(curChrom);
+      string chromStr(curChrom.begin() + 3, curChrom.end());
+      uint chromNum = lexical_cast<uint>(chromStr);
+      ReadGenotypesFile(chromNum);
+      ReadSnpLocationsFile(chromNum);
+      prevChrom = curChrom;
     }
     if(par::verbose) PP->printLOG("--------------------------------------------------------\n");
-    PP->printLOG("SNP [ " + snpName + " ] " + int2str(chipseqIdx + 1) + " of " + 
-                 int2str(numChipseq) + "\n");
-    // ------------------------------------------------------------------------
-    if(par::verbose) PP->printLOG("\tCreating phenotype from SNP genotypes\n");
-    vector<uint> snpGenotypes;
-    for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
-      snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[chipseqIdx][colIdx]));
-    }
-    // get variant genotypes for all subject and map to a genetic model
-    if(par::verbose) PP->printLOG("\tGenotypes case-control status\n");    
-    vector<uint> mappedPhenos;
-    MapPhenosToModel(snpGenotypes, 
-                     par::dcvar_var_model, 
-                     mappedPhenos);
-    if(par::verbose) cout << "\tCases:    " << caseIdxCol.size() << "\t";
-    if(par::verbose) cout << "Controls: " << ctrlIdxCol.size() << endl;
-    // ------------------------------------------------------------------------
-    if(par::verbose) PP->printLOG("\tSplitting into case-control groups\n");
-    uint numCases = caseIdxCol.size();
-    uint numCtrls = ctrlIdxCol.size();
-    if((numCases < MIN_NUM_SUBJ_PER_GROUP) || (numCtrls < MIN_NUM_SUBJ_PER_GROUP)) {
-      if(par::verbose) PP->printLOG("\tWARNING: groups sizes must be greater than [ " + 
-                   int2str(MIN_NUM_SUBJ_PER_GROUP - 1) + " ], skipping SNP\n");
+    PP->printLOG("\tChIP-Seq related SNP [ " + chipseqSnpName + " ] " + 
+                 int2str(chipseqIdx + 1) + " of " + int2str(numChipseq) + "\n");
+    // find all SNPs within radius of the ChIP-Seq location
+    if(par::verbose) 
+      PP->printLOG("\tSearching for SNPs within radius [ +/- " + 
+                   int2str(par::dcvar_radius) + " bp]\n");
+    vector<uint> foundSnps;
+    FindSnps(par::dcvar_radius, foundSnps);
+    if(!foundSnps.size()) {
+      if(par::verbose) PP->printLOG("\tWARNING: radius search found no SNPs\n");
       continue;
     }
-    mat casesMatrix(numCases, numGenes);
-    mat ctrlsMatrix(numCtrls, numGenes);
-    // split into case-control groups for testing DC
-    if(!SplitExpressionCaseControl(casesMatrix, ctrlsMatrix)) {
-      error("Could not split on case control status");
-    }
-    // ------------------------------------------------------------------------
-    if(par::verbose) PP->printLOG("\tComputeDifferentialCorrelationZals " 
-                 "and first pass p-value filter [ " + 
-                 dbl2str(DEFAULT_PVALUE_THRESHOLD) + " ]\n");
-    // sparse matrix of significant p-values
-    if(!ComputeDifferentialCorrelationZsparse(snpName, 
-                                              casesMatrix, 
-                                              ctrlsMatrix)) {
-      error("ComputeDifferentialCorrelationZvals failed");
-    }
-    // ------------------------------------------------------------------------
-    // adjust p-values
-    if(par::do_dcvar_pfilter) {
-      if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
-      uint numFiltered;
-      FilterPvalues(numFiltered);
-      if(par::verbose) {
-        PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
-        PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+    if(par::verbose) PP->printLOG("\tFound [ " + int2str(foundSnps.size()) + " ]\n");
+    for(uint foundSnpIdx=0; foundSnpIdx < foundSnps.size(); ++foundSnpIdx) {
+      string foundSnpName = snpNames[foundSnpIdx];
+      // ------------------------------------------------------------------------
+      if(par::verbose) PP->printLOG("\tCreating phenotype from SNP genotypes\n");
+      vector<uint> snpGenotypes;
+      for(uint colIdx=0; colIdx < genotypeSubjects.size(); ++colIdx) {
+        snpGenotypes.push_back(static_cast<uint>(genotypeMatrix[foundSnpIdx][colIdx]));
       }
-    } else {
-      if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
-    }
-    // ------------------------------------------------------------------------
-    // write results, if there are any to write
-    if(zVals.n_nonzero) {
-      string resultsFilename = 
-              par::output_file_name + "." + 
-              par::dcvar_pfilter_type + "." +
-              snpName + 
-              ".pass.tab";
-      WriteResults(resultsFilename);
-    } else {
-      PP->printLOG("\tWARNING: nothing to write for [ " + snpName + " ]\n");
-    }
-    // write in case the job fails in this loop; resume with command line flag
-    WriteCheckpoint(chipseqIdx, snpName);
-    
-    preChrom = curChrom;
-  } // end for all SNPs
+      // get variant genotypes for all subject and map to a genetic model
+      if(par::verbose) PP->printLOG("\tGenotypes case-control status\n");    
+      vector<uint> mappedPhenos;
+      MapPhenosToModel(snpGenotypes, 
+                       par::dcvar_var_model, 
+                       mappedPhenos);
+      if(par::verbose) cout << "\tCases:    " << caseIdxCol.size() << "\t";
+      if(par::verbose) cout << "Controls: " << ctrlIdxCol.size() << endl;
+      // ------------------------------------------------------------------------
+      if(par::verbose) PP->printLOG("\tSplitting into case-control groups\n");
+      uint numCases = caseIdxCol.size();
+      uint numCtrls = ctrlIdxCol.size();
+      if((numCases < MIN_NUM_SUBJ_PER_GROUP) || (numCtrls < MIN_NUM_SUBJ_PER_GROUP)) {
+        if(par::verbose) PP->printLOG("\tWARNING: groups sizes must be greater than [ " + 
+                     int2str(MIN_NUM_SUBJ_PER_GROUP - 1) + " ], skipping SNP\n");
+        continue;
+      }
+      mat casesMatrix(numCases, numGenes);
+      mat ctrlsMatrix(numCtrls, numGenes);
+      // split into case-control groups for testing DC
+      if(!SplitExpressionCaseControl(casesMatrix, ctrlsMatrix)) {
+        error("Could not split on case control status");
+      }
+      // ------------------------------------------------------------------------
+      if(par::verbose) PP->printLOG("\tComputeDifferentialCorrelationZals " 
+                   "and first pass p-value filter [ " + 
+                   dbl2str(DEFAULT_PVALUE_THRESHOLD) + " ]\n");
+      // sparse matrix of significant p-values
+      if(!ComputeDifferentialCorrelationZsparse(foundSnpName, 
+                                                casesMatrix, 
+                                                ctrlsMatrix)) {
+        error("ComputeDifferentialCorrelationZvals failed");
+      }
+      // ------------------------------------------------------------------------
+      // adjust p-values
+      if(par::do_dcvar_pfilter) {
+        if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
+        uint numFiltered;
+        FilterPvalues(numFiltered);
+        if(par::verbose) {
+          PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
+          PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+        }
+      } else {
+        if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
+      }
+      // ------------------------------------------------------------------------
+      // write results, if there are any to write
+      if(zVals.n_nonzero) {
+        string resultsFilename = 
+                par::output_file_name + "." + 
+                par::dcvar_pfilter_type + "." +
+                foundSnpName + 
+                ".pass.tab";
+        WriteResults(resultsFilename, foundSnpName);
+      } else {
+        PP->printLOG("\tWARNING: nothing to write for [ " + foundSnpName + " ]\n");
+      }
+      // write in case the job fails in this loop; resume with command line flag
+      WriteCheckpoint(chipseqIdx, foundSnpName);
+    } // end for all SNPs found within radius
+  } // end for all ChIP-Seq SNPs
   
 //  zout.close();
   
@@ -540,6 +560,26 @@ bool DcVar::RunOMRFChipSeq() {
 }
 
 bool DcVar::CheckInputs() {
+  return true;
+}
+
+bool DcVar::FindSnps(uint pos, std::vector<uint>& inRadius) {
+  inRadius.clear();
+  bool foundAll = false;
+  uint startPos = pos - radius;
+  uint endPos = pos + radius;
+  for(SNP_INFO_LIST_IT it=snpLocations.begin(); 
+      !foundAll && it != snpLocations.end(); 
+      ++it) {
+    uint thisPos = it->position;
+    if((thisPos > startPos) && (thisPos < endPos)) {
+      inRadius.push_back(thisPos);
+    } else {
+      if(thisPos >= endPos) {
+        foundAll = true;
+      }
+    }
+  }
   return true;
 }
 
@@ -551,8 +591,8 @@ void DcVar::PrintState() {
   PP->printLOG("-----------------------------------------------------------\n");
 }
 
-bool DcVar::ReadGenotypesFile(string chrom) {
-  string genotypesFilename = "data/genotype." + chrom + ".txt.gz";
+bool DcVar::ReadGenotypesFile(uint chrom) {
+  string genotypesFilename = "data/genotype." + int2str(chrom) + ".txt.gz";
   checkFileExists(genotypesFilename);
   PP->printLOG("Reading genotypes input from [ " + genotypesFilename + " ]\n");
   ZInput zin(genotypesFilename, compressed(genotypesFilename));
@@ -591,8 +631,8 @@ bool DcVar::ReadGenotypesFile(string chrom) {
   return true;
 }
 
-bool DcVar::ReadSnpLocationsFile(string chrom) {
-  string locationsFilename = "data/SNP_location." + chrom + ".txt.gz";
+bool DcVar::ReadSnpLocationsFile(uint chrom) {
+  string locationsFilename = "data/SNP_location." + int2str(chrom) + ".txt.gz";
   checkFileExists(locationsFilename);
   PP->printLOG("Reading SNP locations input from [ " + locationsFilename + " ]\n");
   ZInput zin(locationsFilename, compressed(locationsFilename));
@@ -615,12 +655,13 @@ bool DcVar::ReadSnpLocationsFile(string chrom) {
     thisSnpInfo.chrom = parsedFileLine[SNP_CHROM];
     thisSnpInfo.position = lexical_cast<uint>(parsedFileLine[SNP_POS]);
     thisSnpInfo.refAllele = parsedFileLine[SNP_DBSNP_ALLELE][0];
-    snpLocations[parsedFileLine[SNP_ID]] = thisSnpInfo;
+    thisSnpInfo.rsnum = parsedFileLine[SNP_ID];
+    snpLocations.push_back(thisSnpInfo);
 	}
   zin.close();
   PP->printLOG("Read subject SNP location info for [ " + 
                int2str(lineCounter) + " ] SNPs\n");
-
+  
   return true;
 }
 
@@ -1100,7 +1141,7 @@ bool DcVar::ReadCheckpoint(std::pair<uint, string>& lastSnp) {
   return true;
 }
 
-bool DcVar::WriteResults(string filename) {
+bool DcVar::WriteResults(string filename, string curSnp) {
   if(par::verbose) 
     PP->printLOG("\tWriting interactions that passed p-value filter to [ "  + 
                  filename + " ]\n");
@@ -1123,13 +1164,14 @@ bool DcVar::WriteResults(string filename) {
     return false;
   }
   ofstream resultsFile(filename);
-  resultsFile << "Gene1\tGene2\tZ\tP" << endl;
+  resultsFile << "SNP\tGene1\tGene2\tZ\tP" << endl;
   for(; zmatItCurrent != zmatItEnd; ++zmatItCurrent) {
     double zvalue = *zmatItCurrent;
     uint row = zmatItCurrent.row();
     uint col = zmatItCurrent.col();
     double pvalue = pVals(row, col);
     resultsFile 
+        << curSnp << "\t" 
         << geneExprNames[row] << "\t" 
         << geneExprNames[col] << "\t" 
         << zvalue << "\t"
