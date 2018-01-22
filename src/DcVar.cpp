@@ -73,7 +73,7 @@ DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq) {
   if(!CheckInputs()) {
     error("Checking data sets compatability failed. Exiting.");
   }
-  radius = par::dcvar_radius * 1000;
+  radius = par::dcvar_radius;
   // OpenMP parallelization
   uint numThreads = omp_get_num_threads();
   uint numProcs = omp_get_num_procs();
@@ -342,7 +342,7 @@ bool DcVar::RunOMRF() {
   for(uint snpIdx = initSnpIdx; snpIdx < numSnps; ++snpIdx) {
     string snpName = snpNames[snpIdx];
     if(par::verbose) PP->printLOG("--------------------------------------------------------\n");
-    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx + 1) + " of " + 
+    PP->printLOG("SNP [ " + snpName + " ] " + int2str(snpIdx) + " of " + 
                  int2str(numSnps) + "\n");
     // ------------------------------------------------------------------------
     if(par::verbose) PP->printLOG("\tCreating phenotype from SNP genotypes\n");
@@ -457,10 +457,12 @@ bool DcVar::RunOMRFChipSeq() {
   CHIP_SEQ_INFO chipseqInfo = chipSeqExpression[initChipseqIdx];
   string prevChrom = "";
   string curChrom = chipseqInfo.chrom;
+  
   for(uint chipseqIdx = initChipseqIdx; chipseqIdx < numChipseq; ++chipseqIdx) {
     chipseqInfo = chipSeqExpression[chipseqIdx];
     string chipseqSnpName = chipseqInfo.rsnum;
     curChrom = chipseqInfo.chrom;
+    uint curPos = chipseqInfo.position;
     if(curChrom != prevChrom) {
       PP->printLOG("\tChromosome [ " + curChrom + " ]\n");
       string chromStr(curChrom.begin() + 3, curChrom.end());
@@ -474,10 +476,9 @@ bool DcVar::RunOMRFChipSeq() {
                  int2str(chipseqIdx + 1) + " of " + int2str(numChipseq) + "\n");
     // find all SNPs within radius of the ChIP-Seq location
     if(par::verbose) 
-      PP->printLOG("\tSearching for SNPs within radius [ +/- " + 
-                   int2str(par::dcvar_radius) + " bp]\n");
+      PP->printLOG("\tSearching for SNPs within radius [ +/- " +  int2str(radius) + " bp]\n");
     vector<uint> foundSnps;
-    FindSnps(par::dcvar_radius, foundSnps);
+    FindSnps(curPos, foundSnps);
     if(!foundSnps.size()) {
       if(par::verbose) PP->printLOG("\tWARNING: radius search found no SNPs\n");
       continue;
@@ -568,9 +569,15 @@ bool DcVar::FindSnps(uint pos, std::vector<uint>& inRadius) {
   bool foundAll = false;
   uint startPos = pos - radius;
   uint endPos = pos + radius;
+  if(par::verbose) {
+    PP->printLOG("\tChIP-Seq position: " + int2str(pos) + " => ( " + 
+                 int2str(startPos) + ", " + int2str(endPos) + " )\n");
+  }
+  uint searched = 0;
   for(SNP_INFO_LIST_IT it=snpLocations.begin(); 
       !foundAll && it != snpLocations.end(); 
       ++it) {
+    ++searched;
     uint thisPos = it->position;
     if((thisPos > startPos) && (thisPos < endPos)) {
       inRadius.push_back(thisPos);
@@ -580,14 +587,21 @@ bool DcVar::FindSnps(uint pos, std::vector<uint>& inRadius) {
       }
     }
   }
-  return true;
+  if(par::verbose) {
+    PP->printLOG("\tSearched: [ " + int2str(searched) + 
+                 " ] => Found: [ " + int2str(inRadius.size()) + " ]\n");
+  }
+  return foundAll;
 }
 
 void DcVar::PrintState() {
   PP->printLOG("-----------------------------------------------------------\n");
-  PP->printLOG("CHiP-seq expression file:       " + par::dcvar_chip_seq_file + "\n");
   PP->printLOG("p-value adjust method:          " + par::dcvar_pfilter_type + "\n");
   PP->printLOG("p-value cutoff for file output: " + dbl2str(par::dcvar_pfilter_value) + "\n");
+  if(par::dcvar_chip_seq_file != "") {
+    PP->printLOG("ChIP-seq expression file:       " + par::dcvar_chip_seq_file + "\n");
+    PP->printLOG("ChIP-Seq search radius        : " + int2str(par::dcvar_radius) + "\n");
+  }
   PP->printLOG("-----------------------------------------------------------\n");
 }
 
@@ -606,6 +620,7 @@ bool DcVar::ReadGenotypesFile(uint chrom) {
   genotypeMatrix.clear();
   snpNames.clear();
   uint lineCounter = 1;
+  PP->printLOG("Reading compressed genotypes\n");
   while(!zin.endOfFile()) {
     ++lineCounter;
 	  vector<string> tok = zin.tokenizeLine();
@@ -839,8 +854,7 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       #pragma omp critical 
       {
-        // !NOTE! critical section for writing to an already opened file 'zout'!
-        // and to keep track of counts, min/max p-values in public scope
+        // !NOTE! critical section
         double p = DEFAULT_PVALUE;
         if(std::isinf(Z_ij)) {
           // bad Z
@@ -849,7 +863,6 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
           //matrixElement interactionPvalElement;
           //pair<uint, uint> indexPair = make_pair(i, j);
           p = 2 * normdist(-abs(Z_ij));
-
           if(p < minP) minP = p;
           if(p > maxP) maxP = p;
           if(p <= pThreshold) {
@@ -1190,8 +1203,8 @@ bool DcVar::SetRadius(int newRadius) {
     cerr << "Error setting cis radius to: " << newRadius << endl;
     return false;
   }
-  // newRadius is in kilobases, but need to store a bases
-  radius = newRadius * 1000;
+  // newRadius is in kilobases
+  radius = newRadius;
   return true;
 }
 

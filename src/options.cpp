@@ -267,7 +267,7 @@ string par::dcvar_gene_expression_file = "";
 string par::dcvar_chip_seq_file = "";
 bool par::dcvar_resume_snp = false;
 // added for radius searches - bcw - 1/10/18
-uint par::dcvar_radius = 0;
+uint par::dcvar_radius = 1000;
 
 // differential modularity analysis - bcw - 7/31/14
 bool par::do_differential_modularity = false;

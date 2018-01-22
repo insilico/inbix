@@ -137,7 +137,8 @@ private:
   bool GetSnpsForTFs(std::vector<int>& snpIndices, std::vector<std::string>& tfs);
   bool LoadDefaultTranscriptionFactorLUT();
   bool IsSnpInTFs(int chr, int bp, std::string& tf);
-  int radius;
+  // search radius in kilobases
+  uint radius;
   bool localCis;
   CoordinateTable coordinates;
   // added 4/21/15
