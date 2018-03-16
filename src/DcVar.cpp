@@ -51,15 +51,14 @@ bool chipseqComparatorAscending(const CHIP_SEQ_INFO& l, const CHIP_SEQ_INFO& r) 
   return chromNum1 < chromNum2;
 }
 
-DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam, bool hasChipSeq) {
+DcVar::DcVar(SNP_INPUT_TYPE snpInputTypeParam) {
   PP->printLOG("dcVar initializing\n");
   snpInputType = snpInputTypeParam;
-  chipSeq = hasChipSeq;
+  chipSeqMode = par::do_dcvar_chipseq;
   if(snpInputTypeParam == SNP_SRC_FILE) {
     if(!ReadGeneExpressionFile()) {
       error("Reading gene expression file failed. Exiting.");
     }
-    chipSeqMode = hasChipSeq;
     if(chipSeqMode) {
       if(!ReadChipSeqFile()) {
         error("Reading ChIP-seq file failed. Exiting.");
@@ -90,7 +89,7 @@ bool DcVar::Run() {
     runSuccess = RunPlink();
   }
   if(snpInputType == SNP_SRC_FILE) {
-    if(chipSeq) {
+    if(chipSeqMode) {
       runSuccess = RunOMRFChipSeq();
     } else {
       runSuccess = RunOMRF();
@@ -311,7 +310,7 @@ bool DcVar::RunOMRF() {
   uint numGenes = geneExprNames.size();
   // chipseq
   uint numChipSeq = 0;
-  if(chipSeq) {
+  if(chipSeqMode) {
     numChipSeq = chipSeqExpression.size();
   }
   // make sure we have variants
@@ -422,7 +421,7 @@ bool DcVar::RunOMRFChipSeq() {
   // ---------------------------------------------------------------------------
   PP->printLOG("DcVar::RunOMRF: Performing dcVar analysis on .gz and .tab files\n");
   uint numGenes = geneExprNames.size();
-  if(chipSeq) {
+  if(chipSeqMode) {
   } else {
     return false;
   }
@@ -473,7 +472,7 @@ bool DcVar::RunOMRFChipSeq() {
     }
     if(par::verbose) PP->printLOG("--------------------------------------------------------\n");
     PP->printLOG("\tChIP-Seq related SNP [ " + chipseqSnpName + " ] " + 
-                 int2str(chipseqIdx + 1) + " of " + int2str(numChipseq) + "\n");
+                 int2str(chipseqIdx) + " of " + int2str(numChipseq) + "\n");
     // find all SNPs within radius of the ChIP-Seq location
     if(par::verbose) 
       PP->printLOG("\tSearching for SNPs within radius [ +/- " +  int2str(radius) + " bp]\n");
@@ -976,14 +975,14 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
   }
   if(par::verbose) PP->printLOG("\tFirst pass filter threshold [ " + 
      dbl2str(pThreshold) + " ]\n");
-  if(par::verbose) PP->printLOG("\tEntering OpenMP parallel section for [ ");
-  if(par::verbose) PP->printLOG(int2str(numCombs) + " ] dcvar combination\n");
-  uint i=0, j=0;
+  if(par::verbose) PP->printLOG("\tEntering OpenMP parallel section for [ "+ 
+                                int2str(numCombs) + " ] dcvar combinations\n");
   zVals.set_size(numGenes, numGenes);
   pVals.ones(numGenes, numGenes);
-#pragma omp parallel for schedule(dynamic, 1) private(i, j)
+  uint i, j;
+#pragma omp parallel for private(j) collapse(2)
   for(i=0; i < numGenes; ++i) {
-    for(j=i + 1; j < numGenes; ++j) {
+    for(j=0; j < numGenes; ++j) {
       // correlation between this interaction pair (i, j) in cases and controls
       vec caseVarVals1 = cases.col(i);
       vec caseVarVals2 = cases.col(j);
@@ -999,6 +998,11 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       #pragma omp critical 
       {
+        if(par::verbose) {
+          if(i && ((i % 1000) == 0) && (j == (i + 1))) {
+            PP->printLOG(int2str(i) + " of " + int2str(numGenes) + "\n");
+          }
+        }
         // !NOTE! critical section for writing to an already opened file 'zout'!
         // and to keep track of counts, min/max p-values in public scope
         double p = DEFAULT_PVALUE;

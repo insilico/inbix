@@ -61,8 +61,7 @@ const string CHECKPOINT_FILENAME = "dcvar.chk";
 
 class DcVar {
 public:
-  DcVar(SNP_INPUT_TYPE snpInputTypeParam=SNP_SRC_PLINK,
-        bool hasChipSeq=false);
+  DcVar(SNP_INPUT_TYPE snpInputTypeParam=SNP_SRC_PLINK);
   bool Run();
   bool ReadTranscriptCoordinates(std::string coordinatesFile);
   bool ReadTranscriptFactorCoordinates(std::string coordinatesFile);
@@ -108,7 +107,6 @@ private:
   bool WriteResults(std::string filename, std::string curSnp);
   // INPUTS
   // ChIP-Seq
-  bool chipSeq;
   bool chipSeqMode;
   CHIP_SEQ_INFO_LIST chipSeqExpression;
   // SNP meta data

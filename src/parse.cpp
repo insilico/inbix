@@ -2836,6 +2836,7 @@ void setOptions(CArgs & a) {
   }
   if(a.find("--dcvar-chip-seq-file")) {
     par::dcvar_chip_seq_file = a.value("--dcvar-chip-seq-file");
+    par::do_dcvar_chipseq = true;
   }
   if(a.find("--dcvar-resume-snp")) {
     par::dcvar_resume_snp = true;

@@ -1658,13 +1658,13 @@ int main(int argc, char* argv[]) {
 	if(par::do_dcvar) {
 		P.printLOG("\nPerforming dcVar analysis\n");
     SNP_INPUT_TYPE commandLineSrcType = SNP_SRC_PLINK;
-    if(par::dcvar_chip_seq_file != "") {
+    if(par::do_dcvar_chipseq) {
     	P.printLOG("Using OMRF formatted filenames\n");
       commandLineSrcType = SNP_SRC_FILE;
     } else {
     	P.printLOG("Using PLINK bed/ped, bim/map and fam files\n");
     }
-    DcVar* dcvar = new DcVar(commandLineSrcType, par::dcvar_chip_seq_file != "");
+    DcVar* dcvar = new DcVar(commandLineSrcType);
     if(dcvar) {
   		P.printLOG("Initialization complete. Calling Run() method\n");
       dcvar->Run();

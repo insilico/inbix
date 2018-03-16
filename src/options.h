@@ -362,6 +362,7 @@ public:
   static string dcvar_snp_locations_file;
   static string dcvar_gene_expression_file;
   static string dcvar_chip_seq_file;
+  static bool do_dcvar_chipseq;
   static bool dcvar_resume_snp;
   // added for radius searches - bcw - 1/10/18
   static uint dcvar_radius;

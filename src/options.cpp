@@ -265,6 +265,7 @@ string par::dcvar_genotypes_file = "";
 string par::dcvar_snp_locations_file = "";
 string par::dcvar_gene_expression_file = "";
 string par::dcvar_chip_seq_file = "";
+bool par::do_dcvar_chipseq = false;
 bool par::dcvar_resume_snp = false;
 // added for radius searches - bcw - 1/10/18
 uint par::dcvar_radius = 1000;
