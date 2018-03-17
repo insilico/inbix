@@ -122,6 +122,7 @@ bool DcVar::RunPlink() {
   unsigned int snpIdx;
   for(snpIdx=0; snpIdx < numSnps; ++snpIdx) {
     string variantName = PP->locus[snpIdx]->name;
+    PP->printLOG("\n-----[ " + variantName + " ]-----\n");
     // PP->printLOG("Variant: " + variantName + "\n");
     // get variant info as case-control phenotype based on variant model
     // cout << "PP->n: " << PP->n << endl;
@@ -224,7 +225,7 @@ bool DcVar::RunPlink() {
         double alpha = 2 * m * par::dcvar_pfilter_value  / (m + 1);
         int thresholdIndex = -1;
         minP = testPvals[0];
-        maxP = testPvals[numPvals - 1];
+        maxP = testPvals[0];
         // BH method
         for(int i = 0; i < numPvals; i++) {
           double l = (i + 1) * alpha / (double) numPvals;
@@ -242,62 +243,61 @@ bool DcVar::RunPlink() {
           double T = testPvals[thresholdIndex];
           PP->printLOG("BH rejection threshold T = " + dbl2str(T) + ", R = " +
             int2str(thresholdIndex) + "\n");
-          ++goodPvalCount;
           // now prune (set to 0.0) all values greater than R index
-          for(int i = 0; i <= thresholdIndex; i++) {
-            double p = testPvals[i];
-            uint pRow = i / numPvals;
-            uint pCol = i % numPvals;
-            string gene1 = PP->nlistname[pRow];
-            string gene2 = PP->nlistname[pCol];
-#pragma omp critical 
-{
-            dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-}
+          for(uint pRow=0; pRow < pVals.n_rows; ++pRow) {
+            for(uint pCol=pRow + 1; pCol < pVals.n_cols; ++pCol) {
+              double p = pVals(pRow, pCol);
+              if(p < minP) minP = p;
+              if(p > maxP) maxP = p;
+              string gene1 = PP->nlistname[pRow];
+              string gene2 = PP->nlistname[pCol];
+              if (p < T) {
+                ++goodPvalCount;
+                dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+              }
+            }
           }
         }
       } else {
         PP->printLOG("Filtering using Bonferroni threshold\n");
         // insure doubles used in all intermediate calculations
         double correctedP = par::dcvar_pfilter_value / (numCombs * numSnps);
-        double minP = testPvals[0];
-        double maxP = testPvals[numPvals - 1];
-        for(int i=0; i < numPvals; ++i) {
-          double p = testPvals[i];
-          uint pRow = i / numPvals;
-          uint pCol = i % numPvals;
-          string gene1 = PP->nlistname[pRow];
-          string gene2 = PP->nlistname[pCol];
-          if(p < minP) minP = p;
-          if(p > maxP) maxP = p;
-          if(p <  correctedP) {
-            ++goodPvalCount;
-#pragma omp critical 
-{
-            dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-}
+        minP = testPvals[0];
+        maxP = testPvals[0];
+        for(uint pRow=0; pRow < pVals.n_rows; ++pRow) {
+          for(uint pCol=pRow + 1; pCol < pVals.n_cols; ++pCol) {
+            double p = pVals(pRow, pCol);
+            if(p < minP) minP = p;
+            if(p > maxP) maxP = p;
+            string gene1 = PP->nlistname[pRow];
+            string gene2 = PP->nlistname[pCol];
+            if(p <  correctedP) {
+              ++goodPvalCount;
+              dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
             }
-          } // end interactionPvals
-          PP->printLOG("Found [" + int2str(goodPvalCount) + "] tested p-values, min/max: " + 
-            dbl2str(minP) + " / " + dbl2str(maxP) + "\n");
+          }
+        }
       }
     } else {
-      // no p-value filtering
-      PP->printLOG("Saving ALL p-values\n");
-      for(int i=0; i < numPvals; ++i) {
-        double p = testPvals[i];
-        uint pRow = i / numPvals;
-        uint pCol = i % numPvals;
-        string gene1 = PP->nlistname[pRow];
-        string gene2 = PP->nlistname[pCol];
-#pragma omp critical 
-{
-        dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-}
+      PP->printLOG("No p-value filtering\n");
+      minP = testPvals[0];
+      maxP = testPvals[0];
+      for(uint pRow=0; pRow < pVals.n_rows; ++pRow) {
+        for(uint pCol=pRow + 1; pCol < pVals.n_cols; ++pCol) {
+          double p = pVals(pRow, pCol);
+          if(p < minP) minP = p;
+          if(p > maxP) maxP = p;
+          string gene1 = PP->nlistname[pRow];
+          string gene2 = PP->nlistname[pCol];
+          dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
+          ++goodPvalCount;
+        }
       }
     }
+    PP->printLOG("Found [" + int2str(goodPvalCount) + "] tested p-values, min/max: " + 
+            dbl2str(minP) + " / " + dbl2str(maxP) + "\n");    
     dcvarFile.close();
-  } // END all ChIP-Seq loop
+  } // END all variants loop
 
   return true;
 }
@@ -1045,10 +1045,10 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
 }
 
 bool DcVar::FlattenPvals(vector_t& retPvals) {
-  if(par::verbose) PP->printLOG("\tflattening p-values list into a vector\n");
+  if(par::verbose) PP->printLOG("Flattening p-values list into a vector\n");
   retPvals.clear();
   for(uint i=0; i < pVals.n_rows; ++i) {
-    for(uint j=i + 1; j < pVals.n_rows; ++j) {
+    for(uint j=i + 1; j < pVals.n_cols; ++j) {
       retPvals.push_back(pVals(i, j));
     }
   }
