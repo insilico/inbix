@@ -25,7 +25,7 @@ using namespace std;
 
 // differential coexpression
 bool armaDcgain(sp_mat& results, mat& pvals) {
-  // t-test for diagonal
+  // phenotypes
   int nAff = 0;
   int nUnaff = 0;
   for(int i=0; i < PP->sample.size(); i++) {
@@ -35,6 +35,9 @@ bool armaDcgain(sp_mat& results, mat& pvals) {
     else {
       ++nUnaff;
     }
+  }
+  if((nAff == 0) || (nUnaff == 0)) {
+    error("Single phenotype detected");
   }
   double df = nAff + nUnaff - 2;
   PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
@@ -369,8 +372,10 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 		}
 		else {
       if(!PP->sample[i]->missing) {
-		    ++nUnaff;
-		  }
+        error("PLINK SNP file has missing phenotype(s)");
+		  } else {
+ 		    ++nUnaff;
+      }
 		}
 	}
 	PP->printLOG("Detected " + int2str(nAff) + " affected and " + 
