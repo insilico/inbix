@@ -88,7 +88,8 @@ private:
   bool FindSnps(uint pos, std::vector<uint>& inRadius);
   bool MapPhenosToModel(std::vector<uint> phenos, std::string varModel,
                         std::vector<uint>& mappedPhenos);
-  bool MapSnpIndexToPlinkPhenos(uint snpIndex, std::string varModel);
+  std::pair<uint, uint> MapSnpIndexToPlinkPhenos(uint snpIndex, 
+                                                 std::string varModel);
   bool SplitExpressionCaseControl(arma::mat& caseMatrix, arma::mat& ctrlMatrix);
   bool ComputeDifferentialCorrelationZsparse(std::string snp, 
                                             arma::mat& cases, 

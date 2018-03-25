@@ -2194,7 +2194,7 @@ bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
 		}
 		else {
  			if(PP->sample[i]->missing) {
-  			cerr << "Missing phenotype(s) for numeric data" << endl;
+  			// cerr << "Missing phenotype(s) for numeric data" << endl;
         return false;
   		} else {
         ++nUnaff;

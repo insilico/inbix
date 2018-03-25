@@ -98,7 +98,10 @@ bool DcVar::Run() {
   return runSuccess;
 }
 
-bool DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
+pair<uint, uint> DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
+  pair<uint, uint> retPair;
+  uint nAff = 0;
+  uint nUnAff = 0;
   for(int sampleIdx=0; sampleIdx < PP->n; sampleIdx++) {
     Individual* person = PP->sample[sampleIdx];
     // cout << "variantIdx: " << variantIdx << endl;
@@ -119,10 +122,12 @@ bool DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
       if(!i2) {
         // 10 het
         thisPheno = 1;
+        ++nAff;
         thisAff = true;
       } else {
         // 11
         thisPheno = 1;
+        ++nAff;
         thisAff = true;
       }
     } else {
@@ -130,11 +135,13 @@ bool DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
       if(i2) {
         if(varModel == "rec") {
           thisPheno = 1;
+        ++nAff;
           thisAff = true;
         }
         else {
           if(varModel == "dom") {
             thisPheno = 0;
+            ++nUnAff;
             thisAff = false; 
           }
          // else "hom" missing pheno = -9
@@ -143,6 +150,7 @@ bool DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
       // 00
       else {
         thisPheno = 0; // hom
+        ++nUnAff;
         thisAff = false;
       }
     }
@@ -157,7 +165,10 @@ bool DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
     person->aff = thisAff;
   }
 
-  return true;
+  retPair.first = nAff;
+  retPair.second = nUnAff;
+  
+  return retPair;
 }
 
 bool DcVar::RunPlink() {
@@ -192,7 +203,13 @@ bool DcVar::RunPlink() {
     // get variant info as case-control phenotype based on variant model
     // cout << "PP->n: " << PP->n << endl;
     // cout << "sample size: " << PP->sample.size() << endl;
-    MapSnpIndexToPlinkPhenos(snpIdx, par::dcvar_var_model);
+    pair<uint, uint> caseControl = 
+            MapSnpIndexToPlinkPhenos(snpIdx, par::dcvar_var_model);
+    if(caseControl.first == 0 || caseControl.second == 0) {
+      cerr << "Skipping variant phenotype mapping" << endl << "G1: " 
+              << caseControl.first << "\tG2:" << caseControl.second << endl;
+      continue;
+    }
     // ------------------------------------------------------------------------
     // run dcGAIN for this variant phenotype
     zVals.zeros(numGenes, numGenes);
