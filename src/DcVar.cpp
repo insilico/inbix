@@ -98,6 +98,68 @@ bool DcVar::Run() {
   return runSuccess;
 }
 
+bool DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel) {
+  for(int sampleIdx=0; sampleIdx < PP->n; sampleIdx++) {
+    Individual* person = PP->sample[sampleIdx];
+    // cout << "variantIdx: " << variantIdx << endl;
+    // cout << "sampleIdx: " << sampleIdx << endl;
+    // cout << "phenotype: " << person->phenotype << endl;
+    // cout << "aff: " << person->aff << endl;
+    // cout << "locus size: " << PP->locus.size() << endl;
+    // cout << "SNP allele1 size: " << person->one.size() << endl;
+    // cout << "SNP allele2 size: " << person->two.size() << endl;
+    bool i1 = person->one[snpIndex];
+    bool i2 = person->two[snpIndex];
+    // cout << "i1: "<< i1 << ", i2:  " << i2 << endl;
+    // see Caleb's email of 2/24/15 for phenotype assignment based on var model param
+    // and bit-wise genotype encoding
+    double thisPheno = -9;
+    bool thisAff = false;
+    if(i1) {
+      if(!i2) {
+        // 10 het
+        thisPheno = 1;
+        thisAff = true;
+      } else {
+        // 11
+        thisPheno = 1;
+        thisAff = true;
+      }
+    } else {
+      // 01 // het 
+      if(i2) {
+        if(varModel == "rec") {
+          thisPheno = 1;
+          thisAff = true;
+        }
+        else {
+          if(varModel == "dom") {
+            thisPheno = 0;
+            thisAff = false; 
+          }
+         // else "hom" missing pheno = -9
+        }
+      }
+      // 00
+      else {
+        thisPheno = 0; // hom
+        thisAff = false;
+      }
+    }
+    // cout 
+    //        << "Variant index: " << variantIdx << "\t" 
+    //        << "[ " << i1 << ", " << i2 << " ]" << "\t"
+    //        << "Sample: " << sampleIdx << "\t" 
+    //        << "Phenotype: " << thisPheno << "\t" 
+    //        << "Affected: " << thisAff
+    //        << endl;
+    person->phenotype = thisPheno;
+    person->aff = thisAff;
+  }
+
+  return true;
+}
+
 bool DcVar::RunPlink() {
   if(chipSeqMode) {
     PP->printLOG("ChIP-seq not supported with PLINK files (yet)\n");
@@ -108,6 +170,8 @@ bool DcVar::RunPlink() {
   PP->SNP2Ind();
   int numSnps = PP->nl_all;
   int numGenes = PP->nlistname.size();
+  geneExprNames.resize(numGenes);
+  copy(PP->nlistname.begin(), PP->nlistname.end(), geneExprNames.begin());
   // make sure we have variants
   if(numSnps < 1) {
     error("Variants file must specified at least one variant for this analysis!");
@@ -117,74 +181,19 @@ bool DcVar::RunPlink() {
     error("Gene expression file must specified for this analysis!");
   }
   PP->printLOG(int2str(numSnps) + " variants, and " + int2str(numGenes) + " genes\n");
-
+  // --------------------------------------------------------------------------
   // for all variants
   unsigned int snpIdx;
   for(snpIdx=0; snpIdx < numSnps; ++snpIdx) {
     string variantName = PP->locus[snpIdx]->name;
-    PP->printLOG("\n-----[ " + variantName + " ]-----\n");
-    // PP->printLOG("Variant: " + variantName + "\n");
+    PP->printLOG("\n-----[ " + variantName + " ] (" + int2str(snpIdx) + 
+                 " of " + int2str(numSnps) + ")-----\n");
+    // ------------------------------------------------------------------------
     // get variant info as case-control phenotype based on variant model
     // cout << "PP->n: " << PP->n << endl;
     // cout << "sample size: " << PP->sample.size() << endl;
-    for(int sampleIdx=0; sampleIdx < PP->n; sampleIdx++) {
-      Individual* person = PP->sample[sampleIdx];
-      // cout << "variantIdx: " << variantIdx << endl;
-      // cout << "sampleIdx: " << sampleIdx << endl;
-      // cout << "phenotype: " << person->phenotype << endl;
-      // cout << "aff: " << person->aff << endl;
-      // cout << "locus size: " << PP->locus.size() << endl;
-      // cout << "SNP allele1 size: " << person->one.size() << endl;
-      // cout << "SNP allele2 size: " << person->two.size() << endl;
-      bool i1 = person->one[snpIdx];
-      bool i2 = person->two[snpIdx];
-      // cout << "i1: "<< i1 << ", i2:  " << i2 << endl;
-      // see Caleb's email of 2/24/15 for phenotype assignment based on var model param
-      // and bit-wise genotype encoding
-      double thisPheno = -9;
-      bool thisAff = false;
-      if(i1) {
-        if(!i2) {
-          // 10 het
-          thisPheno = 1;
-          thisAff = true;
-        } else {
-          // 11
-          thisPheno = 1;
-          thisAff = true;
-        }
-      } else {
-        // 01 // het 
-        if(i2) {
-          if(par::dcvar_var_model == "rec") {
-            thisPheno = 1;
-            thisAff = true;
-          }
-          else {
-            if(par::dcvar_var_model == "dom") {
-              thisPheno = 0;
-              thisAff = false;
-            }
-            // else "hom" missing pheno = -9
-          }
-        }
-        // 00
-        else {
-          thisPheno = 0; // hom
-          thisAff = false;
-        }
-      }
-      // cout 
-      // 	<< "Variant index: " << variantIdx << "\t" 
-      // 	<< "[ " << i1 << ", " << i2 << " ]" << "\t"
-      // 	<< "Sample: " << sampleIdx << "\t" 
-      // 	<< "Phenotype: " << thisPheno << "\t" 
-      // 	<< "Affected: " << thisAff
-      // 	<< endl;
-      person->phenotype = thisPheno;
-      person->aff = thisAff;
-    }
-
+    MapSnpIndexToPlinkPhenos(snpIdx, par::dcvar_var_model);
+    // ------------------------------------------------------------------------
     // run dcGAIN for this variant phenotype
     zVals.zeros(numGenes, numGenes);
     pVals.zeros(numGenes, numGenes);
@@ -194,109 +203,33 @@ bool DcVar::RunPlink() {
     // cout << "interactionPvals" << endl << interactionPvals.submat(0,0,4,4) << endl;
     // armaWriteMatrix(results, "DEBUG.dcgain", PP->nlistname);
     // armaWriteMatrix(interactionPvals, "DEBUG.interactionPvals", PP->nlistname);
-
-    // save p-values that pass BH rejection threshold
-    // setup output file
-    string dcvarFilename = variantName + ".dcVarTest.txt";
-    ofstream dcvarFile;
-    PP->printLOG("Writing results to [ " + dcvarFilename + " ]\n");
-    dcvarFile.open(dcvarFilename);
-    if(dcvarFile.fail()) {
-      error("Cannot open dcVar test results file for writing.");
-    }
-
-    double nVars = (double) numGenes;
-    numCombs = (nVars * (nVars - 1.0)) / 2.0;
-    // get all p-values
-    vector_t testPvals;
-    FlattenPvals(testPvals);
-    int numPvals = testPvals.size();
-    double minP = 1.0;
-    double maxP = 0.0;
-    int goodPvalCount = 0;
+    // ------------------------------------------------------------------------
+    // adjust p-values
     if(par::do_dcvar_pfilter) {
-      if(par::dcvar_pfilter_type == "fdr") {
-        // ------------------------------------------------------------------------
-        PP->printLOG("Filtering using Benjamini-Hochberg FDR threshold\n");
-        // sort the array of matrix elements
-        sort(testPvals.begin(), testPvals.end());
-        // use rough FDR (RFDR) to estimate alpha based on input FDR
-        double m = (double) numPvals * (double) numSnps;
-        double alpha = 2 * m * par::dcvar_pfilter_value  / (m + 1);
-        int thresholdIndex = -1;
-        minP = testPvals[0];
-        maxP = testPvals[0];
-        // BH method
-        for(int i = 0; i < numPvals; i++) {
-          double l = (i + 1) * alpha / (double) numPvals;
-          // test whether current p-value < current l
-          if(testPvals[i] < l) {
-            thresholdIndex = i;
-          } else {
-            break;
-          }
-        }
-        if(thresholdIndex == -1) {
-          PP->printLOG("No p-value meets BH threshold criteria, so nothing saved\n");
-        } else {
-          // BH rejection threshold
-          double T = testPvals[thresholdIndex];
-          PP->printLOG("BH rejection threshold T = " + dbl2str(T) + ", R = " +
-            int2str(thresholdIndex) + "\n");
-          // now prune (set to 0.0) all values greater than R index
-          for(uint pRow=0; pRow < pVals.n_rows; ++pRow) {
-            for(uint pCol=pRow + 1; pCol < pVals.n_cols; ++pCol) {
-              double p = pVals(pRow, pCol);
-              if(p < minP) minP = p;
-              if(p > maxP) maxP = p;
-              string gene1 = PP->nlistname[pRow];
-              string gene2 = PP->nlistname[pCol];
-              if (p < T) {
-                ++goodPvalCount;
-                dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-              }
-            }
-          }
-        }
-      } else {
-        PP->printLOG("Filtering using Bonferroni threshold\n");
-        // insure doubles used in all intermediate calculations
-        double correctedP = par::dcvar_pfilter_value / (numCombs * numSnps);
-        minP = testPvals[0];
-        maxP = testPvals[0];
-        for(uint pRow=0; pRow < pVals.n_rows; ++pRow) {
-          for(uint pCol=pRow + 1; pCol < pVals.n_cols; ++pCol) {
-            double p = pVals(pRow, pCol);
-            if(p < minP) minP = p;
-            if(p > maxP) maxP = p;
-            string gene1 = PP->nlistname[pRow];
-            string gene2 = PP->nlistname[pCol];
-            if(p <  correctedP) {
-              ++goodPvalCount;
-              dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-            }
-          }
-        }
+      if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
+      uint numFiltered;
+      FilterPvalues(numFiltered);
+      if(par::verbose) {
+        PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
+        PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
       }
     } else {
-      PP->printLOG("No p-value filtering\n");
-      minP = testPvals[0];
-      maxP = testPvals[0];
-      for(uint pRow=0; pRow < pVals.n_rows; ++pRow) {
-        for(uint pCol=pRow + 1; pCol < pVals.n_cols; ++pCol) {
-          double p = pVals(pRow, pCol);
-          if(p < minP) minP = p;
-          if(p > maxP) maxP = p;
-          string gene1 = PP->nlistname[pRow];
-          string gene2 = PP->nlistname[pCol];
-          dcvarFile << gene1 << "\t" << gene2 << "\t" << p << endl;
-          ++goodPvalCount;
-        }
-      }
+      if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
-    PP->printLOG("Found [" + int2str(goodPvalCount) + "] tested p-values, min/max: " + 
-            dbl2str(minP) + " / " + dbl2str(maxP) + "\n");    
-    dcvarFile.close();
+    // ------------------------------------------------------------------------
+    // write results, if there are any to write
+    if(zVals.n_nonzero) {
+      string resultsFilename = 
+              par::output_file_name + "." + 
+              par::dcvar_pfilter_type + "." +
+              variantName + 
+              ".pass.tab";
+      WriteResults(resultsFilename, variantName);
+    } else {
+      PP->printLOG("\tWARNING: nothing to write for [ " + variantName + " ]\n");
+    }
+    // write in case the job fails in this loop; resume with command line flag
+    WriteCheckpoint(snpIdx, variantName);
   } // END all variants loop
 
   return true;

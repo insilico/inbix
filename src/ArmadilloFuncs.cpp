@@ -92,7 +92,8 @@ bool armaDcgain(sp_mat& results, mat& pvals) {
   PP->printLOG("Performing Z-tests for interactions\n");
   double n1 = nAff;
   double n2 = nUnaff;
-  int goodFdrCount = 0;
+  // int goodFdrCount = 0;
+  uint infinityCount = 0;
   double minP = 1.0;
   double maxP = 0.0;
   for(int i=0; i < numVars; ++i) {
@@ -107,7 +108,8 @@ bool armaDcgain(sp_mat& results, mat& pvals) {
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       double p = 2 * normdist(-abs(Z_ij)); 
       if(std::isinf(Z_ij)) {
-        cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
+        ++infinityCount;
+        // cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
       }
       // if(i == 0 && j < 10) {
       //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
@@ -371,7 +373,7 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 			++nAff;
 		}
 		else {
-      if(!PP->sample[i]->missing) {
+      if(PP->sample[i]->missing) {
         error("PLINK SNP file has missing phenotype(s)");
 		  } else {
  		    ++nUnaff;

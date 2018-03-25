@@ -1655,6 +1655,8 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// dcVar analysis requested - bcw - 2/22/15
   // Refactored to handle both PLINK and separate files. - bcw - 10/22/17
+  // Refactored to incorporate the standalone versions of 
+  // dcvar and epiqtl (iqtl). January 2018
 	if(par::do_dcvar) {
 		P.printLOG("\nPerforming dcVar analysis\n");
     SNP_INPUT_TYPE commandLineSrcType = SNP_SRC_PLINK;

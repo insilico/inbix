@@ -2812,14 +2812,13 @@ void setOptions(CArgs & a) {
   if(a.find("--dcvar")) {
     par::do_dcvar = true;
   }
-  if(a.find("--dcvar-pfilter")) {
-    par::do_dcvar_pfilter = true;
-  }
   if(a.find("--dcvar-pfilter-value")) {
     par::dcvar_pfilter_value = a.value_double("--dcvar-pfilter-value");
+    par::do_dcvar_pfilter = true;
   }
   if(a.find("--dcvar-pfilter-type")) {
     par::dcvar_pfilter_type = a.value("--dcvar-pfilter-type");
+    par::do_dcvar_pfilter = true;
   }
   if(a.find("--dcvar-var-model")) {
     par::dcvar_var_model = a.value("--dcvar-var-model");
@@ -4484,7 +4483,6 @@ void setOptions(CArgs & a) {
             << "\n"
             << "      --dcvar                         Perform a differential coexpression variant analysis\n"
             << "      --dcvar-resume-snp              Resume SNP phenotype loop from checkpoint file\n"
-            << "      --dcvar-pfilter                 Enable p-value filtering\n"
             << "      --dcvar-pfilter-value {value}   P-value filter value\n"
             << "      --dcvar-pfilter-type {bon|fdr|custom}  P-value correction for filter Bonferroni or FDR BH\n"
             << "      --dcvar-var-model {dom|rec|hom} Allelic SNP model\n"
