@@ -163,6 +163,7 @@ pair<uint, uint> DcVar::MapSnpIndexToPlinkPhenos(uint snpIndex, string varModel)
     //        << endl;
     person->phenotype = thisPheno;
     person->aff = thisAff;
+    person->missing = false;
   }
 
   retPair.first = nAff;
