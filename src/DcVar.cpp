@@ -181,9 +181,9 @@ bool DcVar::RunPlink() {
   // NOTE: THE SNP2Ind() CALL IS CRITICAL!!! 2/24/15
   PP->SNP2Ind();
   int numSnps = PP->nl_all;
-  snpNames.clear();
-  for(uint snpNameIdx=0; snpNameIdx < PP->n; snpNameIdx++) {
-    snpNames.push_back(PP->locus[snpNameIdx]->name);
+  snpNames.resize(numSnps);
+  for(uint snpNameIdx=0; snpNameIdx < numSnps; snpNameIdx++) {
+    snpNames[snpNameIdx] = PP->locus[snpNameIdx]->name;
   }
   int numGenes = PP->nlistname.size();
   geneExprNames.resize(numGenes);
@@ -245,6 +245,8 @@ bool DcVar::RunPlink() {
     // ------------------------------------------------------------------------
     // write results, if there are any to write
     if(zVals.n_nonzero) {
+      PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + 
+                   " ] values pass filtering (if used)\n");
       string resultsFilename = 
               par::output_file_name + "." + 
               par::dcvar_pfilter_type + "." +
@@ -1150,6 +1152,7 @@ bool DcVar::WriteResults(string filename, string curSnp) {
         << curSnp << "\t" 
         << geneExprNames[row] << "\t" 
         << geneExprNames[col] << "\t" 
+        << std::scientific 
         << zvalue << "\t"
         << pvalue << "\t"
         << endl;

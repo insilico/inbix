@@ -40,28 +40,34 @@ bool armaDcgain(sp_mat& results, mat& pvals) {
     error("Single phenotype detected");
   }
   if((nAff < 3) || (nUnaff < 3)) {
-    cerr << "WARNING: zTest requires at least 3 samples in a each phenotype" << endl;
+    cerr << "WARNING: zTest requires at least 3 individuals in a each phenotype" << endl;
     return false;
   }
+  uint totalTests = 0;
   double df = nAff + nUnaff - 2;
   PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
   PP->printLOG("WARNING: all main effect p-values are set to 1.\n");
-  int numVars = PP->nlistname.size();
-  for(int i=0; i < numVars; ++i) {
+  uint numVars = PP->nlistname.size();
+#pragma omp parallel for
+  for(uint i=0; i < numVars; ++i) {
     // double t;
     // tTest(i, t);
     // double p = pT(t, df);
     // results(i, i) = t;
-    double z;
+    double z = 0.0;
     zTest(i, z);
+    ++totalTests;
     double p = 1.0;
+//    if(par::do_regain_pvalue_threshold) {
+//      if(p > par::regainPvalueThreshold) {
+//        results(i, i) = 0;
+//      }
+//    }
+    #pragma omp critical
+    {
     results(i, i) = z;
-    if(par::do_regain_pvalue_threshold) {
-      if(p > par::regainPvalueThreshold) {
-        results(i, i) = 0;
-      }
-    }
     pvals(i, i) = p;
+    }
   }
 
   // z-test for off-diagonal elements
@@ -96,40 +102,37 @@ bool armaDcgain(sp_mat& results, mat& pvals) {
   PP->printLOG("Performing Z-tests for interactions\n");
   double n1 = nAff;
   double n2 = nUnaff;
-  // int goodFdrCount = 0;
   uint infinityCount = 0;
-  double minP = 1.0;
-  double maxP = 0.0;
-  for(int i=0; i < numVars; ++i) {
-    for(int j=0; j < numVars; ++j) {
-      if(j <= i) {
-        continue;
-      }
+#pragma omp parallel for schedule(dynamic, 1)
+  for(uint i=0; i < numVars; ++i) {
+    for(uint j=i + 1; j < numVars; ++j) {
       double r_ij_1 = corMatrixX(i, j);
       double r_ij_2 = corMatrixY(i, j);
       double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (n1 - 3.0) + 1.0 / (n2 - 3.0)));
       double p = 2 * normdist(-abs(Z_ij)); 
-      if(std::isinf(Z_ij)) {
-        ++infinityCount;
-        // cerr << "Infinity found at (" << i << ", " << j << ")" << endl;
-      }
-      // if(i == 0 && j < 10) {
-      //   printf("%d, %d => %10.2f %g\n", i, j, Z_ij, p);
-      // }
-      results(i, j) = Z_ij;
-      results(j, i) = Z_ij;
-      if(par::do_regain_pvalue_threshold) {
-        if(p > par::regainPvalueThreshold) {
-          results(i, j) = 0;
-          results(j, i) = 0;
+      #pragma omp critical
+      {
+        ++totalTests;
+        // update shared memory variables
+        if(std::isinf(Z_ij)) {
+          ++infinityCount;
+          results(i, j) = 0.0;
+          results(j, i) = 0.0;
+          pvals(i, j) = 1.0;
+          pvals(j, i) = 1.0;
+        } else {
+          results(i, j) = Z_ij;
+          results(j, i) = Z_ij;
+          pvals(i, j) = p;
+          pvals(j, i) = p;
         }
       }
-      pvals(i, j) = p;
-      pvals(j, i) = p;
     }
   }
+  PP->printLOG(int2str(infinityCount) + " infinite Z values found\n");
+  PP->printLOG(int2str(totalTests) + " total number of tests\n");
 
   return true;
 }
