@@ -86,7 +86,7 @@ Plink * PP;
 map<string, int> Range::groupNames;
 
 int main(int argc, char* argv[]) {
-	/////////////////////////
+	////////////////////////
 	// Setup, display title
 
 	cout.setf(ios::fixed);
@@ -1658,6 +1658,28 @@ int main(int argc, char* argv[]) {
   // Refactored to incorporate the standalone versions of 
   // dcvar and epiqtl (iqtl). January 2018
 	if(par::do_dcvar) {
+ 		int ncase = 0;
+		int ncontrol = 0;
+		int nmissing = 0;
+		for(int i = 0; i < P.sample.size(); i++) {
+			if (P.sample[i]->missing) {
+				nmissing++;
+        continue;
+      }
+			if(P.sample[i]->aff) {
+				ncase++; 
+      }
+			else {
+				ncontrol++; 
+      }
+    }
+    if(ncase < 3 || ncontrol < 3) {
+      error("Not enough cases and/or controls, requires 3 per. " 
+            "Cases [ " + int2str(ncase) +  " ], " 
+            "Controls: [ " + int2str(ncontrol) + " ], " 
+            "Missing [ " + int2str(nmissing) + " ]\n");
+    }
+      
 		P.printLOG("\nPerforming dcVar analysis\n");
     SNP_INPUT_TYPE commandLineSrcType = SNP_SRC_PLINK;
     if(par::do_dcvar_chipseq) {

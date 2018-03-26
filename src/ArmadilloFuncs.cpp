@@ -39,6 +39,10 @@ bool armaDcgain(sp_mat& results, mat& pvals) {
   if((nAff == 0) || (nUnaff == 0)) {
     error("Single phenotype detected");
   }
+  if((nAff < 3) || (nUnaff < 3)) {
+    cerr << "WARNING: zTest requires at least 3 samples in a each phenotype" << endl;
+    return false;
+  }
   double df = nAff + nUnaff - 2;
   PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
   PP->printLOG("WARNING: all main effect p-values are set to 1.\n");

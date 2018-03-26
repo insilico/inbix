@@ -180,9 +180,16 @@ bool DcVar::RunPlink() {
   // NOTE: THE SNP2Ind() CALL IS CRITICAL!!! 2/24/15
   PP->SNP2Ind();
   int numSnps = PP->nl_all;
+  snpNames.clear();
+  for(uint snpNameIdx=0; snpNameIdx < PP->n; snpNameIdx++) {
+    snpNames.push_back(PP->locus[snpNameIdx]->name);
+  }
   int numGenes = PP->nlistname.size();
   geneExprNames.resize(numGenes);
   copy(PP->nlistname.begin(), PP->nlistname.end(), geneExprNames.begin());
+  numCombs = (numGenes * (numGenes - 1.0)) / 2.0;
+  PP->printLOG("Number of genes [ " + dbl2str(numGenes) + " ]\n");
+  PP->printLOG("Number of gene interactions [ " + dbl2str(numCombs) + " ]\n");
   // make sure we have variants
   if(numSnps < 1) {
     error("Variants file must specified at least one variant for this analysis!");
@@ -194,10 +201,9 @@ bool DcVar::RunPlink() {
   PP->printLOG(int2str(numSnps) + " variants, and " + int2str(numGenes) + " genes\n");
   // --------------------------------------------------------------------------
   // for all variants
-  unsigned int snpIdx;
-  for(snpIdx=0; snpIdx < numSnps; ++snpIdx) {
+  for(uint snpIdx=0; snpIdx < numSnps; ++snpIdx) {
     string variantName = PP->locus[snpIdx]->name;
-    PP->printLOG("\n-----[ " + variantName + " ] (" + int2str(snpIdx) + 
+    PP->printLOG("\n-----[ " + variantName + " ] (" + int2str(snpIdx + 1) + 
                  " of " + int2str(numSnps) + ")-----\n");
     // ------------------------------------------------------------------------
     // get variant info as case-control phenotype based on variant model
@@ -205,7 +211,7 @@ bool DcVar::RunPlink() {
     // cout << "sample size: " << PP->sample.size() << endl;
     pair<uint, uint> caseControl = 
             MapSnpIndexToPlinkPhenos(snpIdx, par::dcvar_var_model);
-    if(caseControl.first == 0 || caseControl.second == 0) {
+    if((caseControl.first < 3) || (caseControl.second < 3)) {
       cerr << "Skipping variant phenotype mapping" << endl << "G1: " 
               << caseControl.first << "\tG2:" << caseControl.second << endl;
       continue;
@@ -214,7 +220,9 @@ bool DcVar::RunPlink() {
     // run dcGAIN for this variant phenotype
     zVals.zeros(numGenes, numGenes);
     pVals.zeros(numGenes, numGenes);
-    armaDcgain(zVals, pVals);
+    if(!armaDcgain(zVals, pVals)) {
+      continue;
+    }
     // DEBUG
     // cout << "results" << endl << results.submat(0,0,4,4) << endl;
     // cout << "interactionPvals" << endl << interactionPvals.submat(0,0,4,4) << endl;
