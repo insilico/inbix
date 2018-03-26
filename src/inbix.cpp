@@ -1662,10 +1662,6 @@ int main(int argc, char* argv[]) {
 		int ncontrol = 0;
 		int nmissing = 0;
 		for(int i = 0; i < P.sample.size(); i++) {
-			if (P.sample[i]->missing) {
-				nmissing++;
-        continue;
-      }
 			if(P.sample[i]->aff) {
 				ncase++; 
       }
@@ -1675,9 +1671,8 @@ int main(int argc, char* argv[]) {
     }
     if(ncase < 3 || ncontrol < 3) {
       error("Not enough cases and/or controls, requires 3 per. " 
-            "Cases [ " + int2str(ncase) +  " ], " 
-            "Controls: [ " + int2str(ncontrol) + " ], " 
-            "Missing [ " + int2str(nmissing) + " ]\n");
+            "Cases [ " + int2str(ncase) +  " ],"
+            "Controls [ " + int2str(ncontrol) + " ]\n");
     }
       
 		P.printLOG("\nPerforming dcVar analysis\n");
