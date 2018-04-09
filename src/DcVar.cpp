@@ -220,8 +220,9 @@ bool DcVar::RunPlink() {
     // ------------------------------------------------------------------------
     // run dcGAIN for this variant phenotype
     zVals.zeros(numGenes, numGenes);
-    pVals.zeros(numGenes, numGenes);
+    pVals.ones(numGenes, numGenes);
     if(!armaDcgain(zVals, pVals)) {
+      cerr << "WARNING armaDcgain failed for this variant [ " << variantName << " ]" << endl;
       continue;
     }
     // DEBUG
@@ -233,7 +234,7 @@ bool DcVar::RunPlink() {
     // adjust p-values
     if(par::do_dcvar_pfilter) {
       if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
-      uint numFiltered;
+      uint numFiltered = 0;
       FilterPvalues(numFiltered);
       if(par::verbose) {
         PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
@@ -941,9 +942,10 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
   zVals.set_size(numGenes, numGenes);
   pVals.ones(numGenes, numGenes);
   uint i, j;
-#pragma omp parallel for private(j) collapse(2)
+#pragma omp parallel for private(i, j) collapse(2)
   for(i=0; i < numGenes; ++i) {
     for(j=0; j < numGenes; ++j) {
+      if(j <= i) continue;
       // correlation between this interaction pair (i, j) in cases and controls
       vec caseVarVals1 = cases.col(i);
       vec caseVarVals2 = cases.col(j);
@@ -1023,10 +1025,10 @@ bool DcVar::FilterPvalues(uint& numFiltered) {
     filterThreshold = CalculateFdrBHThreshold();
   } else {
     if(par::dcvar_pfilter_type == "bon") {
-      filterThreshold = par::dcvar_pfilter_value / (numCombs * snpNames.size());
+      filterThreshold = par::dcvar_pfilter_value / static_cast<double>(numCombs * snpNames.size());
     } else {
       if(par::dcvar_pfilter_type == "custom") {
-        // do nothing, but include for later mods context
+        // do nothing, but include for later filter additions
         filterThreshold = par::dcvar_pfilter_value;
       } else {
         error("Unknown p-value filter type. Expects \"bon\" or \"fdr\" or \"custom\"."   
@@ -1034,19 +1036,19 @@ bool DcVar::FilterPvalues(uint& numFiltered) {
       }
     }
   }
-
   if(par::verbose) {
     PP->printLOG("\tCustom pruning with method [ " + par::dcvar_pfilter_type + " ]\n");
     PP->printLOG("\tCustom pruning with correctedP [ " + 
                  dbl2str(filterThreshold) + " ]\n");
   }
+  // prune sparse matrix by setting filtered elements to zero
   uint numPruned = 0;
   uint numGenes = geneExprNames.size();
   for(uint i=0; i < numGenes; ++i) {
     for(uint j=i + 1; j < numGenes; ++j) {
       if(pVals(i, j) > filterThreshold) {
-        zVals(i, j) = 0;
-        zVals(j, i) = 0;
+        zVals(i, j) = 0.0;
+        zVals(j, i) = 0.0;
         ++numPruned;
       }
     }
@@ -1120,44 +1122,41 @@ bool DcVar::ReadCheckpoint(std::pair<uint, string>& lastSnp) {
 }
 
 bool DcVar::WriteResults(string filename, string curSnp) {
-  if(par::verbose) 
+  if(par::verbose) {
     PP->printLOG("\tWriting interactions that passed p-value filter to [ "  + 
                  filename + " ]\n");
-  // avoid writing empty matrix/zero-byte file
-  // make no assumption that called has checked; display warning and return
-  sp_mat::const_iterator zmatItCurrent = zVals.begin();
-  sp_mat::const_iterator zmatItEnd = zVals.end();
-  // no elements to write for this SNP?
-  if(zmatItCurrent == zmatItEnd) {
-    PP->printLOG("\tWARNING: DcVar::WriteResults method attempt to write "
-                 "empty z-values sparse matrix\n");
-    return false;
-  }
-  if((zVals.n_rows != pVals.n_rows) ||
-     (zVals.n_cols != pVals.n_cols)) {
-    PP->printLOG("\tWARNING: DcVar::WriteResults method attempt to write "
-                 "z-values matrix dimensions not equal to the p-values matrix\n");
-    PP->printLOG("\tZ: " + int2str(zVals.n_rows) + " x " + int2str(zVals.n_cols) + "\n");
-    PP->printLOG("\tp: " + int2str(pVals.n_rows) + " x " + int2str(pVals.n_cols) + "\n");
-    return false;
   }
   ofstream resultsFile(filename);
+  uint linesWritten = 0;
   resultsFile << "SNP\tGene1\tGene2\tZ\tP" << endl;
-  for(; zmatItCurrent != zmatItEnd; ++zmatItCurrent) {
-    double zvalue = *zmatItCurrent;
-    uint row = zmatItCurrent.row();
-    uint col = zmatItCurrent.col();
-    double pvalue = pVals(row, col);
-    resultsFile 
-        << curSnp << "\t" 
-        << geneExprNames[row] << "\t" 
-        << geneExprNames[col] << "\t" 
-        << std::scientific 
-        << zvalue << "\t"
-        << pvalue << "\t"
-        << endl;
+  ++linesWritten;
+  for(uint row=0; row < zVals.n_rows; ++row) {
+    for(uint col=row+1; col < zVals.n_cols; ++col) {
+      double zvalue = zVals(row, col);
+      double pvalue = pVals(row, col);
+      if(zvalue != 0.0) {
+        ++linesWritten;
+        resultsFile 
+            << curSnp << "\t" 
+            << geneExprNames[row] << "\t" 
+            << geneExprNames[col] << "\t" 
+            << std::scientific 
+            << zvalue << "\t"
+            << pvalue << "\t"
+            << endl;
+      }
+    }
   }
   resultsFile.close();
+  if(linesWritten == 1) {
+    std::remove(filename.c_str());
+  } else {
+    if(par::verbose) {
+      PP->printLOG("\tWrote [ "  + int2str(linesWritten) + " ]\n");
+    } else {
+      PP->printLOG("\tAll zero Z-values, so no output file was created\n");
+    }
+  }
   
   return true;
 }

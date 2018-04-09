@@ -2296,5 +2296,9 @@ bool zTest(int varIndex, double& z) {
 
   z = abs(z_i_1 - z_i_2) / sqrt((1/(g1_n - 3) + 1 / (g2_n - 3)));
 
+  if(std::isinf(z) || std::isnan(z)) {
+    error("Infinite or NaN in Z-test zTest() calculation");
+  }
+
   return true;
 }
