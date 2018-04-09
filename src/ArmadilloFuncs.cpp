@@ -43,11 +43,13 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     error("zTest requires at least 4 individuals in a each phenotype group");
     return false;
   }
-  uint totalTests = 0;
   double df = nAff + nUnaff - 2;
   PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
   PP->printLOG("WARNING: all main effect p-values are set to 1.\n");
   uint numVars = PP->nlistname.size();
+  bool readyToRun = true;
+  uint totalTests = 0;
+
   #pragma omp parallel for
   for(uint i=0; i < numVars; ++i) {
     // double t;
@@ -75,10 +77,12 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     error("Cannot read numeric data into case-control matrices");
   }
   if(!X.is_finite()) {
-    error("armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix X is not finite");
+    PP->printLOG("WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix X is not finite\n");
+    readyToRun = false;
   }
   if(!Y.is_finite()) {
-    error("armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix Y is not finite");
+    PP->printLOG("WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix Y is not finite");
+    readyToRun = false;
   }
   // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
   // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
@@ -91,10 +95,12 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     error("Could not compute coexpression matrix for cases");
   }
   if(!covMatrixX.is_finite()) {
-    error("armaComputeCovariance(X, covMatrixX, corMatrixX) covMatrixX matrix is not finite");
+    PP->printLOG("WARNING: armaComputeCovariance(X, covMatrixX, corMatrixX) covMatrixX matrix is not finite");
+    readyToRun = false;
   }
   if(!corMatrixX.is_finite()) {
-    error("armaComputeCovariance(X, corMatrixX, corMatrixX) corMatrixX matrix is not finite");
+    PP->printLOG("WARNING: armaComputeCovariance(X, corMatrixX, corMatrixX) corMatrixX matrix is not finite");
+    readyToRun = false;
   }
   mat covMatrixY;
   mat corMatrixY;
@@ -102,12 +108,20 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     error("Could not compute coexpression matrix for controls");
   }
   if(!covMatrixY.is_finite()) {
-    error("armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite");
+    PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite");
+    readyToRun = false;
   }
   if(!corMatrixY.is_finite()) {
-    error("armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite");
+    PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite");
+    readyToRun = false;
   }
-
+  
+  // are all the prerequisites ready?
+  if(!readyToRun) {
+    return false;
+  } else {
+    readyToRun = true;
+  }
   // DEBUG
   // cout << corMatrixX.n_rows << " x " << corMatrixX.n_cols << endl;
   // cout << "cor(X)" << endl << corMatrixX.submat(0,0,4,4) << endl;
