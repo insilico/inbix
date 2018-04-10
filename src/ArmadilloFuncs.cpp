@@ -48,8 +48,17 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
   PP->printLOG("WARNING: all main effect p-values are set to 1.\n");
   uint numVars = PP->nlistname.size();
   bool readyToRun = true;
+  uint infinityCount = 0;
+  uint nanCount = 0;
   uint totalTests = 0;
 
+  if(computeDiagonal) {
+    PP->printLOG("Performing Z-tests for zVals and pVals matrix diagonals\n");
+  } else {
+    PP->printLOG("Setting matrix diagonals zVals to 0.0 and pVals to 1.0\n");
+  }
+  
+  PP->printLOG("Setting matrix diagonals\n");
   #pragma omp parallel for
   for(uint i=0; i < numVars; ++i) {
     // double t;
@@ -57,15 +66,21 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     // double p = pT(t, df);
     // results(i, i) = t;
     double z = 0.0;
+    double p = 1.0;
     if(computeDiagonal) {
       zTest(i, z); 
     }
     ++totalTests;
-    double p = 1.0;
     #pragma omp critical
     {
-    results(i, i) = z;
-    pvals(i, i) = p;
+      if(std::isnan(z)) {
+        ++nanCount;
+      }
+      if(std::isinf(z)) {
+        ++infinityCount;
+      }
+      results(i, i) = z;
+      pvals(i, i) = p;
     }
   }
  
@@ -74,7 +89,8 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
   mat X;
   mat Y;
   if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
-    error("Cannot read numeric data into case-control matrices");
+    PP->printLOG("WARNING: Cannot read numeric data into case-control matrices");
+    readyToRun = false;
   }
   if(!X.is_finite()) {
     PP->printLOG("WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix X is not finite\n");
@@ -92,7 +108,8 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
   mat covMatrixX;
   mat corMatrixX;
   if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
-    error("Could not compute coexpression matrix for cases");
+    PP->printLOG("WARNING: Could not compute coexpression matrix for cases\n");
+    readyToRun = false;
   }
   if(!covMatrixX.is_finite()) {
     PP->printLOG("WARNING: armaComputeCovariance(X, covMatrixX, corMatrixX) covMatrixX matrix is not finite");
@@ -105,7 +122,8 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
   mat covMatrixY;
   mat corMatrixY;
   if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
-    error("Could not compute coexpression matrix for controls");
+    PP->printLOG("WARNING: Could not compute coexpression matrix for controls");
+    readyToRun = false;
   }
   if(!covMatrixY.is_finite()) {
     PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite");
@@ -129,8 +147,6 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
 
   // algorithm from R script z_test.R
   PP->printLOG("Performing Z-tests for interactions\n");
-  uint infinityCount = 0;
-  uint nanCount = 0;
   uint i, j;
 #pragma omp parallel for private(i, j) collapse(2)
   for(i=0; i < numVars; ++i) {
@@ -184,14 +200,17 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
   PP->printLOG(int2str(nanCount) + " nan Z values found\n");
   PP->printLOG(int2str(totalTests) + " total number of tests\n");
 
+  bool returnValue = true;
   if(!results.is_finite()) {
-    error("armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite");
+    PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite\n");
+    returnValue = false;
   }
   if(!pvals.is_finite()) {
-    error("armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite");
+    PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite\n");
+    returnValue = false;
   }
 
-  return true;
+  return returnValue;
 }
 
 bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {

@@ -193,18 +193,19 @@ bool DcVar::RunPlink() {
   PP->printLOG("Number of gene interactions [ " + dbl2str(numCombs) + " ]\n");
   // make sure we have variants
   if(numSnps < 1) {
-    error("Variants file must specified at least one variant for this analysis!");
+    error("Variants file must specify at least one variant for this analysis!");
   }
   // make sure we have genes
   if(numGenes < 2) {
-    error("Gene expression file must specified for this analysis!");
+    error("Gene expression file must specify at least two gene for this analysis!");
   }
   PP->printLOG(int2str(numSnps) + " variants, and " + int2str(numGenes) + " genes\n");
   // --------------------------------------------------------------------------
   // for all variants
   for(uint snpIdx=0; snpIdx < numSnps; ++snpIdx) {
     string variantName = PP->locus[snpIdx]->name;
-    PP->printLOG("\n-----[ " + variantName + " ] (" + int2str(snpIdx + 1) + 
+    PP->printLOG("\n-----[ " + variantName + 
+                 " ] (" + int2str(snpIdx + 1) + 
                  " of " + int2str(numSnps) + ")-----\n");
     // ------------------------------------------------------------------------
     // get variant info as case-control phenotype based on variant model
@@ -213,8 +214,8 @@ bool DcVar::RunPlink() {
     pair<uint, uint> caseControl = 
             MapSnpIndexToPlinkPhenos(snpIdx, par::dcvar_var_model);
     if((caseControl.first < 3) || (caseControl.second < 3)) {
-      cerr << "Skipping variant phenotype mapping" << endl << "G1: " 
-              << caseControl.first << "\tG2:" << caseControl.second << endl;
+      PP->printLOG("WARNING: Skipping variant phenotype mapping for minimum group size 3\nG1: " +
+              int2str(caseControl.first) + "\tG2:" + int2str(caseControl.second) + "\n");
       continue;
     }
     // ------------------------------------------------------------------------
@@ -222,7 +223,7 @@ bool DcVar::RunPlink() {
     zVals.zeros(numGenes, numGenes);
     pVals.ones(numGenes, numGenes);
     if(!armaDcgain(zVals, pVals)) {
-      cerr << "WARNING armaDcgain failed for this variant [ " << variantName << " ]" << endl;
+      PP->printLOG("WARNING:  armaDcgain failed for this variant [ " + variantName + " ]\n");
       continue;
     }
     // DEBUG
@@ -233,7 +234,9 @@ bool DcVar::RunPlink() {
     // ------------------------------------------------------------------------
     // adjust p-values
     if(par::do_dcvar_pfilter) {
-      if(par::verbose) PP->printLOG("\tp-value filtering requested\n");
+      if(par::verbose) 
+        PP->printLOG("\tFiltering p-values with [ " + par::dcvar_pfilter_type + " ] set to [ " +
+                     dbl2str(par::dcvar_pfilter_value) + " ]\n");
       uint numFiltered = 0;
       FilterPvalues(numFiltered);
       if(par::verbose) {
@@ -246,7 +249,7 @@ bool DcVar::RunPlink() {
     // ------------------------------------------------------------------------
     // write results, if there are any to write
     if(zVals.n_nonzero) {
-      PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + 
+      PP->printLOG("[ " + int2str(zVals.n_nonzero) + 
                    " ] values pass filtering (if used)\n");
       string resultsFilename = 
               par::output_file_name + "." + 
@@ -255,11 +258,12 @@ bool DcVar::RunPlink() {
               ".pass.tab";
       WriteResults(resultsFilename, variantName);
     } else {
-      PP->printLOG("\tWARNING: nothing to write for [ " + variantName + " ]\n");
+      PP->printLOG("WARNING: nothing to write for [ " + variantName + " ]\n");
     }
     // write in case the job fails in this loop; resume with command line flag
     WriteCheckpoint(snpIdx, variantName);
   } // END all variants loop
+  PP->printLOG("dcVar analysis complete!\n");
 
   return true;
 }
@@ -1123,7 +1127,7 @@ bool DcVar::ReadCheckpoint(std::pair<uint, string>& lastSnp) {
 
 bool DcVar::WriteResults(string filename, string curSnp) {
   if(par::verbose) {
-    PP->printLOG("\tWriting interactions that passed p-value filter to [ "  + 
+    PP->printLOG("Writing interactions that passed p-value filter to [ "  + 
                  filename + " ]\n");
   }
   ofstream resultsFile(filename);
@@ -1152,9 +1156,9 @@ bool DcVar::WriteResults(string filename, string curSnp) {
     std::remove(filename.c_str());
   } else {
     if(par::verbose) {
-      PP->printLOG("\tWrote [ "  + int2str(linesWritten) + " ]\n");
+      PP->printLOG("Wrote [ "  + int2str(linesWritten) + " ]\n");
     } else {
-      PP->printLOG("\tAll zero Z-values, so no output file was created\n");
+      PP->printLOG("All zero Z-values, so no output file was created\n");
     }
   }
   
