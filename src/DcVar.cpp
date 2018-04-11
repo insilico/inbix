@@ -223,7 +223,7 @@ bool DcVar::RunPlink() {
     zVals.zeros(numGenes, numGenes);
     pVals.ones(numGenes, numGenes);
     if(!armaDcgain(zVals, pVals)) {
-      PP->printLOG("WARNING:  armaDcgain failed for this variant [ " + variantName + " ]\n");
+      PP->printLOG("WARNING: armaDcgain failed for this variant [ " + variantName + " ]\n");
       continue;
     }
     // DEBUG
@@ -1053,6 +1053,8 @@ bool DcVar::FilterPvalues(uint& numFiltered) {
       if(pVals(i, j) > filterThreshold) {
         zVals(i, j) = 0.0;
         zVals(j, i) = 0.0;
+        pVals(i, j) = 1.0;
+        pVals(j, i) = 1.0;
         ++numPruned;
       }
     }
@@ -1138,7 +1140,8 @@ bool DcVar::WriteResults(string filename, string curSnp) {
     for(uint col=row+1; col < zVals.n_cols; ++col) {
       double zvalue = zVals(row, col);
       double pvalue = pVals(row, col);
-      if(zvalue != 0.0) {
+      // skip any z-values - sparse matrix
+      if(!((zvalue > -1e-6) && (zvalue < 1e-6))) {
         ++linesWritten;
         resultsFile 
             << curSnp << "\t" 
@@ -1156,7 +1159,7 @@ bool DcVar::WriteResults(string filename, string curSnp) {
     std::remove(filename.c_str());
   } else {
     if(par::verbose) {
-      PP->printLOG("Wrote [ "  + int2str(linesWritten) + " ]\n");
+      PP->printLOG("Wrote [ "  + int2str(linesWritten) + " ] lines\n");
     } else {
       PP->printLOG("All zero Z-values, so no output file was created\n");
     }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 2.7)
 
 include(GNUInstallDirs)
 
@@ -90,7 +90,7 @@ else()
   message(FATAL_ERROR "Could not find the 'ZLIB' package")
 endif()
 
-set(GSL_ROOT_DIR "/opt/oscer/software/GSL/2.3-foss-2016b")
+set(GSL_ROOT_DIR "/usr")
 find_package(GSL REQUIRED)
 if(GSL_FOUND)
   include_directories(${GSL_INCLUDE_DIRS})

@@ -58,7 +58,6 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     PP->printLOG("Setting matrix diagonals zVals to 0.0 and pVals to 1.0\n");
   }
   
-  PP->printLOG("Setting matrix diagonals\n");
   #pragma omp parallel for
   for(uint i=0; i < numVars; ++i) {
     // double t;
@@ -68,11 +67,13 @@ bool armaDcgain(sp_mat& results, mat& pvals, bool computeDiagonal) {
     double z = 0.0;
     double p = 1.0;
     if(computeDiagonal) {
-      zTest(i, z); 
+      if(!zTest(i, z)) {
+        error("Z-test failed for variant index [ " + int2str(i) + " ]");
+      }
     }
-    ++totalTests;
     #pragma omp critical
     {
+      ++totalTests;
       if(std::isnan(z)) {
         ++nanCount;
       }
