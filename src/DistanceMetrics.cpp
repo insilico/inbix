@@ -203,17 +203,17 @@ double diffNCA(unsigned int attributeIndex,
   return distance;
 }
 
-double diffNCA6(unsigned int attributeIndex,
+double diffTITV(unsigned int attributeIndex,
                 DatasetInstance* dsi1,
                 DatasetInstance* dsi2) {
   double distance = 0.0;
+  AttributeLevel dsi1Al =  dsi1->GetAttribute(attributeIndex);
+  AttributeLevel dsi2Al =  dsi2->GetAttribute(attributeIndex);
   pair<bool, double> checkMissing = CheckMissing(attributeIndex, dsi1, dsi2);
   if(checkMissing.first) {
     distance = checkMissing.second;
   } else {
-    distance = (double)
-            abs((int) dsi1->GetAttribute(attributeIndex) -
-                (int) dsi2->GetAttribute(attributeIndex)) * 0.5;
+    distance = abs(dsi1Al - dsi2Al) * 0.5;
   }
   // transition/transversion adjustment
   if(dsi1->GetDatasetPtr()->GetAttributeMutationType(attributeIndex) ==
@@ -227,21 +227,24 @@ double diffKM(unsigned int attributeIndex,
                DatasetInstance* dsi1,
                DatasetInstance* dsi2) {
   double distance = 0.0;
-
-	AttributeLevel dsi1Al =  dsi1->GetAttribute(attributeIndex);
-	AttributeLevel dsi2Al =  dsi2->GetAttribute(attributeIndex);
-	if(dsi1Al != dsi2Al) {
-		if(dsi1->GetDatasetPtr()->GetAttributeMutationType(attributeIndex) ==
-				TRANSITION_MUTATION) {
-			distance = 1.0;
-		} else {
+  AttributeLevel dsi1Al =  dsi1->GetAttribute(attributeIndex);
+  AttributeLevel dsi2Al =  dsi2->GetAttribute(attributeIndex);
+  pair<bool, double> checkMissing = CheckMissing(attributeIndex, dsi1, dsi2);
+  if(checkMissing.first) {
+    distance = checkMissing.second;
+  } else {
+    if(dsi1Al != dsi2Al) {
       if(dsi1->GetDatasetPtr()->GetAttributeMutationType(attributeIndex) ==
-          TRANSVERSION_MUTATION) {
-        distance = 2.0;
+          TRANSITION_MUTATION) {
+        distance = 1.0;
+      } else {
+        if(dsi1->GetDatasetPtr()->GetAttributeMutationType(attributeIndex) ==
+            TRANSVERSION_MUTATION) {
+          distance = 2.0;
+        }
       }
     }
-	}
-
+  }
   return distance;
 }
 

@@ -76,13 +76,14 @@ double diffNCA(unsigned int attributeIndex,
                DatasetInstance* dsi1,
                DatasetInstance* dsi2);
 /***************************************************************************//**
- * Nucleotide count array + G/C sum + A/T sum (NCA6) metric.
+ * Nucleotide count array + G/C sum + A/T sum metric, TiTv.
+ * considers transition/transversion mutation types
  * \param [in] attributeIndex index into the vector of attributes
  * \param [in] dsi1 data set instance 1
  * \param [in] dsi2 data set instance 2
- * \return diff(erence) considering nucleotide counts
+ * \return diff(erence) considering nucleotide mutation types
  ****************************************************************************/
-double diffNCA6(unsigned int attributeIndex,
+double diffTITV(unsigned int attributeIndex,
                 DatasetInstance* dsi1,
                 DatasetInstance* dsi2);
 /***************************************************************************//**

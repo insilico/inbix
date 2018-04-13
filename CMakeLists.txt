@@ -90,7 +90,6 @@ else()
   message(FATAL_ERROR "Could not find the 'ZLIB' package")
 endif()
 
-set(GSL_ROOT_DIR "/usr")
 find_package(GSL REQUIRED)
 if(GSL_FOUND)
   include_directories(${GSL_INCLUDE_DIRS})

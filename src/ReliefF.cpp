@@ -145,8 +145,8 @@ AttributeRanker::AttributeRanker(ds) {
     snpDiffFuncPtr = diffNCA;
     snpMetricFunctionUnset = false;
   }
-  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "NCA6") {
-    snpDiffFuncPtr = diffNCA6;
+  if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "TITV") {
+    snpDiffFuncPtr = diffTITV;
     snpMetricFunctionUnset = false;
   }
   if(snpMetricFunctionUnset && to_upper(snpDiffMetricName) == "GRM") {

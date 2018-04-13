@@ -2807,8 +2807,8 @@ bool Dataset::SetDistanceMetrics(string newSnpDiffMetricName,
 		snpDiffFuncPtr = diffNCA;
 		snpDiffMetricFunctionUnset = false;
 	}
-	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "NCA6") {
-		snpDiffFuncPtr = diffNCA6;
+	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "TITV") {
+		snpDiffFuncPtr = diffTITV;
 		snpDiffMetricFunctionUnset = false;
 	}
 	if (snpDiffMetricFunctionUnset && to_upper(newSnpDiffMetricName) == "KM") {
@@ -2836,8 +2836,8 @@ bool Dataset::SetDistanceMetrics(string newSnpDiffMetricName,
 		snpNearestNeighborFuncPtr = diffNCA;
 		snpNNMetricFunctionUnset = false;
 	}
-	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "NCA6") {
-		snpNearestNeighborFuncPtr = diffNCA6;
+	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "TITV") {
+		snpNearestNeighborFuncPtr = diffTITV;
 		snpNNMetricFunctionUnset = false;
 	}
 	if (snpNNMetricFunctionUnset && to_upper(newSnpNNMetricName) == "KM") {
