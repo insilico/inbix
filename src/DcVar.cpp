@@ -1128,13 +1128,16 @@ bool DcVar::ReadCheckpoint(std::pair<uint, string>& lastSnp) {
 }
 
 bool DcVar::WriteResults(string filename, string curSnp) {
+  string newFile = filename + ".gz";
   if(par::verbose) {
     PP->printLOG("Writing interactions that passed p-value filter to [ "  + 
-                 filename + " ]\n");
+                 newFile + " ]\n");
   }
-  ofstream resultsFile(filename);
+  // ofstream resultsFile(filename);
+  ZOutput resultsFile(newFile, compressed(newFile));
   uint linesWritten = 0;
-  resultsFile << "SNP\tGene1\tGene2\tZ\tP" << endl;
+  string header = "SNP\tGene1\tGene2\tZ\tP\n";
+  resultsFile << header;
   ++linesWritten;
   for(uint row=0; row < zVals.n_rows; ++row) {
     for(uint col=row+1; col < zVals.n_cols; ++col) {
@@ -1142,15 +1145,14 @@ bool DcVar::WriteResults(string filename, string curSnp) {
       double pvalue = pVals(row, col);
       // skip any z-values - sparse matrix
       if(!((zvalue > -1e-6) && (zvalue < 1e-6))) {
+        stringstream floatVals;
+        floatVals << zvalue << "\t" << pvalue;
         ++linesWritten;
         resultsFile 
             << curSnp << "\t" 
             << geneExprNames[row] << "\t" 
             << geneExprNames[col] << "\t" 
-            << std::scientific 
-            << zvalue << "\t"
-            << pvalue << "\t"
-            << endl;
+            << floatVals.str() << "\n";
       }
     }
   }
