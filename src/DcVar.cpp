@@ -202,7 +202,14 @@ bool DcVar::RunPlink() {
   PP->printLOG(int2str(numSnps) + " variants, and " + int2str(numGenes) + " genes\n");
   // --------------------------------------------------------------------------
   // for all variants
-  for(uint snpIdx=0; snpIdx < numSnps; ++snpIdx) {
+  uint initSnpIdx = 0;
+  if(par::dcvar_resume_snp) {
+    pair <uint, string> snpInfo;
+    ReadCheckpoint(snpInfo);
+    initSnpIdx = snpInfo.first;
+    PP->printLOG("Checkpoint resume at SNP index: " + int2str(initSnpIdx) + "\n");
+  }
+  for(uint snpIdx=initSnpIdx; snpIdx < numSnps; ++snpIdx) {
     string variantName = PP->locus[snpIdx]->name;
     PP->printLOG("\n-----[ " + variantName + 
                  " ] (" + int2str(snpIdx + 1) + 
