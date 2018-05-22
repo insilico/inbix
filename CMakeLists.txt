@@ -9,7 +9,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(CMAKE_C_COMPILER "clang" CACHE STRING "C compiler" FORCE)
   set(CMAKE_CXX_COMPILER "clang++" CACHE STRING "C++ compiler" FORCE)
   set(CMAKE_CXX_STANDARD 11)
-  set(INBIX_CXX_DEFINES "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DSYS=MAC -DMAC -DWITH_LAPACK=1 -DLAPCK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
+  set(INBIX_CXX_DEFINES "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DSYS=MAC -DMAC -DWITH_LAPACK=1 -DLAPACK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
   # turn off the nit-picky clang compiler warnings in old PLINK code
   set(INBIX_WARNINGS_OFF "-Wno-return-type -Wno-header-guard -Wno-writable-strings -Wno-user-defined-warnings")
   set(OMP_FLAG_AppleClang "-Xclang -fopenmp")
