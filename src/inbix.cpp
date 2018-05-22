@@ -1957,11 +1957,12 @@ int main(int argc, char* argv[]) {
 	///////////////////////
 	// Create family units?
 	if(par::MENDEL_test ||
-					par::MENDEL_report ||
-					par::TDT_test ||
-					par::QTDT_test ||
-					par::make_founders &&
-					!par::built_families) {
+	   par::MENDEL_report ||
+	   par::TDT_test ||
+	   par::QTDT_test ||
+	   (par::make_founders &&
+	   !par::built_families)) {
+
 		map<string, Individual*> fnd;
 		map<Individual*, int> idmap;
 		P.linkRelateds(idmap, fnd);

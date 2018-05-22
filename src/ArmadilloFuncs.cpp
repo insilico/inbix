@@ -360,8 +360,8 @@ bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
   if(outFile.fail()) {
     return false;
   }
-  outFile.precision(6);
-  outFile.fixed;
+  // outFile.precision(6);
+  // outFile.fixed;
 
   // write the variables header
   int hIdx = 0;
@@ -400,8 +400,8 @@ bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector<string> variableN
   if(outFile.fail()) {
     return false;
   }
-  outFile.precision(6);
-  outFile.fixed;
+  // outFile.precision(6);
+  // outFile.fixed;
 
   // write the variables header
   int hIdx = 0;

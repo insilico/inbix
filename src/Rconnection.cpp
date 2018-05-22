@@ -53,7 +53,7 @@
 #endif
 
 // NOTE: 0103 compatibility has not been established! use at your own risk!
-static char *myID= "Rsrv0103QAP1"; /* this client supports up to protocol version 0103 */
+static char myID[16] = "Rsrv0103QAP1"; /* this client supports up to protocol version 0103 */
 
 static Rexp *new_parsed_Rexp(unsigned int *d, Rmessage *msg) {
     int type=ptoi(*d)&0x3f;
@@ -198,11 +198,11 @@ void Rmessage::parse() {
         unsigned int *pp=(unsigned int*)c;
         unsigned int p1=ptoi(pp[0]);
         
-        Rsize_t len=p1>>8;
-        if ((p1&DT_LARGE)>0) {
-            hs+=4;
-            unsigned int p2=ptoi(pp[1]);
-            len|=((Rsize_t)p2)<<24;
+        Rsize_t len = p1 >> 8;
+        if ((p1 & DT_LARGE) > 0) {
+            hs += 4;
+            unsigned int p2 = ptoi(pp[1]);
+            len |= ((Rsize_t)p2) << 24;
         }
 #ifdef DEBUG_CXX
         printf("  par %d: %d length %d\n", pars, p1&0x3f, len);
@@ -361,7 +361,7 @@ char **Rexp::attributeNames() {
 }
 
 void Rinteger::fix_content() {
-    if (len<0 || !data) return;
+    if (!data) return;
 #ifdef SWAPEND
     int *i = (int*) data;
     int *j = (int*) (data+len);
@@ -370,7 +370,7 @@ void Rinteger::fix_content() {
 }
 
 void Rdouble::fix_content() {
-    if (len<0 || !data) return;
+    if (!data) return;
 #ifdef SWAPEND
     double *i = (double*) data;
     double *j = (double*) (data+len);

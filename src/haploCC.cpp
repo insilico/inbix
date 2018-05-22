@@ -59,7 +59,7 @@ void HaploPhase::haplotypicCC(map<int,int> & tests, int nt, bool display)
 			caseN[i1->second] += pp[i][z];		      
 		    }
 		  
-		  if ( ! ( haploid || X && person->sex ) ) 
+		  if ( ! ( haploid || (X && person->sex) ) ) 
 		    {
 		      if ( i2 != tests.end() )
 			{
@@ -90,7 +90,7 @@ void HaploPhase::haplotypicCC(map<int,int> & tests, int nt, bool display)
 			controlN[i1->second] += pp[i][z];
 		    }
 		  
-		  if ( ! ( haploid || X && person->sex ) ) 
+		  if ( ! ( haploid || (X && person->sex) ) ) 
 		    {
 		      if ( i2 != tests.end() )
 			{
@@ -354,7 +354,7 @@ void HaploPhase::haplotypicWeightedCC()
 		       caseN[1] += (1-weights[h1]) * pp[i][z];
 		     }
 
-		  if ( ! ( haploid || X && person->sex ) ) 
+		  if ( ! ( haploid || (X && person->sex) ) ) 
 		    {
 		      if (!ambig[i]) 
 			{
@@ -389,7 +389,7 @@ void HaploPhase::haplotypicWeightedCC()
 		       controlN[1] += (1-weights[h1]) * pp[i][z];
 		     }
 
-		   if ( ! ( haploid || X && person->sex ) ) 
+		   if ( ! ( haploid || (X && person->sex) ) ) 
 		     {
 		       if (!ambig[i]) 
 			 {

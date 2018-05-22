@@ -248,11 +248,7 @@ void Plink::parseTrios()
       Family * mf = f->second;
       
       // TDT = 2 parents + atleast 1 affected offspring
-      
-      if ( mf->kid.size()>=0) 
-	{
-	  
-	  if ( mf->parents )
+    	  if ( mf->parents )
 	    {
 	      with_parents_fam_cnt++;
 	      for (int k=0; k<mf->kid.size(); k++)
@@ -284,7 +280,7 @@ void Plink::parseTrios()
 		mf->discordant_parents = true;
 		disc_parent_cnt++;
 	      }
-	} 
+	
       
       if (mf->singleton) 
 	singleton_cnt++;

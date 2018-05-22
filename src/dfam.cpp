@@ -235,32 +235,31 @@ vector<double> Plink::testSibTDT(bool print_results,
 	      
 	      // We need two genotyped parents, with 
 	      // at least one het
-	      
-	      if ( pat1 && (!pat2) || 
-		   mat1 && (!mat2) ) 
-		{
-		  parents = false;
-		  goto jump_to_sibships;
-		}
+	      // bcw - 5/21/18 - 'goto's and labels!!!
+	      if ( (pat1 && (!pat2)) || (mat1 && (!mat2)) ) 
+				{
+					parents = false;
+					goto jump_to_sibships;
+				}
 	      
 	      int heteroParents = 0;
 	      bool homozygParent;
 	      
 	      if ( pat1 != pat2 )
-		heteroParents++;
+					heteroParents++;
 	      else
-		homozygParent = pat1;
+					homozygParent = pat1;
 	      
 	      if ( mat1 != mat2 ) 
-		heteroParents++;
+					heteroParents++;
 	      else
-		homozygParent = mat1;
+					homozygParent = mat1;
 	      
 	      if ( heteroParents == 0 )
-		{
-		  parents = false;
-		  goto jump_to_sibships;
-		}
+				{
+					parents = false;
+					goto jump_to_sibships;
+				}
 	      
 	      
 	      // Consider all offspring in nuclear family

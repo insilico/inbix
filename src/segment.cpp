@@ -2367,19 +2367,20 @@ void Plink::displaySegmentsBED()
             
 	  MOUT << "chr" << chromosomeName( locus[s->start]->chr ) << " " 
 	       << pos1 << " " << pos2 << " "
-	       << (person->fid + "_" + person->iid ) << " " 
+	       << person->fid << "_" << person->iid << " " 
 	       << s->score << " " 
 	       << ". "
 	       << pos1 << " " << pos2 << " ";
 	  // Colour
 	  
+		// changed assignments to logical equality operator - bcw- 5/21/18
 	  if ( par::cnv_col == 0 )
 	    MOUT << "255,0,0\n";
-	  else if ( par::cnv_col = 1 ) 
+	  else if ( par::cnv_col == 1 ) 
 	    MOUT << "0,0,255\n";
-	  else if ( par::cnv_col = 2 ) 
+	  else if ( par::cnv_col == 2 ) 
 	    MOUT << "0,255,0\n";
-	  else if ( par::cnv_col = 3 ) 
+	  else if ( par::cnv_col == 3 ) 
 	    MOUT << "255,0,0\n";
 	}
 
@@ -2407,13 +2408,14 @@ void Plink::displaySegmentsBED()
 	       << ". " << pos1 << " " << pos2 << " ";
 	  
 	  // Colour
+		// changed assignment to logical equality operator - bcw- 5/21/18
 	  if ( par::cnv_col == 0 )
 	    MOUT << "0,0,255\n";
-	  else if ( par::cnv_col = 1 ) 
+	  else if ( par::cnv_col == 1 ) 
 	    MOUT << "0,0,255\n";
-	  else if ( par::cnv_col = 2 ) 
+	  else if ( par::cnv_col == 2 ) 
 	    MOUT << "0,255,0\n";
-	  else if ( par::cnv_col = 3 ) 
+	  else if ( par::cnv_col == 3 ) 
 	    MOUT << "255,0,0\n";
 	} 
       ++s;
@@ -2438,13 +2440,14 @@ void Plink::displaySegmentsBED()
 	       << ". " << pos1 << " " << pos2 << " ";
 	  
 	  // Colour
+		// changed assignment to logical equality operator - bcw- 5/21/18
 	  if ( par::cnv_col == 0 )
 	    MOUT << "128,0,0\n";
-	  else if ( par::cnv_col = 1 ) 
+	  else if ( par::cnv_col == 1 ) 
 	    MOUT << "0,0,255\n";
-	  else if ( par::cnv_col = 2 ) 
+	  else if ( par::cnv_col == 2 ) 
 	    MOUT << "0,255,0\n";
-	  else if ( par::cnv_col = 3 ) 
+	  else if ( par::cnv_col == 3 ) 
 	    MOUT << "255,0,0\n";
 	}
       ++s;
@@ -2469,13 +2472,14 @@ void Plink::displaySegmentsBED()
 	       << ". " << pos1 << " " << pos2 << " ";
 	  
 	  // Colour
+		// changed assignment to logical equality operator - bcw- 5/21/18
 	  if ( par::cnv_col == 0 )
 	    MOUT << "0,0,128\n";
-	  else if ( par::cnv_col = 1 ) 
+	  else if ( par::cnv_col == 1 ) 
 	    MOUT << "0,0,255\n";
-	  else if ( par::cnv_col = 2 ) 
+	  else if ( par::cnv_col == 2 ) 
 	    MOUT << "0,255,0\n";
-	  else if ( par::cnv_col = 3 ) 
+	  else if ( par::cnv_col == 3 ) 
 	    MOUT << "255,0,0\n";
 	}
       ++s;

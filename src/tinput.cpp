@@ -205,7 +205,7 @@ void Plink::readTransposedData()
   vector<int> include_pos(0);
   int nl_actual = locus.size();
   
-  if ( (!par::plink) && (!par::run_chr==0) ) 
+  if ( ((!par::plink)) && (!(par::run_chr==0)) ) 
     {
       // Get range
       setMarkerRange();						
@@ -258,7 +258,7 @@ void Plink::readTransposedData()
     }
 
   // Drop any markerspace from excluded range
-  if ( (!par::plink) && (!par::run_chr==0) && nl_actual < locus.size() ) 
+  if ( ((!par::plink)) && (!(par::run_chr==0)) && (nl_actual < locus.size()) ) 
     {
       
 

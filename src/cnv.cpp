@@ -2095,7 +2095,8 @@ vector_t Plink::glmCNVBurdenModel(Perm & perm, bool print )
   bool noCovar = false;
 
   if ( par::cnv_en_model == 0 )
-    noCovar == true;
+		// changed == to = - bcw - 5/21/18
+    noCovar = true;
   
 
   /////////////////////////////////////////////////////

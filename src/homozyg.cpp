@@ -2152,7 +2152,8 @@ void Plink::findHomoWindow(Individual * person, ofstream & HOM)
   for ( int l = 0 ; l < nl_all ; l++ )
     {
       if ( totalWindows[l] == 0 ) 
-	homozygWindows[l] == 0;
+		// changed line below to assignment - bcw - 5/21/18
+	homozygWindows[l] = 0;
       else
 	homozygWindows[l] /= totalWindows[l];
     }

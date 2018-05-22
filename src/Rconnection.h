@@ -200,10 +200,10 @@ protected:
     
 public:
     Rsymbol(Rmessage *msg) : Rexp(msg)
-    { name=""; fix_content(); }
+    { name=NULL; fix_content(); }
     
     Rsymbol(unsigned int *ipos, Rmessage *imsg) : Rexp(ipos, imsg)
-    { name=""; fix_content(); }
+    { name=NULL; fix_content(); }
     
     char *symbolName() { return name; }
     

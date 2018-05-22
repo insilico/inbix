@@ -1571,7 +1571,7 @@ void InteractionNetwork::SetDebugMode(bool debugFlag) {
 bool InteractionNetwork::CheckIndices(ModuleIndices toCheck) {
 	bool success = true;
 	for(Indices i=0; !success && (i < toCheck.size()); ++i) {
-		if((toCheck[i] < 0) || (toCheck[i] >= numNodes)) {
+		if(toCheck[i] >= numNodes) {
 			inbixEnv->printLOG("CheckIndices FAILED at index: " + int2str(i) + ", value: " + int2str(toCheck[i]) + "\n");
 			success = false;
 		} 

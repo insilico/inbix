@@ -11,7 +11,7 @@
 //////////////////////////////////////////////////////////////////
 
 
-#ifndef __GENOGROUP_H_
+#ifndef __GENOGROUP_H__
 #define __GENOGROUP_H__
 
 

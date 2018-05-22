@@ -173,7 +173,7 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
 }
 
 void Regain::setFailureValue(double fValue) {
-  failureValue - fValue;
+  failureValue = fValue;
 }
 
 void Regain::performPureInteraction(bool flag) {
@@ -337,6 +337,9 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
           break;
         case REGAIN_OUTPUT_TRANSFORM_THRESH:
           valueToWrite = rawValue < outputThreshold ? 0 : rawValue;
+          break;
+        case REGAIN_OUTPUT_TRANSFORM_NONE:
+          valueToWrite = rawValue;
           break;
       }
       switch(outputFormat) {

@@ -1064,7 +1064,7 @@ void Plink::displayGenomeWideInfo()
 	Individual * p2 = sample[i2];
 	
 	// Only update message every 100 iterations
-	if ( (!par::silent ) && c==c2 || c==np)
+	if ( (!par::silent ) && (c==c2 || c==np))
 	  {
 	    cout << "IBD(g) calculation: " 
 		 << c++ << " of " << np 

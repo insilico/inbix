@@ -1630,8 +1630,8 @@ bool matrixWrite(matrix_t m, string mFilename,
   if(outFile.fail()) {
     return false;
   }
-  outFile.precision(6);
-  outFile.fixed;
+  // outFile.precision(6);
+  // outFile.fixed;
 
   // write header
   int hIdx = 0;

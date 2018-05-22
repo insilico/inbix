@@ -73,15 +73,18 @@ void Plink::perm_testHotel(Perm & perm)
   int caseN = 0;
   int controlN = 0;
 
-  for (int i=0; i < n; i++)
-    if (!sample[i]->missing)
-      if (sample[i]->aff)
-	caseN++;
-      else
-	controlN++;
+  // fully 'braced' - bcw - 5/21/18
+  for (int i=0; i < n; i++) {
+    if (!sample[i]->missing) {
+      if (sample[i]->aff) {
+        caseN++;
+      } else {
+        controlN++;
+      }
+    }
+  }
 
-  if ( caseN == 0 || 
-       controlN == 0 ) 
+  if ( caseN == 0 || controlN == 0 ) 
     error("No cases / no controls for T(2) test");
   
   // Multi-collinearity SNP pruning

@@ -9,8 +9,8 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
-
-#ifndef __HAPWINDOW_H_
+// added missing underscore at the end of this line below - bcw - 5/21/18
+#ifndef __HAPWINDOW_H__
 #define __HAPWINDOW_H__
 
 class HaploPhase;

@@ -286,7 +286,7 @@ void LinearModel::fitLM() {
 			double *A, unsigned int MA, 
 			double **U, double **V, double *W, unsigned int MP, unsigned int NP,
 			double *ChiSq, void funcs(double x, double *afunc, unsigned int ma) )
-	/*
+	
 		 Given a set of NData points X[], Y[] with individual standard
 		 deviations of Sig[], use chi-square minimization to determine the
 		 MA coefficients, A[], of the fitting function

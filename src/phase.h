@@ -10,8 +10,8 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
-
-#ifndef __HAPPHASE_H_
+// missing underscore on line below fixed - bcw - 5/21/18
+#ifndef __HAPPHASE_H__
 #define __HAPPHASE_H__
 
 class HaploWindow;

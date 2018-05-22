@@ -143,7 +143,7 @@ void Plink::readBinData()
   vector<int> include(0);
   int nl_actual = locus.size();
 
-  if ( (!par::plink) && (!par::run_chr==0) ) 
+  if ((!par::plink) && (!(par::run_chr==0)))
     {
 
       // Get range
@@ -391,7 +391,7 @@ void Plink::readBinData()
   // If need be, now prune the MAP file 
   // i.e. if --chr or --from/--to were used
   
-  if ( (!par::plink) && (!par::run_chr==0) )
+  if ((!par::plink) && (!(par::run_chr==0)))
     {
       
       vector<Locus*> l0(0);

@@ -200,7 +200,8 @@ void Plink::metaAnalysis()
     printLOG("Processing only chromosome " + int2str(par::run_chr) + "\n");
 
   if ( par::run_chr > 0 && ! usePositions ) 
-    par::run_chr == -1;
+		// changed to assignment operator - bcw - 5/21/18
+    par::run_chr = -1;
 
   set<string> mset;
   if ( par::extract_set )
