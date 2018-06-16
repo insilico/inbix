@@ -44,9 +44,11 @@ ReliefFSeq::ReliefFSeq(Dataset* ds, Plink* plinkPtr) :
       cout << Timestamp() << "ReliefFSeq SNR mode set to: " << snrMode << endl;
     }
     if(mode == "tstat") {
+      /*  // bam: got rid of this to ignore abst error
       if((tstatMode != "pval") && ((tstatMode != "abst") || (tstatMode != "rawt"))) {
         error("ERROR: Unrecognized ReliefFSeq t-statistic mode: " + tstatMode);
       }
+      */
       cout << Timestamp() << "ReliefFSeq t-statistic mode set to: " << tstatMode << endl;
     }
   }
@@ -148,15 +150,20 @@ bool ReliefFSeq::ComputeAttributeScores() {
 			double df =  n1 + n2 - 2;
 			double gslPval = 1.0;
 			if(t < 0) {
-				gslPval = gsl_cdf_tdist_P(-t, df);
+			        // bam: this is a problem for small p-values, when gslPval close to 1
+			        // bam: you get 1 - nearly1, which gets called 0 and you lose precition
+			        //gslPval = gsl_cdf_tdist_P(-t, df); 
+				gslPval = gsl_cdf_tdist_Q(-t, df);  // should be same as 1-gsl_cdf_tdist_P(-t, df) but with all the precision 
 			}
 			else {
-				gslPval = gsl_cdf_tdist_P(t, df);
+			        //gslPval = gsl_cdf_tdist_P(t, df);  // bam: same change as above
+			        gslPval = gsl_cdf_tdist_Q(t, df); 
 			}
 			// assign the variable a weight for ReliefF
 			if(tstatMode == "pval") {
 				// use 1-pvalue as the attribute scrore
-				alphaWeight = 1.0 - (2.0 * (1.0 - gslPval));
+				// alphaWeight = 1.0 - (2.0 * (1.0 - gslPval));  // bam: replaced this with the following for p-value
+			        alphaWeight = 2.0 * gslPval;   // bam: not sure about x2
 			}
 			else {
 				if(tstatMode == "abst") {
@@ -257,8 +264,8 @@ pair<double, double> ReliefFSeq::SigmaDeltaAlphas(unsigned int alpha,
 	// return the standard deviation of the hit and miss diffs
 	pair<double, double> returnValues;
 	double avgFactor = 1.0 / ((double) m * (double) k);
-	returnValues.first = sqrt(hitSum * avgFactor);
-	returnValues.second = sqrt(missSum * avgFactor);
+	returnValues.first = hitSum * avgFactor;    // bam: got rid of sqrt to make variance
+	returnValues.second = missSum * avgFactor;  // bam: got ride of sqrt to make variance
 
 	return returnValues;
 }
