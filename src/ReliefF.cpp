@@ -719,14 +719,18 @@ bool ReliefF::PreComputeDistances() {
   }
 
   // write distance matrix if in verbose mode for algorithms
-  if(par::algorithm_verbose) {
-    PP->printLOG(Timestamp() + "Writing distanceMatrix.csv\n");
+  // if(par::algorithm_verbose) {
+  // changed by bcw - 6/25/18
+  // old version used the verbose option rather than --distance-matrix <file>
+  if(!par::distanceMatrixFilename.empty()) {
+    string matrixFilename = par::distanceMatrixFilename;
+    PP->printLOG(Timestamp() + "Writing distance matrix to [ " + matrixFilename + " ]\n");
     ofstream outFile;
-    outFile.open("distanceMatrix.csv");
+    outFile.open(matrixFilename);
     for(unsigned int i=0; i < numInstances; ++i) {
       for(unsigned int j=0; j < numInstances; ++j) {
         if(j)
-          outFile << "," << distanceMatrix[i][j];
+          outFile << "\t" << distanceMatrix[i][j];
         else
           outFile << distanceMatrix[i][j];
       }
