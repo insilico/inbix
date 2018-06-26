@@ -28,7 +28,7 @@ PlinkInternalsDatasetInstance::
 PlinkInternalsDatasetInstance(Dataset* ds, string instanceID, 
                               Plink* plinkPtr, Individual* plinkInd): 
 DatasetInstance(ds, instanceID) {
-  PP = plinkPtr;
+  plinkInternalsPtr = plinkPtr;
   ID = instanceID;
   individual = plinkInd;
   // switch from SNP-major to individual-major data orientation!
@@ -62,12 +62,12 @@ double PlinkInternalsDatasetInstance::GetSimpleSNPValue(int snp) {
 }
 
 unsigned int PlinkInternalsDatasetInstance::NumAttributes() {
-  return PP->nl_all;
+  return plinkInternalsPtr->nl_all;
 }
 
 AttributeLevel PlinkInternalsDatasetInstance::GetAttribute(unsigned int index) {
   if(dataset->HasGenotypes()) {
-    if(index < PP->locus.size()) {
+    if(index < plinkInternalsPtr->locus.size()) {
       return static_cast<AttributeLevel>(GetSimpleSNPValue(index));
     } else {
       error("PlinkInternalsDatasetInstance::GetAttribute ERROR: Attribute index is out of range: " + int2str(index) + "\n");
@@ -78,7 +78,7 @@ AttributeLevel PlinkInternalsDatasetInstance::GetAttribute(unsigned int index) {
 }
 
 unsigned int PlinkInternalsDatasetInstance::NumNumerics() {
-  return(PP->nlistname.size());
+  return(plinkInternalsPtr->nlistname.size());
 }
 
 double PlinkInternalsDatasetInstance::GetNumeric(unsigned int index) {
@@ -96,7 +96,7 @@ double PlinkInternalsDatasetInstance::GetNumeric(unsigned int index) {
 
 void PlinkInternalsDatasetInstance::Print() {
   cout << "Instance ID [" << ID << "]" << endl;
-  cout << "PLINK pointer [" << PP << "]" << endl;
+  cout << "PLINK pointer [" << plinkInternalsPtr << "]" << endl;
   cout << "PLINK individual pointer [" << individual << endl;
   // for RReliefF - bcw - 9/30/11
   if(dataset->HasContinuousPhenotypes()) {

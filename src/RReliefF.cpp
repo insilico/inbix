@@ -38,26 +38,26 @@ bool RReliefF::ComputeAttributeScores() {
 	// results are stored in scores
 	W.resize(dataset->NumVariables(), 0.0);
 
-	// using pseudocode notation from paper
-	/**
-	 * Used to hold the probability of a different class val given nearest
+	/* using pseudocode notation from paper
+	 *
+	 * Used to hold the probability of a different class value given nearest
 	 * instances (numeric class)
 	 */
 	double ndc = 0.0;
 	/**
-	 * Used to hold the prob of different value of an attribute given
+	 * Used to hold the probability of different value of an attribute given
 	 * nearest instances (numeric class case)
 	 */
 	vector<double> nda;
 	nda.resize(dataset->NumVariables(), 0.0);
 	/**
-	 * Used to hold the prob of a different class val and different att
-	 * val given nearest instances (numeric class case)
+	 * Used to hold the probability of a different class value and different 
+   * attribute value given nearest instances (numeric class case)
 	 */
 	vector<double> ndcda;
 	ndcda.resize(dataset->NumVariables(), 0.0);
 
-	// pointer to the instance being sampled
+	// pointer to the (possibly random) instance being sampled
 	DatasetInstance* R_i = NULL;
 	cout << Timestamp() << "Running RRelief-F algorithm: ";
 	vector<string> instanceIds = dataset->GetInstanceIds();
@@ -106,6 +106,7 @@ bool RReliefF::ComputeAttributeScores() {
 			double d_ij = R_i->GetInfluenceFactorD(j);
 			ndc += (diffPredicted * d_ij);
 			unsigned int scoresIndex = 0;
+      // ---------------------
 			// attributes
 			vector<unsigned int> attributeIndicies =
 					dataset->MaskGetAttributeIndices(DISCRETE_TYPE);
@@ -115,31 +116,44 @@ bool RReliefF::ComputeAttributeScores() {
 				double attrScore = snpDiffFuncPtr(A, R_i, I_j) * d_ij;
 				nda[scoresIndex] += attrScore;
 				ndcda[scoresIndex] += (diffPredicted * attrScore);
-//        cout << "(i, j) = (" << i << "," << j << ") =>"
-//                << " diff predicted: " << diffPredicted
-//                << ", d_ij: " << d_ij
-//                << ", ndc: " << ndc
-//                << ", A: " << A
-//                << ", snpDiff: " << snpDiff(A, R_i, I_j)
-//                << ", nda[A}: " << nda[scoresIndex]
-//                << " ndcda[A]: " << ndcda[scoresIndex]
-//                << endl;
+        if(par::verbose) {
+          cout << "(i, j) = (" << i << "," << j << ") =>"
+                  << " diff predicted: " << diffPredicted
+                  << ", d_ij: " << d_ij
+                  << ", ndc: " << ndc
+                  << ", A: " << A
+                  << ", snpDiff: " << snpDiffFuncPtr(A, R_i, I_j)
+                  << ", nda[A}: " << nda[scoresIndex]
+                  << " ndcda[A]: " << ndcda[scoresIndex]
+                  << endl;
+        }
 				++scoresIndex;
 			}
+      // ---------------------
 			// numerics
-			vector<unsigned int> numericIndices = dataset->MaskGetAttributeIndices(
-					NUMERIC_TYPE);
+			vector<unsigned int> numericIndices = 
+        dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
 			for (unsigned int numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
 				unsigned int N = numericIndices[numIdx];
 				double numScore = numDiffFuncPtr(N, R_i, I_j) * d_ij;
 				nda[scoresIndex] += numScore;
 				ndcda[scoresIndex] += (diffPredicted * numScore);
+        if(par::verbose) {
+          cout << "(i, j) = (" << i << "," << j << ") =>"
+                  << " diff predicted: " << diffPredicted
+                  << ", d_ij: " << d_ij
+                  << ", N: " << N
+                  << ", snpDiff: " << numDiffFuncPtr(N, R_i, I_j)
+                  << ", nda[N}: " << nda[scoresIndex]
+                  << " ndcda[N]: " << ndcda[scoresIndex]
+                  << endl;
+        }
 				++scoresIndex;
 			}
-//      cout << "******************************" << endl;
+      if(par::verbose) cout << "******************************" << endl;
 		}
 
-//    cout << "--------------------------------------------------" << endl;
+    if(par::verbose) cout << "--------------------------------------------------" << endl;
 
 		// happy lights
 		if (i && ((i % 100) == 0)) {
@@ -150,7 +164,14 @@ bool RReliefF::ComputeAttributeScores() {
 
 	cout << Timestamp() << "Computing final scores" << endl;
 	for (unsigned int A = 0; A < dataset->NumVariables(); ++A) {
-		W[A] = (ndcda[A] / ndc) - ((nda[A] - ndcda[A]) / ((double) m - ndc));
+    double dblM = static_cast<double>(m);
+    double tempW = (ndcda[A] / ndc) - ((nda[A] - ndcda[A]) / (dblM - ndc));
+    if(std::isnan(tempW)) {
+      cerr << "WARNING: detected [NaN] in weight calculation, using zero instead" << endl;
+      W[A] = 0.0;
+    } else {
+      W[A] = tempW;
+    }
 	}
 
 	return true;

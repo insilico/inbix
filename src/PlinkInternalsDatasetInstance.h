@@ -56,7 +56,7 @@ public:
   NumericLevel GetNumeric(unsigned int index) override;
   void Print() override;
 private:
-  Plink* PP;
+  Plink* plinkInternalsPtr;
   string ID;
   Individual* individual;
 };

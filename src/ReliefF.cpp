@@ -849,9 +849,17 @@ bool ReliefF::ComputeWeightByDistanceFactors() {
     dsi->ClearInfluenceFactors();
     for(unsigned int neighborIdx = 0; neighborIdx < k; ++neighborIdx) {
       double influenceFactorD = d1_ij[neighborIdx] / d1_ij_sum;
-      //      cout << "d_ij: " << d1_ij[neighborIdx]
-      //              << ", cummulative sum: " << d1_ij_sum
-      //              << ", normalized value: " << influenceFactorD + "\n");
+      if(std::isnan(influenceFactorD)) {
+        cout << "d_ij: " << d1_ij[neighborIdx] 
+             << ", cumulative sum: " << d1_ij_sum
+             << ", normalized value: " << influenceFactorD << "\n";
+        error("Divide by zero in ComputeWeightByDistanceFactors");
+      }
+      if(par::verbose) {
+        cout << "d_ij: " << d1_ij[neighborIdx] 
+             << ", cumulative sum: " << d1_ij_sum
+             << ", normalized value: " << influenceFactorD << "\n";
+      }
       dsi->AddInfluenceFactorD(influenceFactorD);
     } // end all neighbors
   } // end all instances

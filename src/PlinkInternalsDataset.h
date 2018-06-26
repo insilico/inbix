@@ -27,10 +27,10 @@ class PlinkInternalsDataset : public Dataset
 {
 public:
   PlinkInternalsDataset(Plink* plinkPtr);
-  bool LoadDatasetPP();
+  bool LoadDatasetFromPlink();
   ~PlinkInternalsDataset();
 private:
-  Plink* PP;
+  Plink* plinkInternalsPtr;
 };
 
 #endif	/* PLINKINTERNALSDATASET_H */

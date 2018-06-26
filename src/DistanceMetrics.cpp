@@ -297,6 +297,9 @@ double diffPredictedValueTau(DatasetInstance* dsi1, DatasetInstance* dsi2) {
   double diff =
           fabs(dsi1->GetPredictedValueTau() - dsi2->GetPredictedValueTau()) /
           (minMax.second - minMax.first);
-
+  if(std::isnan(diff) || std::isinf(diff)) {
+    cerr << "WARNING: error in diffPredictedValueTau calculation" << endl;
+  }
+  
   return diff;
 }

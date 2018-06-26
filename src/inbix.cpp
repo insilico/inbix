@@ -1242,7 +1242,7 @@ int main(int argc, char* argv[]) {
     // ---------------------------------------------------------------------------
     P.SNP2Ind();
     PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
-    if(!ds->LoadDatasetPP()) {
+    if(!ds->LoadDatasetFromPlink()) {
       error("Could not load data set from PLINK internal data structures");
     }
     P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
@@ -1276,21 +1276,24 @@ int main(int argc, char* argv[]) {
 
 	/////////////////////////////////////////////////////////////////////////////
 	// Relief-F analysis requested - bcw - 8/19/16
-	if(par::do_relieff) {
+  if(par::do_relieff) {
     // ---------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
 		P.printLOG("Loading data set for Relief-F analysis from Plink data structures\n");
     P.SNP2Ind();
     PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
-    if(!ds->LoadDatasetPP()) {
+    if(!ds->LoadDatasetFromPlink()) {
       error("Could not load data set from PLINK internal data structures");
     }
     P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // ---------------------------------------------------------------------------
-    ds->SetDistanceMetrics(par::snpDiffMetricName, 
-                           par::snpNearestNeighborMetricName, 
-                           par::numDiffMetricName);
+    bool distanceSet = ds->SetDistanceMetrics(par::snpDiffMetricName, 
+                                              par::snpNearestNeighborMetricName, 
+                                              par::numDiffMetricName);
+    if(!distanceSet) {
+      error("Could not set distance metrics");
+    }
     AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;
@@ -1379,7 +1382,7 @@ int main(int argc, char* argv[]) {
       P.printLOG(Timestamp() + "Loading PLINK internal data.\n");
       plinkInternalsDataset = new PlinkInternalsDataset(&P);
       // split the PLINK internal data into three Datasets
-      if(!plinkInternalsDataset->LoadDatasetPP()) {
+      if(!plinkInternalsDataset->LoadDatasetFromPlink()) {
         error("Could not load data set from PLINK internal data structures\n");
       }
       vector<string> varNames = plinkInternalsDataset->GetVariableNames();
@@ -1534,15 +1537,18 @@ int main(int argc, char* argv[]) {
 		P.printLOG(Timestamp() + "Loading data set for Evaporative Cooling analysis\n");
     P.SNP2Ind();
     PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
-    if(!ds->LoadDatasetPP()) {
+    if(!ds->LoadDatasetFromPlink()) {
       error("Could not load data set from PLINK internal data structures");
     }
     P.printLOG(Timestamp() + "PlinkInternalsDataset loaded\n");
 
     // -------------------------------------------------------------------------
-    ds->SetDistanceMetrics(par::snpDiffMetricName, 
-                           par::snpNearestNeighborMetricName, 
-                           par::numDiffMetricName);
+    bool distanceSet = ds->SetDistanceMetrics(par::snpDiffMetricName, 
+                                              par::snpNearestNeighborMetricName, 
+                                              par::numDiffMetricName);
+    if(!distanceSet) {
+      error("Could not set distance metrics");
+    }
     AnalysisType analysisType = NO_ANALYSIS;
     if(ds->HasGenotypes() && ds->HasNumerics()) {
       analysisType = INTEGRATED_ANALYSIS;

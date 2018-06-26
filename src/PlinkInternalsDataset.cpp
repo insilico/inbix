@@ -17,26 +17,26 @@ using namespace std;
 
 PlinkInternalsDataset::PlinkInternalsDataset(Plink* plinkPtr): 
   Dataset::Dataset() {
-  PP = plinkPtr;
+  plinkInternalsPtr = plinkPtr;
 }
 
 PlinkInternalsDataset::~PlinkInternalsDataset() {
 }
 
-bool PlinkInternalsDataset::LoadDatasetPP() {
-  PP->printLOG(Timestamp() + "Adapting PLINK data structures to Dataset object\n");
+bool PlinkInternalsDataset::LoadDatasetFromPlink() {
+  plinkInternalsPtr->printLOG(Timestamp() + "Adapting PLINK data structures to Dataset object\n");
   // --------------------------------------------------------------------------
   // get variable metadata
-  unsigned int numAttributes = PP->nl_all;
+  unsigned int numAttributes = plinkInternalsPtr->nl_all;
   if(numAttributes) {
-    PP->printLOG(Timestamp() + "Get PLINK SNP variable metadata for " + 
+    plinkInternalsPtr->printLOG(Timestamp() + "Get PLINK SNP variable metadata for " + 
                  int2str(numAttributes) + " SNPs\n");
     hasGenotypes = true;
     attributeAlleles.resize(numAttributes);
     attributeMinorAllele.resize(numAttributes);
     attributeMutationTypes.resize(numAttributes);
     for(int i=0; i < numAttributes; i++) {
-      Locus* locus = PP->locus[i];
+      Locus* locus = plinkInternalsPtr->locus[i];
       string locusName = locus->name;
       attributeNames.push_back(locusName);
       attributesMask[locusName] = i;
@@ -48,13 +48,13 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
       attributeMutationTypes[i] = attributeMutationMap[alleles];
     }
   }
-  unsigned int numNumerics = PP->nlistname.size();
+  unsigned int numNumerics = plinkInternalsPtr->nlistname.size();
   if(numNumerics) {
-    PP->printLOG(Timestamp() + "Get PLINK Numeric variable metadata for " + 
+    plinkInternalsPtr->printLOG(Timestamp() + "Get PLINK Numeric variable metadata for " + 
                  int2str(numNumerics) + " numerics\n");
     hasNumerics = true;
-    for(int i=0; i < PP->nlistname.size(); i++) {
-      string numericName = PP->nlistname[i];
+    for(int i=0; i < plinkInternalsPtr->nlistname.size(); i++) {
+      string numericName = plinkInternalsPtr->nlistname[i];
       numericsNames.push_back(numericName);
       numericsMask[numericName] = i;
     }
@@ -65,7 +65,7 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
   }
   // --------------------------------------------------------------------------
   // look at all SNP and numeric values for all subjects
-  PP->printLOG(Timestamp() + "Get PLINK variable data for all subjects\n");
+  plinkInternalsPtr->printLOG(Timestamp() + "Get PLINK variable data for all subjects\n");
   
 	attributeLevelsSeen.resize(numAttributes);
 	genotypeCounts.resize(numAttributes);
@@ -75,43 +75,57 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
 
   // binary or continuous trait/phenotype
   if(par::bt) {
-    PP->printLOG(Timestamp() + "Detected BINARY phenotype\n");
+    plinkInternalsPtr->printLOG(Timestamp() + "Detected BINARY phenotype\n");
     hasContinuousPhenotypes = false;
     levelCountsByClass.resize(numAttributes);
   } else {
-    PP->printLOG(Timestamp() + "Detected CONTINUOUS phenotype\n");
+    plinkInternalsPtr->printLOG(Timestamp() + "Detected CONTINUOUS phenotype\n");
     hasContinuousPhenotypes = true;
   }
   hasPhenotypes = true;  
   
   unsigned int nextInstanceIdx = 0;
   instances.clear();
-  for(int sampleIdx=0; sampleIdx < PP->sample.size(); sampleIdx++) {
-    string ID = PP->sample[sampleIdx]->fid + PP->sample[sampleIdx]->iid;
+  for(int sampleIdx=0; sampleIdx < plinkInternalsPtr->sample.size(); sampleIdx++) {
+    string ID = plinkInternalsPtr->sample[sampleIdx]->fid + plinkInternalsPtr->sample[sampleIdx]->iid;
 //    if(par::verbose) {
 //      PP->printLOG("[ DEBUG ] individual i: " + int2str(i)
 //              + ", ID: " + ID 
 //              + ", next index: " + int2str(nextInstanceIdx) + "\n");
 //    }
-    if(PP->sample[sampleIdx]->missing) {
+    if(plinkInternalsPtr->sample[sampleIdx]->missing) {
       // missing phenotype so skip this individual
       if(par::verbose) {
-        PP->printLOG(Timestamp() + "ID: " + ID + " missing, skipping\n");
+        plinkInternalsPtr->printLOG(Timestamp() + "ID: " + ID + " missing, skipping\n");
       }
       continue;
     }
     // this individual is a "go"!
     PlinkInternalsDatasetInstance* tmpInd = 
-      new PlinkInternalsDatasetInstance(this, ID, PP, PP->sample[sampleIdx]);
+      new PlinkInternalsDatasetInstance(this, ID, plinkInternalsPtr, plinkInternalsPtr->sample[sampleIdx]);
     double phenotype = -9;
     if(par::bt) {
       // encode 0/1 for my Dataset class assumptions
-      uint intPheno = PP->sample[sampleIdx]->aff? 1: 0;
+      uint intPheno = plinkInternalsPtr->sample[sampleIdx]->aff? 1: 0;
       phenotype = static_cast<double>(intPheno);
       classIndexes[intPheno].push_back(sampleIdx);
       tmpInd->SetClass(phenotype);
     } else {
-      phenotype = PP->sample[sampleIdx]->phenotype;
+      phenotype = plinkInternalsPtr->sample[sampleIdx]->phenotype;
+      if(std::isnan(phenotype) || std::isinf(phenotype)) {
+        error("Invalid continuous phenotype value: [ " + dbl2str(phenotype) + " ]");
+      }
+      if(sampleIdx == 0) {
+        continuousPhenotypeMinMax.first = phenotype;
+        continuousPhenotypeMinMax.second = phenotype;
+      } else {
+        if(phenotype < continuousPhenotypeMinMax.first) {
+          continuousPhenotypeMinMax.first = phenotype;
+        }
+        if(phenotype > continuousPhenotypeMinMax.second) {
+          continuousPhenotypeMinMax.second = phenotype;
+        }
+      }
       tmpInd->SetPredictedValueTau(phenotype);
     }
     instanceIds.push_back(ID);
@@ -148,18 +162,19 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
       numericsSums.resize(numNumerics);
       numericsMinMax.resize(numNumerics);
       for(int numericIdx=0; numericIdx < numNumerics; numericIdx++) {
-        NumericLevel numeric = PP->sample[sampleIdx]->nlist[numericIdx];
-        if(numeric == -9) {
+        NumericLevel numericValue = plinkInternalsPtr->sample[sampleIdx]->nlist[numericIdx];
+        if(numericValue == -9) {
           missingNumericValues[ID].push_back(numericIdx);
+          continue;
         }
-        numericsSums[numericIdx] += numeric;
-        if(numeric < numericsMinMax[numericIdx].first) {
-          numericsMinMax[numericIdx].first = numeric;
+        numericsSums[numericIdx] += numericValue;
+        if(numericValue < numericsMinMax[numericIdx].first) {
+          numericsMinMax[numericIdx].first = numericValue;
         }
-        if(numeric > numericsMinMax[numericIdx].second) {
-          numericsMinMax[numericIdx].second = numeric;
+        if(numericValue > numericsMinMax[numericIdx].second) {
+          numericsMinMax[numericIdx].second = numericValue;
         }
-        tmpInd->AddNumeric(numeric);
+        tmpInd->AddNumeric(numericValue);
       }
       MaskIncludeAllAttributes(NUMERIC_TYPE);
     }
@@ -173,9 +188,9 @@ bool PlinkInternalsDataset::LoadDatasetPP() {
     hasAllelicInfo = false;
   }
 
-  PP->printLOG(Timestamp() + "Final number of subjects loaded: " + int2str(instances.size()) + "\n");
-  PP->printLOG(Timestamp() + "Final number of SNPs loaded: " + int2str(numAttributes) + "\n");
-  PP->printLOG(Timestamp() + "Final number of numerics loaded: " + int2str(numNumerics) + "\n");
+  plinkInternalsPtr->printLOG(Timestamp() + "Final number of subjects loaded: " + int2str(instances.size()) + "\n");
+  plinkInternalsPtr->printLOG(Timestamp() + "Final number of SNPs loaded: " + int2str(numAttributes) + "\n");
+  plinkInternalsPtr->printLOG(Timestamp() + "Final number of numerics loaded: " + int2str(numNumerics) + "\n");
 
   return true;
 }
