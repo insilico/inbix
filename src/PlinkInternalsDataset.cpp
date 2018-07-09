@@ -160,7 +160,6 @@ bool PlinkInternalsDataset::LoadDatasetFromPlink() {
     }
     if(hasNumerics) {
       numericsSums.resize(numNumerics);
-      numericsMinMax.resize(numNumerics);
       for(int numericIdx=0; numericIdx < numNumerics; numericIdx++) {
         NumericLevel numericValue = plinkInternalsPtr->sample[sampleIdx]->nlist[numericIdx];
         if(numericValue == -9) {
@@ -168,20 +167,35 @@ bool PlinkInternalsDataset::LoadDatasetFromPlink() {
           continue;
         }
         numericsSums[numericIdx] += numericValue;
-        if(numericValue < numericsMinMax[numericIdx].first) {
-          numericsMinMax[numericIdx].first = numericValue;
-        }
-        if(numericValue > numericsMinMax[numericIdx].second) {
-          numericsMinMax[numericIdx].second = numericValue;
-        }
         tmpInd->AddNumeric(numericValue);
       }
       MaskIncludeAllAttributes(NUMERIC_TYPE);
     }
     instances.push_back(tmpInd);
     instancesMask[ID] = sampleIdx;
-  }
+  } // all samples
 
+  if(hasNumerics) {
+    // go back and get the min and max for each numeric
+    numericsMinMax.resize(numNumerics);
+    for(uint numericIdx=0; numericIdx < numNumerics; ++numericIdx) {
+      for(uint instIdx=0; instIdx < instances.size(); ++ instIdx) {
+        NumericLevel numericValue = instances[instIdx]->GetNumeric(numericIdx);
+        if(instIdx == 0) {
+          numericsMinMax[numericIdx].first = numericValue;
+          numericsMinMax[numericIdx].second = numericValue;
+        } else {
+          if(numericValue < numericsMinMax[numericIdx].first) {
+            numericsMinMax[numericIdx].first = numericValue;
+          }
+          if(numericValue > numericsMinMax[numericIdx].second) {
+            numericsMinMax[numericIdx].second = numericValue;
+          }
+        }
+      }
+    }
+  }
+  
   if(hasGenotypes) {
     hasAllelicInfo = true;
   } else {

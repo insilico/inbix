@@ -221,14 +221,8 @@ bool ReliefF::ComputeAttributeScores() {
     error("Instance IDs mask size is not equal to Relief-F sampling parameter m\n");
   }
   /// algorithm line 2
-  uint i=0;
-  for(i=0; i < (uint) m; i++) {
-    string instanceID = instanceIds[i];
-    if(par::algorithm_verbose) {
-      PP->printLOG(int2str(i) + ": " + instanceID + "\n");
-    }
+  for(uint i=0; i < (uint) m; i++) {
     // algorithm line 3
-    R_i = 0;
     if(randomlySelect) {
       // randomly sample an instance (without replacement?)
       R_i = dataset->GetRandomInstance();
@@ -238,7 +232,7 @@ bool ReliefF::ComputeAttributeScores() {
       // uint instanceIndex;
       // dataset->GetInstanceIndexForID(instanceIds[i], instanceIndex);
       uint instanceIndex = 0;
-      dataset->GetInstanceIndexForID(instanceID, instanceIndex);
+      dataset->GetInstanceIndexForID(instanceIds[i], instanceIndex);
       R_i = dataset->GetInstance(instanceIndex);
     }
     if(!R_i) {
@@ -362,10 +356,9 @@ bool ReliefF::ComputeAttributeScores() {
           } // nearest neighbors
           missSum += (adjustmentFactor * tempSum);
         }
-        
         W[scoresIdx] = W[scoresIdx] - hitSum + missSum;
         ++scoresIdx;
-      }
+      } // all numerics
     } // has numerics
 
     // happy lights
@@ -374,16 +367,9 @@ bool ReliefF::ComputeAttributeScores() {
     }
 
   } // number to randomly select -or all instances
-  PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m) + " done\n");
+  PP->printLOG(Timestamp() + int2str(m) + "/" + int2str(m) + " done\n");
 
-  // superclass variable scores is what gets returned to callers of 
-  // AttributeRanker and subclasses
-  scores.clear();
-  for(uint i=0; i < W.size(); ++i) {
-    scores.push_back(make_pair(W[i], scoreNames[i]));
-  }
-
-  // normalize scores is flag set
+  // normalize scores if flag set
   if(normalizeScores) {
     PP->printLOG(Timestamp() + "Normalizing scores\n");
     NormalizeScores();
@@ -559,9 +545,13 @@ bool ReliefF::ResetForNextIteration() {
 }
 
 void ReliefF::PrintAttributeScores(ofstream& outFile) {
-  unsigned int nameIdx = 0;
+//  for(uint i=0; i < W.size(); ++i) {
+//    outFile << scores[i].first << "\t" << scores[i].second << endl;
+//    outFile << W[i] << "\t" << scoreNames[i] << endl;
+//  }
   AttributeScores scoresMap;
   vector<double>::const_iterator scoresIt = W.begin();
+  uint nameIdx = 0;
   for(; scoresIt != W.end(); ++scoresIt) {
     scoresMap.push_back(make_pair(*scoresIt, scoreNames[nameIdx]));
     ++nameIdx;
@@ -691,28 +681,19 @@ bool ReliefF::PreComputeDistances() {
       //cout << "Computing instance to instance distances. Row: " << i + "\n");
       // #pragma omp parallel for
       for(int j=i + 1; j < numInstances; ++j) {
-        unsigned int dsi1Index = instancesMask[instanceIds[i]];
-        //dataset->GetInstanceIndexForID(instanceIds[i], dsi1Index);
-        unsigned int dsi2Index = instancesMask[instanceIds[j]];
-        //dataset->GetInstanceIndexForID(instanceIds[j], dsi2Index);
+        unsigned int dsi1Index;
+        dataset->GetInstanceIndexForID(instanceIds[i], dsi1Index);
+        unsigned int dsi2Index;
+        dataset->GetInstanceIndexForID(instanceIds[j], dsi2Index);
         /// be sure to call Dataset::ComputeInstanceToInstanceDistance
-#pragma omp critical
-      {
         distanceMatrix[i][j] = distanceMatrix[j][i] =
                 dataset->ComputeInstanceToInstanceDistance(
                 dataset->GetInstance(dsi1Index),
                 dataset->GetInstance(dsi2Index));
-//        PP->printLOG(Timestamp() + 
-//          int2str(i) + " " + int2str(dsi1Index) + ", " + 
-//          int2str(j) + " " + int2str(dsi2Index) + " => " + 
-//          dbl2str(distanceMatrix[i][j]) + "\n");
+        //cout << i << ", " << j << " => " << distanceMatrix[i][j] << endl;
       }
-      }
-#pragma omp critical
-      {
       if(i && (i % 100 == 0)) {
         PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(numInstances) + "\n");
-      }
       }
     }
     PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
@@ -755,20 +736,20 @@ bool ReliefF::PreComputeDistances() {
   }
   PP->printLOG("\n");
 
-  map<string, uint>::const_iterator mit1 = instancesMask.begin();
-  for(uint count=0; mit1 != instancesMask.end(); ++count, ++mit1) {
-    uint dsi1 = (*mit1).second;
-    DatasetInstance* thisInstance = dataset->GetInstance(dsi1);
-    DistancePair nearestNeighborInfo;
+  DistancePair nnInfo;
+  for(int i = 0; i < numInstances; ++i) {
+    unsigned int thisInstanceIndex = instancesMask[instanceIds[i]];
+    DatasetInstance* thisInstance = dataset->GetInstance(thisInstanceIndex);
+
     if(dataset->HasContinuousPhenotypes()) {
       DistancePairs instanceDistances;
-      map<string, uint>::const_iterator mit2 = instancesMask.begin();
-      for(; mit2 != instancesMask.end(); ++mit2) {
-        uint dsi2 = (*mit2).second;
-        if(dsi1 == dsi2)
+      for(int j = 0; j < numInstances; ++j) {
+        if(i == j)
           continue;
-        double instanceToInstanceDistance = distanceMatrix[dsi1][dsi2];
-        nearestNeighborInfo = make_pair(instanceToInstanceDistance, (*mit2).first);
+        double instanceToInstanceDistance = distanceMatrix[i][j];
+        DistancePair nearestNeighborInfo;
+        nearestNeighborInfo = make_pair(instanceToInstanceDistance,
+                instanceIds[j]);
         instanceDistances.push_back(nearestNeighborInfo);
       }
       thisInstance->SetDistanceSums(k, instanceDistances);
@@ -778,31 +759,26 @@ bool ReliefF::PreComputeDistances() {
       // changed to an array for multiclass - 12/1/11
       map<ClassLevel, DistancePairs> diffSums;
       map<string, uint>::const_iterator mit2 = instancesMask.begin();
-      for(; mit2 != instancesMask.end(); ++mit2) {
-        uint dsi2 = (*mit2).second;
-        if(dsi1 == dsi2)
+      for(int j = 0; j < numInstances; ++j) {
+        if(i == j)
           continue;
-        double instanceToInstanceDistance = distanceMatrix[dsi1][dsi2];
-        //cout << dsi1 << "\t" << dsi2 << "\t" << instanceToInstanceDistance << endl;
-        nearestNeighborInfo = make_pair(instanceToInstanceDistance, (*mit2).first);
-        DatasetInstance* otherInstance = dataset->GetInstance(dsi2);
-//        cout << "this class: " << thisClass 
-//                << ", other: " << otherInstance->GetClass() 
-//                << ", NN: " << nearestNeighborInfo.second 
-//                << " dist: " << nearestNeighborInfo.first
-//                << endl;
+        double instanceToInstanceDistance = distanceMatrix[i][j];
+        unsigned int otherInstanceIndex = instancesMask[instanceIds[j]];
+        DatasetInstance* otherInstance = dataset->GetInstance(
+                otherInstanceIndex);
+        nnInfo = make_pair(instanceToInstanceDistance, instanceIds[j]);
         if(otherInstance->GetClass() == thisClass) {
-          sameSums.push_back(nearestNeighborInfo);
+          sameSums.push_back(nnInfo);
         } else {
           ClassLevel otherClass = otherInstance->GetClass();
-          diffSums[otherClass].push_back(nearestNeighborInfo);
+          diffSums[otherClass].push_back(nnInfo);
         }
       }
       thisInstance->SetDistanceSums(k, sameSums, diffSums);
     }
 
-    if(count && (count % 100 == 0)) {
-      PP->printLOG(Timestamp() + int2str(count) + "/" + int2str(numInstances) + "\n");
+    if(i && (i % 100 == 0)) {
+      PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(i) + "\n");
     }
   }
   PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
@@ -820,13 +796,14 @@ AttributeScores ReliefF::ComputeScores() {
 }
 
 bool ReliefF::ComputeWeightByDistanceFactors() {
-  vector<string> instanceIds = dataset->MaskGetInstanceIds();
-  map<string, uint> instanceMask = dataset->MaskGetInstanceMask();
-  map<string, uint>::const_iterator mit = instanceMask.begin();
-  for(unsigned int i = 0; i < dataset->NumInstances(); ++i, ++mit) {
+  vector<string> instanceIds = dataset->GetInstanceIds();
+  for(unsigned int i = 0; i < dataset->NumInstances(); ++i) {
+
     // this instance
-    uint instanceIndex = (*mit).second;
+    unsigned int instanceIndex;
+    dataset->GetInstanceIndexForID(instanceIds[i], instanceIndex);
     DatasetInstance* dsi = dataset->GetInstance(instanceIndex);
+
     vector<double> d1_ij;
     double d1_ij_sum = 0.0;
     for(unsigned int rank_j = 1; rank_j <= k; ++rank_j) {
@@ -845,23 +822,17 @@ bool ReliefF::ComputeWeightByDistanceFactors() {
       d1_ij.push_back(d1_ij_value);
       d1_ij_sum += d1_ij_value;
     }
+
     // "normalize" the factors - divide through by the total/sum
     dsi->ClearInfluenceFactors();
     for(unsigned int neighborIdx = 0; neighborIdx < k; ++neighborIdx) {
       double influenceFactorD = d1_ij[neighborIdx] / d1_ij_sum;
-      if(std::isnan(influenceFactorD)) {
-        cout << "d_ij: " << d1_ij[neighborIdx] 
-             << ", cumulative sum: " << d1_ij_sum
-             << ", normalized value: " << influenceFactorD << "\n";
-        error("Divide by zero in ComputeWeightByDistanceFactors");
-      }
-      if(par::verbose) {
-        cout << "d_ij: " << d1_ij[neighborIdx] 
-             << ", cumulative sum: " << d1_ij_sum
-             << ", normalized value: " << influenceFactorD << "\n";
-      }
+      //      cout << "d_ij: " << d1_ij[neighborIdx]
+      //              << ", cummulative sum: " << d1_ij_sum
+      //              << ", normalized value: " << influenceFactorD << endl;
       dsi->AddInfluenceFactorD(influenceFactorD);
-    } // end all neighbors
+    }
+    //    cout << "---------------------------------------------------------" << endl;
   } // end all instances
 
   return true;

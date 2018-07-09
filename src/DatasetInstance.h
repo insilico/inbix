@@ -155,6 +155,10 @@ public:
   std::vector<NumericLevel> GetNumerics() { return numerics; }
   bool SetId(std::string newId);
   std::string GetId() { return id; }
+  /// discrete attributes
+  std::vector<AttributeLevel> attributes;
+  /// continuous attributes
+  std::vector<NumericLevel> numerics;
 protected:
   /// pointer to a Dataset object
   Dataset* dataset;
@@ -162,10 +166,10 @@ protected:
   std::string id;
   /// the class value for this instance
   ClassLevel classLabel;
-  /// discrete attributes
-  std::vector<AttributeLevel> attributes;
-  /// continuous attributes
-  std::vector<NumericLevel> numerics;
+//  /// discrete attributes
+//  std::vector<AttributeLevel> attributes;
+//  /// continuous attributes
+//  std::vector<NumericLevel> numerics;
   /// vector of instance IDs for the best neighbors in this instance's class
   std::vector<std::string> bestNeighborIdsSameClass;
   /// vector of instance IDs for the best neighbors of different class(es)

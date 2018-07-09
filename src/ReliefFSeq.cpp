@@ -96,8 +96,7 @@ bool ReliefFSeq::ComputeAttributeScores() {
 
 	/// run this loop on as many cores as possible through OpenMP
 #pragma omp parallel for
-	for (unsigned int numIdx = 0; numIdx < numericIndices.size();
-			++numIdx) {
+	for (unsigned int numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
 		unsigned int alpha = numericIndices[numIdx];
 		pair<double, double> muDeltaAlphas = MuDeltaAlphas(alpha);
 		double muDeltaHitAlpha = muDeltaAlphas.first;

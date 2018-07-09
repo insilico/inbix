@@ -4552,7 +4552,7 @@ void setOptions(CArgs & a) {
             << "      --writeforest             Save forest to file <outprefix>.forest\n"
             << "      --rfthreads               Number of threads (default 0=all available)\n"
             << "\n"
-            << "      --ec                      Perform a random forest analysis\n"
+            << "      --ec                      Perform an Evaporative Cooling analysis\n"
             << "      --ec-optimize-temp        Turn on temperature optimization\n"
             << "      --ec-algorithm-steps      Algorithm steps (all/default|me|it)\n"
             << "      --ec-me-algorithm         randomforest|edger|deseq|\n"

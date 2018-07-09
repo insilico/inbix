@@ -1277,6 +1277,16 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// Relief-F analysis requested - bcw - 8/19/16
   if(par::do_relieff) {
+    if(par::do_numeric_standardize) {
+      P.printLOG("Standardizing numeric variables.\n");
+      if(!numericMeanCenter()) {
+        error("Mean centering numerics failed.");
+      }
+      if(!numericStandardize()) {
+        error("Standardizing numerics failed.");
+      }
+    }
+    
     // ---------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
 		P.printLOG("Loading data set for Relief-F analysis from Plink data structures\n");
