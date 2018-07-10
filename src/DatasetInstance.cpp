@@ -199,21 +199,16 @@ void DatasetInstance::SetDistanceSums(unsigned int kNearestNeighbors,
   bestNeighborIdsDiffClass.clear();
   
   // use Nate's best_n.h algorithm
-  if(par::algorithm_verbose) cout << "Same class sums:" << endl;
   //PrintDistancePairs(sameClassSums);
   DistancePairs bestInstancesHits;
   best_n(sameClassSums.begin(), sameClassSums.end(),
          back_insert_iterator<DistancePairs>(bestInstancesHits),
          kNearestNeighbors, deref_less_bcw());
-  if(par::algorithm_verbose) cout << "Hits:" << endl;
   DistancePairsIt hit;
   for(hit = bestInstancesHits.begin(); hit != bestInstancesHits.end(); ++hit) {
     DistancePair thisHit = *hit;
-    if(par::algorithm_verbose) cout << thisHit.first << " => " << thisHit.second << endl;
     bestNeighborIdsSameClass.push_back(thisHit.second);
   }
-  if(par::algorithm_verbose) cout << "--------" << endl;
-  if(par::algorithm_verbose) cout << "Other class(es) class sums:" << endl;
   map<ClassLevel, DistancePairs>::const_iterator it = diffClassSums.begin();
   for(; it != diffClassSums.end(); ++it) {
     ClassLevel thisClass = it->first;
@@ -223,16 +218,12 @@ void DatasetInstance::SetDistanceSums(unsigned int kNearestNeighbors,
            back_insert_iterator<DistancePairs > (bestInstancesMisses),
            kNearestNeighbors, deref_less_bcw());
     DistancePairsIt mit;
-    if(par::algorithm_verbose) cout << "Class " << thisClass << ", Different class sums:" << endl;
     //PrintDistancePairs(bestInstancesMisses);
     for(mit = bestInstancesMisses.begin(); mit != bestInstancesMisses.end(); ++mit) {
       DistancePair thisMiss = *mit;
-      if(par::algorithm_verbose) cout << thisMiss.first << " => " << thisMiss.second << endl;
       bestNeighborIdsDiffClass[thisClass].push_back(thisMiss.second);
     }
   }
-  if(par::algorithm_verbose) 
-    cout << "----------------------------------------------------------" << endl;
 }
 
 void DatasetInstance::SetDistanceSums(unsigned int kNearestNeighbors,
@@ -302,15 +293,12 @@ bool DatasetInstance::GetNNearestInstances(unsigned int n,
     return false;
   }
   map<string, uint> instMap = dataset->MaskGetInstanceMask();
-  if(par::algorithm_verbose) cout << "--------- same" << endl;
   sameClassInstances.clear();
   for(uint i = 0; i < n; ++i) {
     uint sameIdx = instMap[bestNeighborIdsSameClass[i]];
     //dataset->GetInstanceIndexForID(bestNeighborIdsSameClass[i], sameIdx);
-    if(par::algorithm_verbose) cout << bestNeighborIdsSameClass[i] << ", " << sameIdx << endl;
     sameClassInstances.push_back(sameIdx);
   }
-  if(par::algorithm_verbose) cout << "--------- diff" << endl;
   diffClassInstances.clear();
   map<ClassLevel, vector<string> >::const_iterator it;
   for(it = bestNeighborIdsDiffClass.begin();
@@ -326,8 +314,6 @@ bool DatasetInstance::GetNNearestInstances(unsigned int n,
     for(unsigned int i = 0; i < n; ++i) {
       uint diffIdx = instMap[thisClassIds[i]];
       //dataset->GetInstanceIndexForID(thisClassIds[i], diffIdx);
-      if(par::algorithm_verbose) 
-        cout << thisClassIds[i] << ", " << diffIdx << endl;
       diffClassInstances[thisClass].push_back(diffIdx);
     }
   }

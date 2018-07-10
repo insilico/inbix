@@ -76,32 +76,36 @@ bool ReliefFSeq::ComputeAttributeScores() {
 	// preconditions:
 	// 1. case-control data
 	// 2. all numeric variables
-
-	W.resize(dataset->NumNumerics(), 0.0);
-
+  if(dataset->HasGenotypes()) {
+    error("ReliefSeq mode only uses numeric attributes. Genotypes are not supported.");
+  }
+  if(dataset->HasContinuousPhenotypes()) {
+    error("ReliefSeq mode only uses case-control/binary phenotypes. Continuous variables are not supported.");
+  }
+  
 	// pre-compute all instance-to-instance distances and get nearest neighbors
 	PreComputeDistances();
 
+  stringstream rawScoresLines;
+	if(par::algorithm_verbose) {
+    rawScoresLines << "idx\tvar\tmuMiss\tmuHit\tsigmaMiss\tsigmaHit\ttstatnum\ttstatden\tt\tpval\tweight" << endl;
+  }
+  // --------------------------------------------------------------------------
 	// using pseudo-code notation from white board discussion - 7/21/12
 	// changed to use Brett's email (7/21/12) equations - 7/23/12
-	cout << Timestamp() << "Running ReliefFSeq algorithm" << endl;
-	vector<string> numNames;
-	numNames = dataset->GetNumericsNames();
-	vector<unsigned int> numericIndices =
-			dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
-	// DEBUG
-	//	string rawScoresFileName = dataset->GetNumericsFilename() + "_rawscores.tab";
-	//	ofstream outFile(rawScoresFileName.c_str());
-	//	outFile << "gene\tmuMiss\tmuHit\tsigmaMiss\tsigmaHit\tnum\tden\tdms0\tsnr" << endl;
-
 	/// run this loop on as many cores as possible through OpenMP
+  PP->printLOG(Timestamp() + "Running ReliefFSeq algorithm\n");
+	W.resize(dataset->NumNumerics(), 0.0);
+	vector<unsigned int> numericIndices = dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
+  vector<string> numericNames = dataset->GetNumericsNames();
+  scores.clear();
 #pragma omp parallel for
 	for (unsigned int numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
-		unsigned int alpha = numericIndices[numIdx];
+		uint alpha = numericIndices[numIdx];
+    string alphaName = numericNames[alpha];
 		pair<double, double> muDeltaAlphas = MuDeltaAlphas(alpha);
 		double muDeltaHitAlpha = muDeltaAlphas.first;
 		double muDeltaMissAlpha = muDeltaAlphas.second;
-
 		pair<double, double> sigmaDeltaAlphas = SigmaDeltaAlphas(alpha,
 				muDeltaHitAlpha, muDeltaMissAlpha);
 		double sigmaDeltaHitAlpha = sigmaDeltaAlphas.first;
@@ -113,18 +117,13 @@ bool ReliefFSeq::ComputeAttributeScores() {
 			// mode: snr (signal to noise ratio)
 			snrNum = fabs(muDeltaMissAlpha - muDeltaHitAlpha);
 			snrDen = sigmaDeltaMissAlpha + sigmaDeltaHitAlpha;
-//			outFile << numNames[numIdx]
-//					<< "\t" << muDeltaMissAlpha << "\t" << muDeltaHitAlpha
-//					<< "\t" << sigmaDeltaMissAlpha << "\t" << sigmaDeltaHitAlpha
-//					<< "\t" << num << "\t" << den << "\t" << (den + s0);
 			if(snrMode == "snr") {
 				alphaWeight = snrNum / (snrDen + s0);
 			}
 			else {
 				alphaWeight = snrNum;
 			}
-		}
-		else {
+		} else {
 			// mode: tstat (t-statistic)
 			// from Brett's email - 8/15/12
 			// Also we could change the score to a real t-statistic:
@@ -141,49 +140,68 @@ bool ReliefFSeq::ComputeAttributeScores() {
 			tstatDen = pooledStdDev * sqrt((1.0 / n1) + (1.0 / n2));
 			// make into a t-statistic and use for pvalue
 			double t = tstatNum / (tstatDen + s0);
-//#pragma omp critical
-//			cout << numNames[numIdx]
-//					<< "\t" << muDeltaMissAlpha << "\t" << muDeltaHitAlpha
-//					<< "\t" << sigmaDeltaMissAlpha << "\t" << sigmaDeltaHitAlpha
-//					<< "\t" << tstatNum << "\t" << tstatDen << "\t" << t << endl;
 			double df =  n1 + n2 - 2;
 			double gslPval = 1.0;
 			if(t < 0) {
-			        // bam: this is a problem for small p-values, when gslPval close to 1
-			        // bam: you get 1 - nearly1, which gets called 0 and you lose precition
-			        //gslPval = gsl_cdf_tdist_P(-t, df); 
+        // bam: this is a problem for small p-values, when gslPval close to 1
+        // bam: you get 1 - nearly1, which gets called 0 and you lose precition
+        //gslPval = gsl_cdf_tdist_P(-t, df); 
 				gslPval = gsl_cdf_tdist_Q(-t, df);  // should be same as 1-gsl_cdf_tdist_P(-t, df) but with all the precision 
 			}
 			else {
-			        //gslPval = gsl_cdf_tdist_P(t, df);  // bam: same change as above
-			        gslPval = gsl_cdf_tdist_Q(t, df); 
+        //gslPval = gsl_cdf_tdist_P(t, df);  // bam: same change as above
+        gslPval = gsl_cdf_tdist_Q(t, df); 
 			}
 			// assign the variable a weight for ReliefF
 			if(tstatMode == "pval") {
 				// use 1-pvalue as the attribute scrore
 				// alphaWeight = 1.0 - (2.0 * (1.0 - gslPval));  // bam: replaced this with the following for p-value
-			        alphaWeight = 2.0 * gslPval;   // bam: not sure about x2
-			}
-			else {
-				if(tstatMode == "abst") {
-					// use absolute value of the t statistic as the weight
-					alphaWeight = fabs(t);
-				}
-				else {
-					// use raw value of the t statistic as the weight
-					alphaWeight = t;
-				}
-			}
-		}
-	
-		/// assign a weight to this variable index
-		W[numIdx] = alphaWeight;
-		// DEBUG
-		// outFile << "\t" << W[numIdx] << endl;
+        alphaWeight = 2.0 * gslPval;   // bam: not sure about x2
+        
+        if(par::algorithm_verbose) {
+#pragma omp critical
+          {
+            rawScoresLines << alpha 
+            << "\t" << alphaName
+            << "\t" << muDeltaMissAlpha 
+            << "\t" << muDeltaHitAlpha
+            << "\t" << sigmaDeltaMissAlpha 
+            << "\t" << sigmaDeltaHitAlpha
+            << "\t" << tstatNum 
+            << "\t" << tstatDen 
+            << "\t" << t 
+            << "\t" << gslPval 
+            << "\t" << alphaWeight
+            << endl;
+          }
+        }
+      } else {
+        if(tstatMode == "abst") {
+          // use absolute value of the t statistic as the weight
+          alphaWeight = fabs(t);
+        } else {
+          // use raw value of the t statistic as the weight
+          alphaWeight = t;
+        }
+      }
+    }
+
+    /// assign a weight to this variable index
+#pragma omp critical
+    {    
+      W[numIdx] = alphaWeight;
+      scores.push_back(make_pair(alphaWeight, alphaName));
+    }
 	} // for all gene alpha
 
 	// DEBUG
-	// outFile.close();
+  if(par::algorithm_verbose) {
+    string rawScoresFileName = par::output_file_name + "_rawscores.tab";
+   	PP->printLOG(Timestamp() + "Writing Relief-F raw scores to: " + rawScoresFileName + "\n");
+    ofstream outFile(rawScoresFileName);
+    outFile << rawScoresLines.str();
+  	outFile.close();
+  }
 
 	return true;
 }

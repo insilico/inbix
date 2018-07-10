@@ -249,22 +249,22 @@ bool ReliefF::ComputeAttributeScores() {
             "R_i->GetNNearestInstances Cannot get " + int2str(k) + " neighbors\n");
     }
 
-    if(par::algorithm_verbose) {
-      cout << "Instance class: " << R_i->GetClass() << ", hits: ";
-      for(unsigned int ii = 0; ii < hits.size(); ++ii) {
-        cout << hits[ii] << " ";
-      }
-      cout << endl << "Misses:" << endl;
-      map<ClassLevel, vector<unsigned int> >::const_iterator iit;
-      for(iit = misses.begin(); iit != misses.end(); ++iit) {
-        cout << "Class: " << iit->first << ", misses: ";
-        vector<unsigned int> ids = iit->second;
-        for(unsigned int jj = 0; jj < ids.size(); ++jj) {
-          cout << ids[jj] << " ";
-        }
-        cout << endl;
-      }
-    }
+//    if(par::algorithm_verbose) {
+//      cout << "Instance class: " << R_i->GetClass() << ", hits: ";
+//      for(unsigned int ii = 0; ii < hits.size(); ++ii) {
+//        cout << hits[ii] << " ";
+//      }
+//      cout << endl << "Misses:" << endl;
+//      map<ClassLevel, vector<unsigned int> >::const_iterator iit;
+//      for(iit = misses.begin(); iit != misses.end(); ++iit) {
+//        cout << "Class: " << iit->first << ", misses: ";
+//        vector<unsigned int> ids = iit->second;
+//        for(unsigned int jj = 0; jj < ids.size(); ++jj) {
+//          cout << ids[jj] << " ";
+//        }
+//        cout << endl;
+//      }
+//    }
 
     // check algorithm preconditions
     if(hits.size() < 1) {
@@ -549,16 +549,25 @@ void ReliefF::PrintAttributeScores(ofstream& outFile) {
 //    outFile << scores[i].first << "\t" << scores[i].second << endl;
 //    outFile << W[i] << "\t" << scoreNames[i] << endl;
 //  }
-  AttributeScores scoresMap;
-  vector<double>::const_iterator scoresIt = W.begin();
-  uint nameIdx = 0;
-  for(; scoresIt != W.end(); ++scoresIt) {
-    scoresMap.push_back(make_pair(*scoresIt, scoreNames[nameIdx]));
-    ++nameIdx;
+//  uint nameIdx = 0;
+//  vector<unsigned int> numericIndices = dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
+//  vector<string> numericNames = dataset->GetNumericsNames();
+//  AttributeScores scoresMap;
+//  vector_t::const_iterator scoresIt = W.begin();
+//  for(uint numIdx=0; numIdx < numericIndicies.size(); ++numIdx) {
+//  	uint alpha = numericIndices[numIdx];
+//    string alphaName = numericNames[alpha];
+//    
+//  }
+  if(par::algorithmMode == "reliefseq" && 
+     par::algorithmSeqMode == "tstat" &&
+     par::algorithmTstatMode == "pval") {
+    sort(scores.begin(), scores.end(), scoresSortAsc);
+  } else {
+    sort(scores.begin(), scores.end(), scoresSortDesc);
   }
-  sort(scoresMap.begin(), scoresMap.end(), scoresSortDesc);
-  AttributeScoresCIt smIt=scoresMap.begin();
-  for(; smIt != scoresMap.end(); ++smIt) {
+  AttributeScoresCIt smIt=scores.begin();
+  for(; smIt != scores.end(); ++smIt) {
     outFile << smIt->first << "\t" << smIt->second << endl;
   }
 }
@@ -571,13 +580,11 @@ void ReliefF::WriteAttributeScores(string baseFilename) {
     resultsFilename += ".relieff.tab";
   }
 	PP->printLOG(Timestamp() + "Writing Relief-F results to: " + resultsFilename + "\n");
-
   ofstream outFile;
   outFile.open(resultsFilename.c_str());
   if(outFile.bad()) {
     error("ERROR: Could not open scores file " + resultsFilename + " for writing\n");
   }
-  //sort(W.begin(), W.end(), std::greater<double>());
   PrintAttributeScores(outFile);
   outFile.close();
 }
@@ -700,7 +707,6 @@ bool ReliefF::PreComputeDistances() {
   }
 
   // write distance matrix if in verbose mode for algorithms
-  // if(par::algorithm_verbose) {
   // changed by bcw - 6/25/18
   // old version used the verbose option rather than --distance-matrix <file>
   if(!par::distanceMatrixFilename.empty()) {
