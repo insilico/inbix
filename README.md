@@ -63,6 +63,14 @@ The following commands if successful produce an executable file named 'inbix':
     $ make
     $ ./inbix --help
 
+To build with documentation:
+
+    $ cd build
+    $ cmake .. -DBUILD_DOC=ON
+    $ make
+    $ sudo make install
+    $ ./inbix --help
+
 ### Contributors ###
 See AUTHORS file.
 
