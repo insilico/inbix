@@ -7,4 +7,10 @@ Makefile
 CMakeCache.txt
 CMakeFiles/*
 cmake_install.cmake
-
+man/*
+bu/*
+archive/*
+archive_makefiles/*
+.vscode/*
+build/*
+docs/*

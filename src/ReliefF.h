@@ -34,7 +34,8 @@ public:
   /*************************************************************************//**
    * Construct an ReliefF algorithm object.
    * \param [in] ds pointer to a Dataset object
-   * \param [in] anaType analysis type
+   * \param [in] plinkPtr pointer to a PLINK object   
+   * \param [in] anaType analysis type \see AnalysisType
    ****************************************************************************/
   ReliefF(Dataset* ds, Plink* plinkPtr, AnalysisType anaType);
   virtual ~ReliefF();
@@ -57,7 +58,7 @@ public:
   void PrintAttributeScores(std::ofstream& outStream);
   /*************************************************************************//**
    * Write the scores and attribute names to file.
-   * \param [in] baseFIlename filename to write score-attribute name pairs
+   * \param [in] baseFilename filename to write score-attribute name pairs
    ****************************************************************************/
   void WriteAttributeScores(std::string baseFilename);
   /// Pre-compute all pairwise instance-to-instance distances.

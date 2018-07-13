@@ -17,7 +17,7 @@ Center for Human Genetic Research (CHGR), Massachusetts General Hospital (MGH),
 and the Broad Institute of Harvard & MIT, with the support of others.
 
 For more details, visit the inbix
-[website](http://insilico.utulsa.edu/index.php/inbix-in-silico-research-groups-bioinformatics-toolbox-for-network-and-machine-learning-analysis/)
+[website](http://insilico.utulsa.edu/index.php/inbix/)
 
 ### Dependencies ###
 * [cmake](http:/cmake.org) is required to build the executable from source.
@@ -29,28 +29,39 @@ on most Unix systems.  In MinGW libz is installed via mingw-get.
 to take advantage of linear algebra routines that have decades of optimization.
 
 * [Boost](http://www.boost.org/) Mostly header extensions to the standard 
-  C++ libraries.
+C++ libraries.
 
 * [Armadillo](http://arma.sourceforge.net/) Linear algebra header library.
 
 * [GNU Scientific Library](https://www.gnu.org/software/gsl/) Deprecated-
-to be replaced by standard c++11 and boost, and removed.
+to be replaced by standard c++11 and boost and removed.
+
+* [Doxygen](http://www.stack.nl/~dimitri/doxygen/) to generate documentation 
+from source code annotations.
 
 * Finally, OpenMP is required to take advantage of the parallelized epistasis
 analysis code.  This is another library typically installed alongside the 
 compiler toolchain.
 
 ### Compilation Environment and Instructions ###
-GNU g++ 4.9 successfully compiles the code using the cmake 2.8.11 build system.
+GNU g++ 6.3.0 successfully compiles the code using the 
+cmake 3.7.2 build system.
 
 We have successfully built and run inbix on:
 
-* Linux (64-bit) Debian 8, Ubuntu 14.04
+* Linux (64-bit) Debian 9.2, Ubuntu 14.04
 
-To build inbix, run 'cmake .', which builds 'Makefile', then run 'make'.
+To build inbix, change to the build directory. run 'cmake ..' to indicate the
+cmake configuration file is in the parent directory, the top level project 
+directory. cmake builds a standard 'Makefile'. Finally, run 'make'. 
+'make install" will install the build files into the base '/usr/local/'. 
 
-    $ cmake .
+The following commands if successful produce an executable file named 'inbix':
+
+    $ cd build
+    $ cmake ..
     $ make
+    $ ./inbix --help
 
 ### Contributors ###
 See AUTHORS file.

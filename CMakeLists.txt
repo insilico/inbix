@@ -1,35 +1,38 @@
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 3.7)
 
 project(inbix)
 
 enable_language(CXX Fortran)
 
+set(CMAKE_CXX_STANDARD 11)
+set(INBIX_WARNINGS_OFF "-Wno-return-type -Wno-header-guard -Wno-writable-strings -Wno-user-defined-warnings -fno-var-tracking-assignments -Wno-write-strings ")
+set(INBIX_CXX_DEFINES_COMMON "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DWITH_LAPACK=1 -DLAPACK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
+set(INBIX_CXX_DEFINES_LINUX "${INBIX_CXX_DEFINES_COMMON} -Dunix -DSYS=UNIX -DUNIX ")
+set(INBIX_CXX_DEFINES_MAC "${INBIX_CXX_DEFINES_COMMON} -DSYS=MAC -DMAC ")
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   message(STATUS "Mac OS X system detected, setting compiler variables")
   set(CMAKE_C_COMPILER "clang" CACHE STRING "C compiler" FORCE)
   set(CMAKE_CXX_COMPILER "clang++" CACHE STRING "C++ compiler" FORCE)
-  set(CMAKE_CXX_STANDARD 11)
-  set(INBIX_CXX_DEFINES "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DSYS=MAC -DMAC -DWITH_LAPACK=1 -DLAPACK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
   # turn off the nit-picky clang compiler warnings in old PLINK code
-  set(INBIX_WARNINGS_OFF "-Wno-return-type -Wno-header-guard -Wno-writable-strings -Wno-user-defined-warnings")
   set(OMP_FLAG_AppleClang "-Xclang -fopenmp")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES} ${OMP_FLAG_AppleClang} ${INBIX_WARNINGS_OFF}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES_MAC} ${OMP_FLAG_AppleClang} ${INBIX_WARNINGS_OFF}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -L /usr/local/lib -liomp5")
 else(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   message(STATUS "Linux system detected, setting compiler variables")
   set(CMAKE_C_COMPILER gcc CACHE STRING "C compiler" FORCE)
   set(CMAKE_CXX_COMPILER g++ CACHE STRING "C++ compiler" FORCE)
-# enable either debugging mode with embedded symbols
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES_LINUX} ${INBIX_WARNINGS_OFF}")
+endif()
+
+# enable either debug or optimized compiler options
+set(BUILD_DEBUG ON CACHE BOOL "" FORCE)
+if(BUILD_DEBUG)
+  # debugging mode with embedded symbols
+  set(INBIX_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g")
+else()
   # or optimized with no debugging symbols
-  # set(BUILD_DEBUG OFF CACHE BOOL "" FORCE)
-  set(BUILD_DEBUG ON CACHE BOOL "" FORCE)
-  if(BUILD_DEBUG)
-    set(INBIX_CXX_FLAGS "-g -fno-var-tracking-assignments -Wno-write-strings -std=c++11")
-  else()
-    set(INBIX_CXX_FLAGS "-O2 -fno-var-tracking-assignments -Wno-write-strings -std=c++11")
-  endif()
-  set(INBIX_CXX_DEFINES "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -Dunix -DSYS=UNIX -DUNIX -DWITH_LAPACK=1 -DLAPCK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES}")
+  set(INBIX_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 endif()
 
 # build static
@@ -39,9 +42,10 @@ endif()
 # build shared
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
+# source code location
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(src)
-file(GLOB_RECURSE SRC_LIST *.c* *.h*)
+file(GLOB_RECURSE SRC_LIST src/*.cpp src/*.h)
 
 # Executable
 add_executable(${PROJECT_NAME} ${SRC_LIST})
@@ -133,4 +137,34 @@ else(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   messge(STATUS "Windows is not supported")
 endif()
 
-INSTALL(TARGETS inbix RUNTIME DESTINATION bin)
+# -----------------------------------------------------------------------------
+# From: https://vicrucann.github.io/tutorials/quick-cmake-doxygen/
+# first we can indicate the documentation build as an option and 
+# set it to OFF by default
+option(BUILD_DOC "Build documentation" OFF)
+
+# check if Doxygen is installed
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    # set input and output files
+    set(DOXYGEN_IN ${CMAKE_CURRENT_BINARY_DIR}/../docs/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+    # request to configure the file
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    message("Doxygen build started")
+
+    # note the option ALL which allows to build the docs together with 
+    # the application
+    add_custom_target( doc_doxygen ALL
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM )
+else (DOXYGEN_FOUND)
+  message("Doxygen needs to be installed to generate the doxygen documentation")
+endif (DOXYGEN_FOUND)
+# -----------------------------------------------------------------------------
+
+INSTALL(TARGETS inbix RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+INSTALL(DIRECTORY docs/man DESTINATION ${CMAKE_INSTALL_PREFIX}/man)
