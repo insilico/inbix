@@ -77,7 +77,7 @@ See AUTHORS file.
 ### References ###
 Purcell S, Neale B, Todd-Brown K, Thomas L, Ferreira MAR, 
 Bender D, Maller J, Sklar P, de Bakker PIW, Daly MJ & Sham PC (2007) 
-inbix: a toolset for whole-genome association and population-based 
+PLINK: a toolset for whole-genome association and population-based 
 linkage analysis. American Journal of Human Genetics, 81.
 
 [In Silico Lab Publications](http://insilico.utulsa.edu/index.php/publications/) 

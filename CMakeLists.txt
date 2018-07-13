@@ -5,7 +5,7 @@ project(inbix)
 enable_language(CXX Fortran)
 
 set(CMAKE_CXX_STANDARD 11)
-set(INBIX_WARNINGS_OFF "-Wno-return-type -Wno-header-guard -Wno-writable-strings -Wno-user-defined-warnings -fno-var-tracking-assignments -Wno-write-strings ")
+set(INBIX_WARNINGS_OFF "-Wno-return-type -Wno-header-guard -Wno-writable-strings -Wno-user-defined-warnings -Wno-write-strings ")
 set(INBIX_CXX_DEFINES_COMMON "-D_FILE_OFFSET_BITS=64 -Dfopen64=fopen -DWITH_LAPACK=1 -DLAPACK -DWITH_ZLIB=1 -DWITH_WEBCHECK=0 -DSKIP -DWITH_R_PLUGINS=1") 
 set(INBIX_CXX_DEFINES_LINUX "${INBIX_CXX_DEFINES_COMMON} -Dunix -DSYS=UNIX -DUNIX ")
 set(INBIX_CXX_DEFINES_MAC "${INBIX_CXX_DEFINES_COMMON} -DSYS=MAC -DMAC ")
@@ -17,12 +17,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   # turn off the nit-picky clang compiler warnings in old PLINK code
   set(OMP_FLAG_AppleClang "-Xclang -fopenmp")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES_MAC} ${OMP_FLAG_AppleClang} ${INBIX_WARNINGS_OFF}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -L /usr/local/lib -liomp5")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L /usr/local/lib -liomp5")
 else(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   message(STATUS "Linux system detected, setting compiler variables")
   set(CMAKE_C_COMPILER gcc CACHE STRING "C compiler" FORCE)
   set(CMAKE_CXX_COMPILER g++ CACHE STRING "C++ compiler" FORCE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES_LINUX} ${INBIX_WARNINGS_OFF}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-var-tracking-assignments ${INBIX_CXX_FLAGS} ${INBIX_CXX_DEFINES_LINUX} ${INBIX_WARNINGS_OFF}")
 endif()
 
 # enable either debug or optimized compiler options
