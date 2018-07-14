@@ -409,9 +409,15 @@ public:
   /*************************************************************************//**
    * Return a vector of all the attribute indices under consideration.
    * \param attrType attribute type
-   * \return vector of indices into currently considered discrete attributes
+   * \return vector of indices into currently considered attributes
    ****************************************************************************/
   std::vector<uint> MaskGetAttributeIndices(AttributeType attrType);
+  /*************************************************************************//**
+   * Return a vector of all the attribute names under consideration.
+   * \param attrType attribute type
+   * \return vector of strings into currently considered attributes
+   ****************************************************************************/
+  std::vector<string> MaskGetAttributeNames(AttributeType attrType);
   /*************************************************************************//**
    * Return a map of attribute name to attribute index of attributes to include.
    * \param [in] attrType attribute type
@@ -424,6 +430,11 @@ public:
    * \return vector of discrete and numeric variable
    ****************************************************************************/
   std::vector<std::string> MaskGetAllVariableNames();
+  /*************************************************************************//**
+   * Return a vector of all the numeric variable names under consideration.
+   * \return vector of numeric variable names as strings
+   ****************************************************************************/
+  std::vector<std::string> MaskGetNumericVariableNames();
   /*************************************************************************//**
    * Removes the instance from consideration in any data set operations.
    * \param [in] instanceId instance ID

@@ -1831,9 +1831,8 @@ bool Dataset::MaskIncludeAllAttributes(AttributeType attrType) {
 		numericsMask.clear();
 		uint attributeIndex = 0;
 		vector<string>::const_iterator it = numericsNames.begin();
-		for (; it != numericsNames.end(); ++it) {
+		for (; it != numericsNames.end(); ++it, ++attributeIndex) {
 			numericsMask[*it] = attributeIndex;
-			++attributeIndex;
 		}
 		return true;
 	}
@@ -1855,6 +1854,22 @@ vector<uint> Dataset::MaskGetAttributeIndices(AttributeType attrType) {
 	return indices;
 }
 
+vector<string> Dataset::MaskGetAttributeNames(AttributeType attrType) {
+	vector<string> names;
+	if (attrType == DISCRETE_TYPE) {
+		map<string, uint>::const_iterator it = attributesMask.begin();
+		for (; it != attributesMask.end(); ++it) {
+			names.push_back(it->first);
+		}
+	} else {
+		map<string, uint>::const_iterator it = numericsMask.begin();
+		for (; it != numericsMask.end(); ++it) {
+			names.push_back(it->first);
+		}
+	}
+	return names;
+}
+
 const map<string, uint>&
 Dataset::MaskGetAttributeMask(AttributeType attrType) {
 	if (attrType == DISCRETE_TYPE) {
@@ -1862,6 +1877,15 @@ Dataset::MaskGetAttributeMask(AttributeType attrType) {
 	} else {
 		return numericsMask;
 	}
+}
+
+vector<string> Dataset::MaskGetNumericVariableNames() {
+	vector<string> names;
+	map<string, uint>::const_iterator nit = numericsMask.begin();
+	for (; nit != numericsMask.end(); ++nit) {
+		names.push_back(nit->first);
+	}
+	return names;
 }
 
 vector<string> Dataset::MaskGetAllVariableNames() {

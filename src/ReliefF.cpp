@@ -581,7 +581,7 @@ void ReliefF::WriteAttributeScores(string baseFilename) {
   }
 	PP->printLOG(Timestamp() + "Writing Relief-F results to: " + resultsFilename + "\n");
   ofstream outFile;
-  outFile.open(resultsFilename.c_str());
+  outFile.open(resultsFilename);
   if(outFile.bad()) {
     error("ERROR: Could not open scores file " + resultsFilename + " for writing\n");
   }

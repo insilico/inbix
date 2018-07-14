@@ -88,7 +88,7 @@ bool ReliefFSeq::ComputeAttributeScores() {
 
   stringstream rawScoresLines;
 	if(par::algorithm_verbose) {
-    rawScoresLines << "idx\tvar\tmuMiss\tmuHit\tsigmaMiss\tsigmaHit\ttstatnum\ttstatden\tt\tpval\tweight" << endl;
+    rawScoresLines << "loopIdx\tnumidx\tnumname\tmuMiss\tmuHit\tsigmaMiss\tsigmaHit\ttstatnum\ttstatden\tt\tpval\tweight" << endl;
   }
   // --------------------------------------------------------------------------
 	// using pseudo-code notation from white board discussion - 7/21/12
@@ -96,13 +96,14 @@ bool ReliefFSeq::ComputeAttributeScores() {
 	/// run this loop on as many cores as possible through OpenMP
   PP->printLOG(Timestamp() + "Running ReliefFSeq algorithm\n");
 	W.resize(dataset->NumNumerics(), 0.0);
+  dataset->MaskIncludeAllAttributes(NUMERIC_TYPE);
 	vector<unsigned int> numericIndices = dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
-  vector<string> numericNames = dataset->GetNumericsNames();
+  vector<string> numericNames = dataset->MaskGetAttributeNames(NUMERIC_TYPE);
   scores.clear();
 #pragma omp parallel for
 	for (unsigned int numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
 		uint alpha = numericIndices[numIdx];
-    string alphaName = numericNames[alpha];
+    string alphaName = numericNames[numIdx];
 		pair<double, double> muDeltaAlphas = MuDeltaAlphas(alpha);
 		double muDeltaHitAlpha = muDeltaAlphas.first;
 		double muDeltaMissAlpha = muDeltaAlphas.second;
@@ -156,12 +157,14 @@ bool ReliefFSeq::ComputeAttributeScores() {
 			if(tstatMode == "pval") {
 				// use 1-pvalue as the attribute scrore
 				// alphaWeight = 1.0 - (2.0 * (1.0 - gslPval));  // bam: replaced this with the following for p-value
-        alphaWeight = 2.0 * gslPval;   // bam: not sure about x2
+        // alphaWeight = 2.0 * gslPval;   // bam: not sure about x2
+        alphaWeight = gslPval;   // bam: not sure about x2
         
         if(par::algorithm_verbose) {
 #pragma omp critical
           {
-            rawScoresLines << alpha 
+            rawScoresLines << numIdx
+            << "\t" << alpha 
             << "\t" << alphaName
             << "\t" << muDeltaMissAlpha 
             << "\t" << muDeltaHitAlpha
