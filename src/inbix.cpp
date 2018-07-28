@@ -1062,60 +1062,18 @@ int main(int argc, char* argv[]) {
 			}
 			
 			if(par::rankerPermMethod == "dcgain") {
-				mat dcgain(M, M);
-		    // t-test for diagonal
-		    double df = N - 2;
-		    for(int i=0; i < M; ++i) {
-		      double t;
-		      tTest(i, t);
-		      dcgain(i, i) = t;
-		    }
-
-		    // z-test for off-diagonal elements
-		    mat X;
-		    mat Y;
-		    if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
-		      error("Cannot read numeric data into case-control matrices");
-		    }
-
-		    // compute covariances/correlations
-		    mat covMatrixX;
-		    mat corMatrixX;
-		    if(!armaComputeCovariance(X, covMatrixX, corMatrixX)) {
-		      error("Could not compute coexpression matrix for cases");
-		    }
-		    mat covMatrixY;
-		    mat corMatrixY;
-		    if(!armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
-		      error("Could not compute coexpression matrix for controls");
-		    }
-
-		    // algorithm from R script z_test.R
-		    int i, j;
-#pragma omp parallel for schedule(dynamic, 1) private(i, j)
-  	    for(i=0; i < M; ++i) {
-		      for(j=0; j < M; ++j) {
-		        if(j <= i) {
-		          continue;
-		        }
-		        double r_ij_1 = corMatrixX(i, j);
-		        double r_ij_2 = corMatrixY(i, j);
-		        double z_ij_1 = 0.5 * log((abs((1 + r_ij_1) / (1 - r_ij_1))));
-		        double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
-		        double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1 / ((double) n1 - 3) + 1 / ((double) n2 - 3)));
-		        dcgain(i, j) = Z_ij;
-		        dcgain(j, i) = Z_ij;
-		      }
-		    }
-
+				sp_mat dcgain(M, M);
+        mat pvals(M, M);
+        if(!armaDcgain(dcgain, pvals)) {
+          error("armaDcgain failed");
+        }
 		    if(par::do_dcgain_abs) {
 		      for(int i=0; i < dcgain.n_rows; ++i) {
-		        for(int j=0; j < dcgain.n_cols; ++j) {
+		        for(int j=i + 1; j < dcgain.n_cols; ++j) {
 		          dcgain(i, j) = abs(dcgain(i, j));
 		        }
 		      }
 		    }
-
 				cr = new CentralityRanker(dcgain, P.nlistname);
 			}			
 
@@ -1702,9 +1660,7 @@ int main(int argc, char* argv[]) {
     int numVars = P.nlistname.size();
     sp_mat results(numVars, numVars);
     mat pvals(numVars, numVars);
-
     armaDcgain(results, pvals);
-    
     // write results
     if(par::do_dcgain_abs) {
       for(int i=0; i < results.n_rows; ++i) {

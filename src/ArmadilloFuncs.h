@@ -30,6 +30,6 @@ bool armaWriteSparseMatrix(arma::sp_mat& m, std::string mFilename,
 bool armaGetPlinkNumericToMatrixAll(arma::mat& X);
 bool armaGetPlinkNumericToMatrixCaseControl(arma::mat& X, arma::mat& Y);
 
-bool armaDcgain(arma::sp_mat& results, arma::mat& pvals, bool computeDiagonal=false);
+bool armaDcgain(arma::sp_mat& zvals, arma::mat& pvals, bool computeDiagonal=false);
 
 #endif	/* ARMADILLOFUNCS_H */

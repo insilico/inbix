@@ -23,6 +23,7 @@ public:
 	CentralityRanker(double** variablesMatrix, unsigned int dim,
 			std::vector<std::string>& variableNames);
 	CentralityRanker(arma::mat& A, std::vector<std::string> varNames);
+	CentralityRanker(arma::sp_mat& A, std::vector<std::string> varNames);
 	virtual ~CentralityRanker();
 
 	bool CalculateCentrality(SolverMethod method);

@@ -88,6 +88,27 @@ CentralityRanker::CentralityRanker(mat& A, vector<string> varNames)
   Gdiag.resize(n, n);
 }
 
+CentralityRanker::CentralityRanker(sp_mat& A, vector<string> varNames)
+{
+	unsigned int dim = A.n_cols;
+	// setup G matrix for SNPrank algorithm
+	G.resize(dim, dim);
+	// copy variable matrix values into G
+	for(unsigned int i=0; i < dim; ++i) {
+		for(unsigned int j=0; j < dim; ++j) {
+			G(i, j) = G(j, i) = A(i, j);
+		}
+	}
+	for(unsigned int i=0; i < dim; ++i) {
+		variableNames.push_back(varNames[i]);
+	}
+	// set default values
+	gainFile = "";
+	gamma = 0.0;
+	n = G.n_cols;
+  Gdiag.resize(n, n);
+}
+
 CentralityRanker::~CentralityRanker()
 {}
 
