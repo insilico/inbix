@@ -32,6 +32,8 @@ RReliefF::~RReliefF() {
 
 bool RReliefF::ComputeAttributeScores() {
 
+  PP->printLOG(Timestamp() + "---------------------------------------\n");
+  PP->printLOG(Timestamp() + "Regression Relief-F ComputeAttributeScores() START\n");
 	// precompute all instance-to-instance distances and get nearest neighbors
 	PreComputeDistances();
 
@@ -59,7 +61,7 @@ bool RReliefF::ComputeAttributeScores() {
 
 	// pointer to the (possibly random) instance being sampled
 	DatasetInstance* R_i = NULL;
-	cout << Timestamp() << "Running RRelief-F algorithm: ";
+	PP->printLOG(Timestamp() + "Running RRelief-F algorithm:\n");
 	vector<string> instanceIds = dataset->GetInstanceIds();
 	for (int i = 0; i < (int) m; i++) {
 
@@ -138,7 +140,7 @@ bool RReliefF::ComputeAttributeScores() {
 				double numScore = numDiffFuncPtr(N, R_i, I_j) * d_ij;
 				nda[scoresIndex] += numScore;
 				ndcda[scoresIndex] += (diffPredicted * numScore);
-        if(par::verbose) {
+        if(par::algorithm_verbose) {
           cout << "(i, j) = (" << i << "," << j << ") =>"
                   << " diff predicted: " << diffPredicted
                   << ", d_ij: " << d_ij
@@ -174,5 +176,7 @@ bool RReliefF::ComputeAttributeScores() {
     }
 	}
 
+  PP->printLOG(Timestamp() + "Relief-F ComputeAttributeScores() END\n");
+  
 	return true;
 }

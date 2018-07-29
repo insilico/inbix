@@ -167,4 +167,4 @@ endif (DOXYGEN_FOUND)
 # -----------------------------------------------------------------------------
 
 INSTALL(TARGETS inbix RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-INSTALL(DIRECTORY man DESTINATION ${CMAKE_INSTALL_PREFIX}/man)
+INSTALL(DIRECTORY man DESTINATION ${CMAKE_INSTALL_PREFIX})

@@ -14,6 +14,7 @@
 
 #include "plink.h"
 #include "helper.h"
+#include "stats.h"
 
 #include "ReliefF.h"
 #include "ReliefFSeq.h"
@@ -88,7 +89,7 @@ bool ReliefFSeq::ComputeAttributeScores() {
 
   stringstream rawScoresLines;
 	if(par::algorithm_verbose) {
-    rawScoresLines << "loopIdx\tnumidx\tnumname\tmuMiss\tmuHit\tsigmaMiss\tsigmaHit\ttstatnum\ttstatden\tt\tpval\tweight" << endl;
+    rawScoresLines << "loopIdx\tnumidx\tnumname\tmuMiss\tmuHit\tsigmaMiss\tsigmaHit\ttstatnum\ttstatden\tt\tpval\tpvalp\tweight\tweightp" << endl;
   }
   // --------------------------------------------------------------------------
 	// using pseudo-code notation from white board discussion - 7/21/12
@@ -143,6 +144,7 @@ bool ReliefFSeq::ComputeAttributeScores() {
 			double t = tstatNum / (tstatDen + s0);
 			double df =  n1 + n2 - 2;
 			double gslPval = 1.0;
+      double plinkPval = pT(t, df);
 			if(t < 0) {
         // bam: this is a problem for small p-values, when gslPval close to 1
         // bam: you get 1 - nearly1, which gets called 0 and you lose precition
@@ -158,13 +160,14 @@ bool ReliefFSeq::ComputeAttributeScores() {
 				// use 1-pvalue as the attribute scrore
 				// alphaWeight = 1.0 - (2.0 * (1.0 - gslPval));  // bam: replaced this with the following for p-value
         // alphaWeight = 2.0 * gslPval;   // bam: not sure about x2
+        double alphaWeightPlink = plinkPval;
         alphaWeight = gslPval;   // bam: not sure about x2
         
         if(par::algorithm_verbose) {
 #pragma omp critical
           {
             rawScoresLines << numIdx
-            << "\t" << alpha 
+            << "\t" << alpha
             << "\t" << alphaName
             << "\t" << muDeltaMissAlpha 
             << "\t" << muDeltaHitAlpha
@@ -174,7 +177,9 @@ bool ReliefFSeq::ComputeAttributeScores() {
             << "\t" << tstatDen 
             << "\t" << t 
             << "\t" << gslPval 
+            << "\t" << plinkPval
             << "\t" << alphaWeight
+            << "\t" << alphaWeightPlink
             << endl;
           }
         }

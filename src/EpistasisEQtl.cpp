@@ -46,35 +46,28 @@ bool EpistasisEQtl::SetDebugMode(bool debugFlag) {
 }
 
 bool EpistasisEQtl::CheckInputs() {
-    // --------------------------------------------------------------------------
   // basic assumptions check
   // we have SNPs?
-  int numSnps = PP->nl_all;
+  uint numSnps = PP->nl_all;
   if(!numSnps) {
-    cerr << "Error: no SNPs found " << endl;
-    return false;
+    error("no SNPs found \n");
   }
-  
   // we have transcript expression levels?
-  int numTranscripts = PP->nlistname.size();
+  uint numTranscripts = PP->nlistname.size();
   if(!numTranscripts) {
-    cerr << "Error: no transcript values found " << endl;
-    return false;
+    error("no transcript values found \n");
   }
-  
   // we have a transcript lookup table that matches the expression data?
-  int numTranscriptInfo = coordinates.size();
+  uint numTranscriptInfo = coordinates.size();
   if(numTranscriptInfo != numTranscripts) {
-    cerr << "Error: number of coordinate file entries does not match "
-      "the number of transcript values found " << endl;
-    return false;
+    error("number of coordinate file entries does not match "
+      "the number of transcript values found \n");
   }
   vector<string>::const_iterator cit = PP->nlistname.begin();
   for(; cit != PP->nlistname.end(); ++cit) {
     // do all the transcripts in expression values have coordinates info?
     if(coordinates.find(*cit) == coordinates.end()) {
-      cerr << "Error: Transcript " << *cit << " not found in coordinate file" << endl;
-      return false;
+      error("Transcript " + *cit + " not found in coordinate file\n");
     }
   }
 
@@ -90,11 +83,11 @@ void EpistasisEQtl::PrintState() {
 
   if(localCis) {
     PP->printLOG("local cis mode with radius: " + 
-      int2str(int(radius / 1000)) + " kilobases\n");
+      int2str(uint(radius / 1000)) + " kilobases\n");
   }
   if(tfMode) {
     PP->printLOG("TF mode with radius: " + 
-      int2str(int(tfRadius / 1000)) + " kilobases\n");
+      int2str(uint(tfRadius / 1000)) + " kilobases\n");
   }
   if(par::iqtl_interaction_full) {
     PP->printLOG("FULL epistatic interaction mode\n");
@@ -133,12 +126,12 @@ bool EpistasisEQtl::Run(bool debug) {
   string testnumbersFilename = par::output_file_name + ".testnumbers.txt";
   PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
   std::ofstream TESTNUMBERS;
-  TESTNUMBERS.open(testnumbersFilename.c_str(), ios::out);
+  TESTNUMBERS.open(testnumbersFilename, ios::out);
 
   string loopInfoFilename = par::output_file_name + ".loopinfo.txt";
   PP->printLOG("Writing loop information to [ " + loopInfoFilename + " ]\n");
   std::ofstream LOOPINFO;
-  LOOPINFO.open(loopInfoFilename.c_str(), ios::out);
+  LOOPINFO.open(loopInfoFilename, ios::out);
 
   // --------------------------------------------------------------------------
   // determine SNPs in outer loop; considers transcription factor mode
@@ -150,7 +143,7 @@ bool EpistasisEQtl::Run(bool debug) {
     if(debugMode) {
      cout << "TF snp indices: ";
      copy(thisTFSnpIndices.begin(), thisTFSnpIndices.end(), 
-             ostream_iterator<int>(cout, "\t"));
+             ostream_iterator<uint>(cout, "\t"));
      cout << endl;
      cout << "TFs: ";
      copy(thisTFSnpNames.begin(), 
@@ -164,11 +157,11 @@ bool EpistasisEQtl::Run(bool debug) {
   // --------------------------------------------------------------------------
   // for each transcript build main effect and epistasis regression models
   string thisTranscript;
-  int transcriptIndex = 0;
+  uint transcriptIndex = 0;
   for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
     
     thisTranscript = PP->nlistname[transcriptIndex];
-    cout << "-----------------------------------------------------------------------------" << endl;
+    error("-----------------------------------------------------------------------------\n");
     PP->printLOG("Transcript: " + thisTranscript + "\n");
 
     // get transcript expression vector as phenotype
@@ -197,11 +190,11 @@ bool EpistasisEQtl::Run(bool debug) {
       cout << "DEBUG outerLoopSnps set size: " << outerLoopSnps.size() << endl;
       cout << "transcript cis snp indices: ";
       copy(thisTranscriptSnpIndices.begin(), thisTranscriptSnpIndices.end(), 
-              ostream_iterator<int>(cout, "\t"));
+              ostream_iterator<uint>(cout, "\t"));
       cout << endl;
       cout << "Loop set snp indices: ";
       copy(outerLoopSnps.begin(), outerLoopSnps.end(), 
-              ostream_iterator<int>(cout, "\t"));
+              ostream_iterator<uint>(cout, "\t"));
       cout << endl;
     }
 
@@ -240,19 +233,19 @@ bool EpistasisEQtl::Run(bool debug) {
       thisTranscript + ".iqtl.txt";
     PP->printLOG("Writing iQTL results to [ " + iqtlFilename + " ]\n");
     ofstream IQTL_OUT;
-    IQTL_OUT.open(iqtlFilename.c_str(), ios::out);
+    IQTL_OUT.open(iqtlFilename, ios::out);
     if(tfMode) {
       IQTL_OUT << "SnpA\tSnpB\tTranscript\tTF\tCoef\tP" << endl;
     } else {
       IQTL_OUT << "SnpA\tSnpB\tTranscript\tCoef\tP" << endl;
     }
-    for(int kk=0; kk < nOuterLoop; ++kk) {
-      for(int ll=0; ll < nInnerLoop; ++ll) {
+    for(uint kk=0; kk < nOuterLoop; ++kk) {
+      for(uint ll=0; ll < nInnerLoop; ++ll) {
         double thisInteractionPval = resultsMatrixPvals(kk, ll);
         if((thisInteractionPval > 0) && 
            (thisInteractionPval < par::iqtl_pvalue)) {
           string snpTF = "NA";
-          int snpAIndex = -1;
+          uint snpAIndex = -1;
           if(tfMode) {
             snpAIndex = thisTFSnpIndices[kk];
             snpTF = thisTFSnpNames[kk];
@@ -260,7 +253,7 @@ bool EpistasisEQtl::Run(bool debug) {
             snpAIndex = thisTranscriptSnpIndices[kk];
           }
           string snpAName = PP->locus[snpAIndex]->name;
-          int snpBIndex = thisTranscriptSnpIndices[ll];
+          uint snpBIndex = thisTranscriptSnpIndices[ll];
           string snpBName = PP->locus[snpBIndex]->name;
           if(tfMode) {
             IQTL_OUT
@@ -307,19 +300,19 @@ bool EpistasisEQtl::RunIqtlCisTrans() {
   }
   uint badModelsTotal = 0;
   uint goodModelsTotal = 0;
-  set<int>::const_iterator sit = outerLoopSnps.begin();
+  set<uint>::const_iterator sit = outerLoopSnps.begin();
 #pragma omp parallel
-  for(int ii=0; (ii < nOuterLoop) && (sit != outerLoopSnps.end()); ++ii, ++sit) {
+  for(uint ii=0; (ii < nOuterLoop) && (sit != outerLoopSnps.end()); ++ii, ++sit) {
     //if(ii && (ii % 10000 == 0)) {
     if(ii && ((ii % 1000) == 0)) {
       cout << ii << "/" << nOuterLoop << endl;
     }
-    int snpAIndex = *sit;
+    uint snpAIndex = *sit;
     string snpAName = PP->locus[snpAIndex]->name;
     badModels = 0;
     goodModels = 0;
-    for(int jj=0; jj < nInnerLoop; ++jj) {
-      int snpBIndex = thisTranscriptSnpIndices[jj];
+    for(uint jj=0; jj < nInnerLoop; ++jj) {
+      uint snpBIndex = thisTranscriptSnpIndices[jj];
       string snpBName = PP->locus[snpBIndex]->name;
       Model* interactionModel = new LinearModel(PP);
       interactionModel->setMissing();
@@ -328,7 +321,7 @@ bool EpistasisEQtl::RunIqtlCisTrans() {
       interactionModel->addAdditiveSNP(snpBIndex);
       interactionModel->label.push_back(snpBName);
       if(par::covar_file) {
-        for(int kk = 0; kk < par::clist_number; kk++) {
+        for(uint kk = 0; kk < par::clist_number; kk++) {
           interactionModel->addCovariate(kk);
           interactionModel->label.push_back(PP->clistname[kk]);
         }
@@ -336,7 +329,7 @@ bool EpistasisEQtl::RunIqtlCisTrans() {
       interactionModel->addInteraction(1, 2);
       interactionModel->label.push_back("EPI");
       interactionModel->buildDesignMatrix();
-      int tp = 3;
+      uint tp = 3;
       // add # covars to test param to get interaction param
       if(par::covar_file) {
         tp += par::clist_number;
@@ -395,14 +388,14 @@ bool EpistasisEQtl::RunIqtlFull() {
   uint numSnps = PP->nl_all;
   PP->printLOG("iQTL linear regression loop: Full SNP x SNP\n");
 #pragma omp parallel
-  for(int ii=0; ii < numSnps; ++ii) {
+  for(uint ii=0; ii < numSnps; ++ii) {
     if(ii && (ii % 1000 == 0)) {
       cout << ii << "/" << numSnps << endl;
     }
-    for(int jj=ii+1; jj < numSnps; ++jj) {
-      int snpAIndex = ii;
+    for(uint jj=ii+1; jj < numSnps; ++jj) {
+      uint snpAIndex = ii;
       string snpAName = PP->locus[snpAIndex]->name;
-      int snpBIndex = jj;
+      uint snpBIndex = jj;
       string snpBName = PP->locus[snpBIndex]->name;
       Model* interactionModel = new LinearModel(PP);
       interactionModel->setMissing();
@@ -411,7 +404,7 @@ bool EpistasisEQtl::RunIqtlFull() {
       interactionModel->addAdditiveSNP(snpBIndex);
       interactionModel->label.push_back(snpBName);
       if(par::covar_file) {
-        for(int kk = 0; kk < par::clist_number; kk++) {
+        for(uint kk = 0; kk < par::clist_number; kk++) {
           interactionModel->addCovariate(kk);
           interactionModel->label.push_back(PP->clistname[kk]);
         }
@@ -419,7 +412,7 @@ bool EpistasisEQtl::RunIqtlFull() {
       interactionModel->addInteraction(1, 2);
       interactionModel->label.push_back("EPI");
       interactionModel->buildDesignMatrix();
-      int tp = 3;
+      uint tp = 3;
       // add # covars to test param to get interaction param
       if(par::covar_file) {
         tp += par::clist_number;
@@ -449,10 +442,10 @@ bool EpistasisEQtl::RunEqtl(string transcript) {
       transcript + ".eqtl.txt";
     PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
     std::ofstream EQTL;
-    EQTL.open(eqtlFilename.c_str(), ios::out);
-    for(set<int>::const_iterator loopIt=outerLoopSnps.begin(); 
+    EQTL.open(eqtlFilename, ios::out);
+    for(set<uint>::const_iterator loopIt=outerLoopSnps.begin(); 
             loopIt != outerLoopSnps.end(); ++loopIt) {
-      int thisSnpIndex = *loopIt;
+      uint thisSnpIndex = *loopIt;
       string thisSnpName = PP->locus[thisSnpIndex]->name;
       
       Model* mainEffectModel = new LinearModel(PP);
@@ -461,7 +454,7 @@ bool EpistasisEQtl::RunEqtl(string transcript) {
       mainEffectModel->label.push_back(thisSnpName);
       // add covariates if specified
       if(par::covar_file) {
-        for(int k=0; k < par::clist_number; k++) {
+        for(uint k=0; k < par::clist_number; k++) {
           // add covariate to the model
           mainEffectModel->addCovariate(k);
           mainEffectModel->label.push_back(PP->clistname[k]);
@@ -471,14 +464,14 @@ bool EpistasisEQtl::RunEqtl(string transcript) {
       mainEffectModel->buildDesignMatrix();
 
       // Fit linear model
-      int tp = 1; 
+      uint tp = 1; 
       mainEffectModel->testParameter = tp; // single variable main effect
       mainEffectModel->fitLM();
 
       // Obtain estimates and statistics
       vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
       double mainEffectValue = betaMainEffectCoefs[tp];
-      // p-values don't include intercept term
+      // p-values don't include uintercept term
       vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
       double mainEffectPValue = betaMainEffectCoefPvals[tp-1];
 
@@ -498,13 +491,13 @@ bool EpistasisEQtl::RunEqtl(string transcript) {
 bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
   // open the numeric attributes file if possible
   checkFileExists(coordinatesFilename);
-  ifstream coordinatesFile(coordinatesFilename.c_str(), ios::in);
+  ifstream coordinatesFile(coordinatesFilename, ios::in);
   if(coordinatesFile.fail()) {
     return false;
   }
 
   coordinates.clear();
-  int rows = 0;
+  uint rows = 0;
   while(!coordinatesFile.eof()) {
     char nline[par::MAX_LINE_LENGTH];
     coordinatesFile.getline(nline, par::MAX_LINE_LENGTH, '\n');
@@ -513,7 +506,7 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
     string sline = nline;
     if(sline == "") continue;
 
-    // read line from text file into a vector of tokens
+    // read line from text file uinto a vector of tokens
     string buf;
     stringstream ss(sline);
     vector<string> tokens;
@@ -530,15 +523,15 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
     string gene = tokens[tokens.size()-1];
 
     // handle special cases of chromosome that are not integers
-    int chrom = -1;
+    uint chrom = -1;
     bool chromAssigned = false;
     if(tokens[0] == "X") { chrom = 23; chromAssigned = true; }
     if(tokens[0] == "Y") { chrom = 24; chromAssigned = true; }
     if(tokens[0] == "XY") { chrom = 25; chromAssigned = true; }
     if(tokens[0] == "MT") { chrom = 26; chromAssigned = true; }
     if(!chromAssigned) {
-      int t = 0;
-      if(!from_string<int>(t, tokens[0], std::dec)) {
+      uint t = 0;
+      if(!from_string<uint>(t, tokens[0], std::dec)) {
         cerr << "Error parsing chromosome to integer on line " << rows << endl;
         cerr << "token: " << tokens[0] << endl;
         return false;
@@ -548,9 +541,9 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
     }
     coordinates[gene].push_back(chrom);
 
-    for(int i=1; i < tokens.size()-1; ++i) {
-      int t = 0;
-      if(!from_string<int>(t, tokens[i], std::dec)) {
+    for(uint i=1; i < tokens.size()-1; ++i) {
+      uint t = 0;
+      if(!from_string<uint>(t, tokens[i], std::dec)) {
         cerr << "Error parsing transcript info to integer on line " << rows << endl;
         cerr << "token: " << tokens[i] << endl;
         return false;
@@ -569,13 +562,13 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
 bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) {
   // open the numeric attributes file if possible
   checkFileExists(coordinatesFilename);
-  ifstream coordinatesFile(coordinatesFilename.c_str(), ios::in);
+  ifstream coordinatesFile(coordinatesFilename, ios::in);
   if(coordinatesFile.fail()) {
     return false;
   }
 
   transcriptFactorLUT.clear();
-  int rows = 0;
+  uint rows = 0;
   while(!coordinatesFile.eof()) {
     char nline[par::MAX_LINE_LENGTH];
     coordinatesFile.getline(nline, par::MAX_LINE_LENGTH, '\n');
@@ -584,7 +577,7 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
     string sline = nline;
     if(sline == "") continue;
 
-    // read lines from a text file into a vector of string tokens
+    // read lines from a text file uinto a vector of string tokens
     string buf;
     stringstream ss(sline);
     vector<string> tokens;
@@ -602,15 +595,15 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
     string gene = tokens[tokens.size()-1];
 
     // handle special cases of chromosome that are not integers
-    int chrom = -1;
+    uint chrom = -1;
     bool chromAssigned = false;
     if(tokens[0] == "X") { chrom = 23; chromAssigned = true; }
     if(tokens[0] == "Y") { chrom = 24; chromAssigned = true; }
     if(tokens[0] == "XY") { chrom = 25; chromAssigned = true; }
     if(tokens[0] == "MT") { chrom = 26; chromAssigned = true; }
     if(!chromAssigned) {
-      int t = 0;
-      if(!from_string<int>(t, tokens[0], std::dec)) {
+      uint t = 0;
+      if(!from_string<uint>(t, tokens[0], std::dec)) {
         cerr << "Error parsing chromosome to integer on line " << rows << endl;
         cerr << "token: " << tokens[0] << endl;
         return false;
@@ -621,9 +614,9 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
     transcriptFactorLUT[gene].push_back(chrom);
 
     // start and end bp
-    for(int i=1; i < tokens.size()-1; ++i) {
-      int t = 0;
-      if(!from_string<int>(t, tokens[i], std::dec)) {
+    for(uint i=1; i < tokens.size()-1; ++i) {
+      uint t = 0;
+      if(!from_string<uint>(t, tokens[i], std::dec)) {
         cerr << "Error parsing transcript info to integer on line " << rows << endl;
         cerr << "token: " << tokens[i] << endl;
         return false;
@@ -639,7 +632,7 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
   return true;
 }
 
-bool EpistasisEQtl::SetRadius(int newRadius) {
+bool EpistasisEQtl::SetRadius(uint newRadius) {
   if(newRadius < 1) {
     cerr << "Error setting cis radius to: " << newRadius << endl;
     return false;
@@ -655,7 +648,7 @@ bool EpistasisEQtl::SetLocalCis(bool localCisFlag) {
 }
 
 
-bool EpistasisEQtl::SetTFRadius(int newRadius) {
+bool EpistasisEQtl::SetTFRadius(uint newRadius) {
   if(newRadius < 0) {
     cerr << "Error setting TF radius to: " << newRadius << endl;
     return false;
@@ -675,14 +668,14 @@ bool EpistasisEQtl::SetTF(bool tfFlag) {
 }
 
 bool EpistasisEQtl::GetSnpsForTranscript(string transcript, 
-  vector<int>& snpIndices) {
+  vector<uint>& snpIndices) {
 
   // get transcript info
-  int chromosome = coordinates[transcript][COORD_CHROM];
-  int bpStart = coordinates[transcript][COORD_BP_START];
-  int bpEnd = coordinates[transcript][COORD_BP_END];
-  int lowerThreshold = bpStart - radius;
-  int upperThreshold = bpEnd + radius;
+  uint chromosome = coordinates[transcript][COORD_CHROM];
+  uint bpStart = coordinates[transcript][COORD_BP_START];
+  uint bpEnd = coordinates[transcript][COORD_BP_END];
+  uint lowerThreshold = bpStart - radius;
+  uint upperThreshold = bpEnd + radius;
   
  // cout 
  //   << "GetSnpsForTranscript: chrom: " << chromosome  << ", radius: " 
@@ -694,7 +687,7 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
  //   << endl;
   
   // find SNPs matching criteria
-  for(int j=0; j < PP->locus.size(); ++j) {
+  for(uint j=0; j < PP->locus.size(); ++j) {
     Locus* thisSnp = PP->locus[j];
     if(thisSnp->chr == chromosome) {
       if(localCis) {
@@ -714,18 +707,18 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
   return true;
 }
 
-bool EpistasisEQtl::GetSnpsForTFs(vector<int>& snpIndices, vector<string>& tfs) {
+bool EpistasisEQtl::GetSnpsForTFs(vector<uint>& snpIndices, vector<string>& tfs) {
 
-  int allSnps = PP->locus.size();
+  uint allSnps = PP->locus.size();
   PP->printLOG("Searching transcription factors in " + int2str(allSnps) + " SNPs\n");
   // for all SNPs
-  for(int thisSnpIndex=0; thisSnpIndex < allSnps; ++thisSnpIndex) {
+  for(uint thisSnpIndex=0; thisSnpIndex < allSnps; ++thisSnpIndex) {
     if(thisSnpIndex && (thisSnpIndex % 100000 == 0)) {
       cout << thisSnpIndex << "/" << allSnps << endl;
     }
     Locus* thisSnp = PP->locus[thisSnpIndex];
-    int chr = thisSnp->chr;
-    int bp = thisSnp->bp;
+    uint chr = thisSnp->chr;
+    uint bp = thisSnp->bp;
     // is this bp in range of any transcription factors?
     string tf;
     if(IsSnpInTFs(chr, bp, tf)) {
@@ -737,18 +730,18 @@ bool EpistasisEQtl::GetSnpsForTFs(vector<int>& snpIndices, vector<string>& tfs) 
   return true;
 }
 
-bool EpistasisEQtl::IsSnpInTFs(int chr, int bp, string& tf) {
+bool EpistasisEQtl::IsSnpInTFs(uint chr, uint bp, string& tf) {
   // linear search through the transcription factor lookup table for SNP at
   // chr/bp, returning the transcription factor if true, else return false
   bool found = false;
   TranscriptFactorTableCIt lutIt = transcriptFactorLUT.begin();
   while((lutIt != transcriptFactorLUT.end()) && (!found)) {
     string thisTF = (*lutIt).first;
-    int thisTfChr = transcriptFactorLUT[thisTF][COORD_CHROM];
-    int thisTfBpBeg = transcriptFactorLUT[thisTF][COORD_BP_START];
-    int thisTfBpEnd = transcriptFactorLUT[thisTF][COORD_BP_END];
-    int rangeStart = thisTfBpBeg - tfRadius;
-    int rangeEnd = thisTfBpEnd + tfRadius;
+    uint thisTfChr = transcriptFactorLUT[thisTF][COORD_CHROM];
+    uint thisTfBpBeg = transcriptFactorLUT[thisTF][COORD_BP_START];
+    uint thisTfBpEnd = transcriptFactorLUT[thisTF][COORD_BP_END];
+    uint rangeStart = thisTfBpBeg - tfRadius;
+    uint rangeEnd = thisTfBpEnd + tfRadius;
     if((chr == thisTfChr) && ((bp >= rangeStart) &&  (bp <= rangeEnd))) {
       tf = thisTF;
       return true;
@@ -758,13 +751,13 @@ bool EpistasisEQtl::IsSnpInTFs(int chr, int bp, string& tf) {
   return false;
 }
 
-bool EpistasisEQtl::GetTFInfo(string tf, vector<int>& tfInfo) {
+bool EpistasisEQtl::GetTFInfo(string tf, vector<uint>& tfInfo) {
   TranscriptFactorTableCIt lutInfo = transcriptFactorLUT.find(tf);
   if(lutInfo == transcriptFactorLUT.end()) {
     cerr << "GetTFRange failed to find: " << tf << endl;
     return false;
   }
-  for(int i=0; i < lutInfo->second.size(); ++i) {
+  for(uint i=0; i < lutInfo->second.size(); ++i) {
     tfInfo.push_back(lutInfo->second[i]);
   }
   return true;

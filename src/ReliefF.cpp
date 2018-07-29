@@ -193,6 +193,9 @@ AttributeRanker::AttributeRanker(ds) {
   scoreNames.resize(atrNames.size() + numNames.size());
   copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
   copy(numNames.begin(), numNames.end(), scoreNames.begin() + atrNames.size());
+  
+  PP->printLOG(Timestamp() + "ReliefF initialization done\n");
+  PP->printLOG(Timestamp() + "---------------------------------------------\n");
 }
 
 ReliefF::~ReliefF() {
@@ -640,7 +643,7 @@ bool ReliefF::ComputeGRM() {
   PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
 
   // write GRM matrix to file with output prefix
-  PP->printLOG(Timestamp() + "[ " + par::output_file_name + ".grm.tab ]\n");
+  PP->printLOG(Timestamp() + "Writing GRM to [ " + par::output_file_name + ".grm.tab ]\n");
   ofstream outFile(par::output_file_name + ".grm.tab");
   for(int i=0; i < numInstances; ++i) {
     for(int j=0; j < numInstances; ++j) {
@@ -666,6 +669,7 @@ void ReliefF::PrintInstancesMask() {
 }
 
 bool ReliefF::PreComputeDistances() {
+  PP->printLOG(Timestamp() + "---------------------------------------------\n");
   PP->printLOG(Timestamp() + "Precomputing instance distances\n");
   map<string, unsigned int> instancesMask = dataset->MaskGetInstanceMask();
   vector<string> instanceIds = dataset->MaskGetInstanceIds();
@@ -678,6 +682,7 @@ bool ReliefF::PreComputeDistances() {
 
   if(par::snpNearestNeighborMetricName == "grm") {
     // TCGA genetic relationship matrix (GRM))
+    PP->printLOG(Timestamp() + "Constructing GRM distance matrix...\n");
     this->ComputeGRM();
   } else {
     // populate the matrix - upper triangular

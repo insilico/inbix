@@ -1074,7 +1074,7 @@ int main(int argc, char* argv[]) {
 		        }
 		      }
 		    }
-				cr = new CentralityRanker(dcgain, P.nlistname);
+				cr = new CentralityRanker(dcgain , P.nlistname);
 			}			
 
 			// run snprank

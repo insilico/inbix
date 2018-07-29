@@ -2188,13 +2188,14 @@ bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
 	// determine the number of affected and unaffected individuals
 	int nAff = 0;
 	int nUnaff = 0;
+  int nMiss = 0;
 	for(int i=0; i < PP->sample.size(); i++) {
 		if(PP->sample[i]->aff) {
 			++nAff;
 		}
 		else {
  			if(PP->sample[i]->missing) {
-  			// cerr << "Missing phenotype(s) for numeric data" << endl;
+        ++nMiss;
         return false;
   		} else {
         ++nUnaff;
@@ -2210,23 +2211,25 @@ bool getNumericCaseControl(int varIndex, vector_t& cases, vector_t& controls) {
 	int aIdx = 0;
 	int uIdx = 0;
 	for(int i=0; i < PP->sample.size(); i++) {
-			if(PP->sample[i]->aff) {
-				cases[aIdx] = PP->sample[i]->nlist[varIndex];
-			} else {
-			  // handle missing phenos - bcw - 2/5/15
-  			if(!PP->sample[i]->missing) {
-  				controls[uIdx] = PP->sample[i]->nlist[varIndex];
-  			}
-			}
-		if(PP->sample[i]->aff) {
-			++aIdx;
-		}
-		else {
-			if(!PP->sample[i]->missing) {
-  			++uIdx;
-  		}
-		}
+    if(PP->sample[i]->aff) {
+      cases[aIdx] = PP->sample[i]->nlist[varIndex];
+      ++aIdx;
+    } else {
+      // handle missing phenos - bcw - 2/5/15
+      if(!PP->sample[i]->missing) {
+        controls[uIdx] = PP->sample[i]->nlist[varIndex];
+        ++uIdx;
+      } else {
+        
+      }
+    }
 	}
+
+  if(par::verbose) {
+    PP->printLOG("Cases:    " + int2str(nAff) + "\n");
+    PP->printLOG("Controls: " + int2str(nUnaff) + "\n");
+    PP->printLOG("Missing:  " + int2str(nMiss) + "\n");
+  }
   
   return true;
 }
