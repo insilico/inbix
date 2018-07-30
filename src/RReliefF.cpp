@@ -21,7 +21,7 @@ using namespace std;
 
 RReliefF::RReliefF(Dataset* ds, Plink* plinkPtr) :
 		ReliefF::ReliefF(ds, plinkPtr, REGRESSION_ANALYSIS) {
-	cout << Timestamp() << "RReliefF initialization" << endl;
+	PP->printLOG(Timestamp() + "RReliefF initialization\n");
 	if (!ds->HasContinuousPhenotypes()) {
 		error("ERROR: Attempting to construct RReliefF object without a continuous phenotype data set");
 	}
@@ -34,13 +34,22 @@ bool RReliefF::ComputeAttributeScores() {
 
   PP->printLOG(Timestamp() + "---------------------------------------\n");
   PP->printLOG(Timestamp() + "Regression Relief-F ComputeAttributeScores() START\n");
-	// precompute all instance-to-instance distances and get nearest neighbors
+	// pre-compute all instance-to-instance distances and get nearest neighbors
 	PreComputeDistances();
 
-	// results are stored in scores
+	// results are stored in scores, raw weights in W
 	W.resize(dataset->NumVariables(), 0.0);
+  scores.clear();
 
-	/* using pseudocode notation from paper
+	double dblM = static_cast<double>(m);
+  vector<uint> attributeIndices = dataset->MaskGetAttributeIndices(DISCRETE_TYPE);
+  vector<string> attributeNames = dataset->MaskGetAttributeNames(DISCRETE_TYPE);
+  vector<uint> numericIndices = dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
+  vector<string> numericNames = dataset->MaskGetAttributeNames(NUMERIC_TYPE);
+  uint numAttributes = attributeIndices.size();
+  uint numNumerics = numericIndices.size();
+  
+  /* using pseudocode notation from paper
 	 *
 	 * Used to hold the probability of a different class value given nearest
 	 * instances (numeric class)
@@ -60,65 +69,67 @@ bool RReliefF::ComputeAttributeScores() {
 	ndcda.resize(dataset->NumVariables(), 0.0);
 
 	// pointer to the (possibly random) instance being sampled
-	DatasetInstance* R_i = NULL;
 	PP->printLOG(Timestamp() + "Running RRelief-F algorithm:\n");
 	vector<string> instanceIds = dataset->GetInstanceIds();
+  #pragma omp parallel for
 	for (int i = 0; i < (int) m; i++) {
 
+    DatasetInstance* R_i = NULL;
 		if (randomlySelect) {
 			// randomly sample an instance (without replacement?)
 			R_i = dataset->GetRandomInstance();
 		} else {
 			// deterministic/indexed instance sampling, ie, every instance against
 			// every other instance
-			unsigned int instanceIndex;
+			uint instanceIndex;
 			dataset->GetInstanceIndexForID(instanceIds[i], instanceIndex);
 			R_i = dataset->GetInstance(instanceIndex);
 		}
 		if (!R_i) {
-			cerr
-					<< "ERROR: Random or indexed instance count not be found for index: ["
-					<< i << "]" << endl;
-			return false;
+			error("ERROR: Random or indexed instance count not be found for index: ["
+					+ int2str(i) + "]\n");
 		}
 
 		// K NEAREST NEIGHBORS
 		// find k nearest neighbors
-		vector<unsigned int> nNearestNeighbors;
+		vector<uint> nNearestNeighbors;
 		bool canGetNeighbors = R_i->GetNNearestInstances(k, nNearestNeighbors);
 		if (!canGetNeighbors) {
-			cerr << "ERROR: Cannot get " << k << " nearest neighbors" << endl;
-			return false;
+			error("ERROR: Cannot get " + int2str(k) + " nearest neighbors\n");
 		}
 		// check algorithm preconditions
 		if (nNearestNeighbors.size() < 1) {
-			cerr << "ERROR: No nearest hits found" << endl;
-			return false;
+			error("ERROR: No nearest hits found\n");
 		}
 		if (nNearestNeighbors.size() < k) {
-			cerr << "ERROR: Could not find enough neighbors" << endl;
-			return false;
+			error("ERROR: Could not find enough neighbors\n");
 		}
 
 		// update: using pseudocode notation
-		for (unsigned int j = 0; j < k; ++j) {
+		for (uint j = 0; j < k; ++j) {
 			// get the jth nearest neighbor
 			DatasetInstance* I_j = dataset->GetInstance(nNearestNeighbors[j]);
 			double diffPredicted = diffPredictedValueTau(R_i, I_j);
 			double d_ij = R_i->GetInfluenceFactorD(j);
-			ndc += (diffPredicted * d_ij);
-			unsigned int scoresIndex = 0;
+#pragma omp critical
+      {
+        ndc += (diffPredicted * d_ij);
+      }
+			uint scoresIndex = 0;
       // ---------------------
 			// attributes
-			vector<unsigned int> attributeIndicies =
+			vector<uint> attributeIndicies =
 					dataset->MaskGetAttributeIndices(DISCRETE_TYPE);
-			for (unsigned int attrIdx = 0; attrIdx < attributeIndicies.size();
+			for (uint attrIdx = 0; attrIdx < attributeIndicies.size();
 					++attrIdx) {
-				unsigned int A = attributeIndicies[attrIdx];
+				uint A = attributeIndicies[attrIdx];
 				double attrScore = snpDiffFuncPtr(A, R_i, I_j) * d_ij;
-				nda[scoresIndex] += attrScore;
-				ndcda[scoresIndex] += (diffPredicted * attrScore);
-        if(par::verbose) {
+#pragma omp critical
+        {
+          nda[scoresIndex] += attrScore;
+          ndcda[scoresIndex] += (diffPredicted * attrScore);
+        }
+        if(par::algorithm_verbose) {
           cout << "(i, j) = (" << i << "," << j << ") =>"
                   << " diff predicted: " << diffPredicted
                   << ", d_ij: " << d_ij
@@ -133,13 +144,16 @@ bool RReliefF::ComputeAttributeScores() {
 			}
       // ---------------------
 			// numerics
-			vector<unsigned int> numericIndices = 
+			vector<uint> numericIndices = 
         dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
-			for (unsigned int numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
-				unsigned int N = numericIndices[numIdx];
+			for (uint numIdx = 0; numIdx < numNumerics; ++numIdx) {
+				uint N = numericIndices[numIdx];
 				double numScore = numDiffFuncPtr(N, R_i, I_j) * d_ij;
-				nda[scoresIndex] += numScore;
-				ndcda[scoresIndex] += (diffPredicted * numScore);
+#pragma omp critical
+        {
+          nda[scoresIndex] += numScore;
+          ndcda[scoresIndex] += (diffPredicted * numScore);
+        }
         if(par::algorithm_verbose) {
           cout << "(i, j) = (" << i << "," << j << ") =>"
                   << " diff predicted: " << diffPredicted
@@ -152,29 +166,61 @@ bool RReliefF::ComputeAttributeScores() {
         }
 				++scoresIndex;
 			}
-      if(par::verbose) cout << "******************************" << endl;
 		}
-
-    if(par::verbose) cout << "--------------------------------------------------" << endl;
-
 		// happy lights
 		if (i && ((i % 100) == 0)) {
-			cout << Timestamp() << i << "/" << m << endl;
+			PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m)  + "\n");
 		}
 	}
-	cout << Timestamp() << m << "/" << m << " done" << endl;
+	PP->printLOG(Timestamp() + int2str(m) + "/" + int2str(m) + " done\n");
 
-	cout << Timestamp() << "Computing final scores" << endl;
-	for (unsigned int A = 0; A < dataset->NumVariables(); ++A) {
-    double dblM = static_cast<double>(m);
-    double tempW = (ndcda[A] / ndc) - ((nda[A] - ndcda[A]) / (dblM - ndc));
-    if(std::isnan(tempW)) {
-      cerr << "WARNING: detected [NaN] in weight calculation, using zero instead" << endl;
-      W[A] = 0.0;
-    } else {
-      W[A] = tempW;
+	PP->printLOG(Timestamp() + "Computing final scores\n");
+  #pragma omp parralel for
+  for (uint attIdx = 0; attIdx < numAttributes; ++attIdx) {
+    uint A = attributeIndices[attIdx];
+    string attributeName = attributeNames[A];
+#pragma omp critical
+    {
+      double tempW = (ndcda[A] / ndc) - ((nda[A] - ndcda[A]) / (dblM - ndc));
+      if(std::isnan(tempW)) {
+        error("WARNING: detected [NaN] in weight calculation, using zero instead\n");
+        W[A] = 0.0;
+      } else {
+        W[A] = tempW;
+      }
+      scores.push_back(make_pair(W[A], attributeName));
+      // happy lights
+      if (attIdx && ((attIdx % 100) == 0)) {
+        PP->printLOG(Timestamp() + int2str(attIdx) + "/" + int2str(numAttributes)  + "\n");
+      }
     }
-	}
+  }
+  PP->printLOG(Timestamp() + int2str(numAttributes) + "/" + int2str(numAttributes)  + "\n");
+  #pragma omp parralel for
+  for (uint numIdx = 0; numIdx < numNumerics; ++numIdx) {
+    uint N = numericIndices[numIdx];
+    string numericName = numericNames[N];
+#pragma omp critical
+    {
+      double tempW = 
+        (ndcda[numAttributes + N] / ndc) - 
+        ((nda[numAttributes + N] - 
+        ndcda[numAttributes + N]) 
+        / (dblM - ndc));
+      if(std::isnan(tempW)) {
+        error("WARNING: detected [NaN] in weight calculation, using zero instead\n");
+        W[numAttributes + N] = 0.0;
+      } else {
+        W[numAttributes + N] = tempW;
+      }
+      scores.push_back(make_pair(W[numAttributes + N], numericName));
+      // happy lights
+      if (numIdx && ((numIdx % 100) == 0)) {
+        PP->printLOG(Timestamp() + int2str(numIdx) + "/" + int2str(numNumerics)  + "\n");
+      }
+    }
+  }
+  PP->printLOG(Timestamp() + int2str(numNumerics) + "/" + int2str(numNumerics)  + "\n");
 
   PP->printLOG(Timestamp() + "Relief-F ComputeAttributeScores() END\n");
   
