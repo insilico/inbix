@@ -27,7 +27,6 @@
 using namespace std;
 
 EpistasisEQtl::EpistasisEQtl() {
-  debugMode = false;
   radius = -1;
   localCis = false;
   tfMode = false;
@@ -35,13 +34,16 @@ EpistasisEQtl::EpistasisEQtl() {
   tfRadius = 0;
   goodModels = 0;
   badModels = 0;
+  exprFilename = par::iqtl_expression_file;
+  cordFilename = par::iqtl_coord_file;
+  fullInteraction = par::iqtl_interaction_full;
 }
 
 EpistasisEQtl::~EpistasisEQtl() {
 }
 
 bool EpistasisEQtl::SetDebugMode(bool debugFlag) {
-  debugMode = debugFlag;
+  par::algorithm_verbose = debugFlag;
   return true;
 }
 
@@ -76,60 +78,61 @@ bool EpistasisEQtl::CheckInputs() {
 
 void EpistasisEQtl::PrintState() {
   PP->printLOG("-----------------------------------------------------------\n");
-  string debugFlag = debugMode? "on": "off";
-  PP->printLOG("debug mode: " + debugFlag + "\n");
-  PP->printLOG("expression file: " + par::iqtl_expression_file + "\n");
-  PP->printLOG("coordinate file: " + par::iqtl_coord_file + "\n");
-
+  PP->printLOG(Timestamp() + "EpistasisEqtl object state:\n");
+  string verboseFlag = par::verbose? "on": "off";
+  PP->printLOG(Timestamp() + "verbose mode: " + verboseFlag + "\n");
+  string debugFlag = par::algorithm_verbose? "on": "off";
+  PP->printLOG(Timestamp() + "debug mode: " + debugFlag + "\n");
+  PP->printLOG(Timestamp() + "expression file: " + exprFilename + "\n");
+  PP->printLOG(Timestamp() + "coordinates file: " + cordFilename + "\n");
   if(localCis) {
-    PP->printLOG("local cis mode with radius: " + 
+    PP->printLOG(Timestamp() + "local cis mode with radius: " + 
       int2str(uint(radius / 1000)) + " kilobases\n");
   }
   if(tfMode) {
-    PP->printLOG("TF mode with radius: " + 
+    PP->printLOG(Timestamp() + "TF mode with radius: " + 
       int2str(uint(tfRadius / 1000)) + " kilobases\n");
   }
-  if(par::iqtl_interaction_full) {
-    PP->printLOG("FULL epistatic interaction mode\n");
+  if(fullInteraction) {
+    PP->printLOG(Timestamp() + "FULL epistatic interaction mode\n");
   } else {
     if(tfMode) {
-      PP->printLOG("TF/cis-trans interaction mode\n");  
+      PP->printLOG(Timestamp() + "TF/cis-trans interaction mode\n");  
     } else {
-      PP->printLOG("cis-cis/cis-trans interaction mode\n");  
+      PP->printLOG(Timestamp() + "cis-cis/cis-trans interaction mode\n");  
     }
   }
-
-  if(par::do_iqtl_tf) {
-    PP->printLOG("transcription factor mode\n");
-    PP->printLOG("search radius: " + int2str(par::iqtl_tf_radius) + "\n");
-    PP->printLOG("coordinate file: " + par::iqtl_tf_coord_file + "\n");
+  if(tfMode) {
+    PP->printLOG(Timestamp() + "transcription factor mode\n");
+    PP->printLOG(Timestamp() + "search radius: " + int2str(par::iqtl_tf_radius) + "\n");
+    PP->printLOG(Timestamp() + "coordinate file: " + par::iqtl_tf_coord_file + "\n");
   }
-
-  PP->printLOG("p-value cutoff for file output: " + dbl2str(par::iqtl_pvalue) + "\n");
- 
+  PP->printLOG(Timestamp() + "p-value cutoff for file output: " + dbl2str(par::iqtl_pvalue) + "\n");
   PP->printLOG("-----------------------------------------------------------\n");
+  
+  return;
 }
 
-bool EpistasisEQtl::Run(bool debug) {
-  PP->printLOG("Running iQTL\n");
-  PP->printLOG("iQTL inputs check OK\n");
+bool EpistasisEQtl::Run() {
+  PP->printLOG("\n" + Timestamp() + "Running iQTL\n");
   if(!CheckInputs()) {
-    error("EpistasisEQtl::Run CheckInputs() failed\n");
+    error("iQTL::CheckInputs() failed\n");
   }
+  PP->printLOG(Timestamp() + "iQTL::CheckInputs() OK\n");
 
   // --------------------------------------------------------------------------
-  PP->printLOG("iQTL linear regression loop for all transcripts\n");
+  PP->printLOG(Timestamp() + "iQTL linear regression loop for all RNA-Seq transcripts\n");
   PrintState();
   
   // --------------------------------------------------------------------------
   // keep track of loop parameters and number of tests done and write to file
   string testnumbersFilename = par::output_file_name + ".testnumbers.txt";
-  PP->printLOG("Writing test results to [ " + testnumbersFilename + " ]\n");
+  PP->printLOG(Timestamp() + "Writing test results to [ " + testnumbersFilename + " ]\n");
   std::ofstream TESTNUMBERS;
   TESTNUMBERS.open(testnumbersFilename, ios::out);
 
   string loopInfoFilename = par::output_file_name + ".loopinfo.txt";
-  PP->printLOG("Writing loop information to [ " + loopInfoFilename + " ]\n");
+  PP->printLOG(Timestamp() + "Writing loop information to [ " + loopInfoFilename + " ]\n");
   std::ofstream LOOPINFO;
   LOOPINFO.open(loopInfoFilename, ios::out);
 
@@ -137,181 +140,136 @@ bool EpistasisEQtl::Run(bool debug) {
   // determine SNPs in outer loop; considers transcription factor mode
   nOuterLoop = PP->nl_all;
   vector<string> thisTFSnpNames;
-  if(par::do_iqtl_tf) {
+  if(tfMode) {
     GetSnpsForTFs(thisTFSnpIndices, thisTFSnpNames);
     nOuterLoop = thisTFSnpIndices.size();
-    if(debugMode) {
-     cout << "TF snp indices: ";
-     copy(thisTFSnpIndices.begin(), thisTFSnpIndices.end(), 
-             ostream_iterator<uint>(cout, "\t"));
-     cout << endl;
-     cout << "TFs: ";
-     copy(thisTFSnpNames.begin(), 
-       thisTFSnpNames.end(), 
-       ostream_iterator<string>(cout, "\t"));
-     cout << endl;
+    if(par::algorithm_verbose) {
+      cout << "TF snp indices: ";
+      copy(thisTFSnpIndices.begin(), thisTFSnpIndices.end(), 
+              ostream_iterator<uint>(cout, "\t"));
+      cout << endl;
+      cout << "TFs: ";
+      copy(thisTFSnpNames.begin(), 
+        thisTFSnpNames.end(), 
+        ostream_iterator<string>(cout, "\t"));
+      cout << endl;
     }
+    PP->printLOG(Timestamp() + "nOuterLoop TFs: " + int2str(nOuterLoop) + "\n");
+  } else {
+    PP->printLOG(Timestamp() + "nOuterLoop SNPs: " + int2str(nOuterLoop) + "\n");
   }
-  cout << "nOuterLoop (SNPs or TFs) : " << nOuterLoop << endl;
 
   // --------------------------------------------------------------------------
   // for each transcript build main effect and epistasis regression models
   string thisTranscript;
-  uint transcriptIndex = 0;
-  for(; transcriptIndex < PP->nlistname.size(); ++transcriptIndex) {
+  for(uint transcriptIndex = 0; 
+      transcriptIndex < PP->nlistname.size(); 
+      ++transcriptIndex) {
     
     thisTranscript = PP->nlistname[transcriptIndex];
-    error("-----------------------------------------------------------------------------\n");
-    PP->printLOG("Transcript: " + thisTranscript + "\n");
+    PP->printLOG("---------------------------------------------------------\n");
+    PP->printLOG(Timestamp() + "Transcript: " + thisTranscript + "\n");
 
+    // get SNP indices for the transcript
+    nInnerLoop = PP->nl_all;
+    // GetSnpsForTranscript takes locl-cis into account
+    if(!GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices)) {
+      error("Could not get SNPs for transcript");
+    } else {
+      nInnerLoop = thisTranscriptSnpIndices.size();
+    }
+    
     // get transcript expression vector as phenotype
     PP->setQtlPhenoFromNumericIndex(transcriptIndex);
     
-    // determine SNPs being considered in interactions ------------------------
-    nInnerLoop = PP->nl_all;
-    if(!par::iqtl_interaction_full) {
-      GetSnpsForTranscript(thisTranscript, thisTranscriptSnpIndices);
-      nInnerLoop = thisTranscriptSnpIndices.size();
-    }
-    PP->printLOG("nInnerLoop (cis): " + int2str(nInnerLoop) + "\n");
-
     if(!(nInnerLoop * nOuterLoop)) {
       PP->printLOG("WARNING: no interactions for: " + thisTranscript + "\n");
       continue; // to next transcript
     }
-    copy(thisTranscriptSnpIndices.begin(), thisTranscriptSnpIndices.end(),
-         std::inserter(outerLoopSnps, outerLoopSnps.begin()));
-    if(tfMode) {
-      copy(thisTFSnpIndices.begin(), thisTFSnpIndices.end(), 
-        std::inserter(outerLoopSnps, outerLoopSnps.end() ));
-    }
-    nOuterLoop = outerLoopSnps.size();
-    if(debugMode) {
+    
+    if(par::algorithm_verbose) {
       cout << "DEBUG outerLoopSnps set size: " << outerLoopSnps.size() << endl;
       cout << "transcript cis snp indices: ";
       copy(thisTranscriptSnpIndices.begin(), thisTranscriptSnpIndices.end(), 
               ostream_iterator<uint>(cout, "\t"));
       cout << endl;
       cout << "Loop set snp indices: ";
-      copy(outerLoopSnps.begin(), outerLoopSnps.end(), 
+      copy(thisTFSnpIndices.begin(), thisTFSnpIndices.end(), 
               ostream_iterator<uint>(cout, "\t"));
       cout << endl;
     }
-
-    PP->printLOG("Writing transcript loop info to: " + loopInfoFilename + "\n");
-    if(debugMode) {
-      PP->printLOG(thisTranscript + "\t" + int2str(nOuterLoop) + "\t" + 
-        int2str(nInnerLoop) + "\n");
-    }
+    
+    PP->printLOG(Timestamp() + "Writing transcript loop info to: " + loopInfoFilename + "\n");
+    PP->printLOG(Timestamp() + 
+                 thisTranscript + "\t" + 
+                 int2str(nOuterLoop) + "\t" + 
+                 int2str(nInnerLoop) + "\n");
     LOOPINFO 
       << thisTranscript << "\t"
       << nInnerLoop << "\t"
       << nOuterLoop << "\t"
       << endl;
-      
+
     // EQTL -------------------------------------------------------------------
-    PP->printLOG("Running main effects regression models\n");
+    PP->printLOG(Timestamp() + "Running main effects regression models\n");
     RunEqtl(thisTranscript);
     
     // IQTL -----------------------------------------------------------------
-    PP->printLOG("Running interaction effects regression models\n");
+    PP->printLOG(Timestamp() + "Running interaction effects regression models\n");
     // allocate results matrices
     resultsMatrixBetas.resize(nOuterLoop, nInnerLoop);
     resultsMatrixBetas.zeros();
     resultsMatrixPvals.resize(nOuterLoop, nInnerLoop);
     resultsMatrixPvals.ones();
-    if(par::iqtl_interaction_full) {
+    if(fullInteraction) {
       RunIqtlFull();
     } else {
       RunIqtlCisTrans();
     }
 
     // ------------------------------------------------------------------------
-    PP->printLOG("write regression results\n");
-    // fixed bug where not in transcription factor mode - 1/17/17
+    PP->printLOG(Timestamp() + "write regression results\n");
     string iqtlFilename = par::output_file_name + "." + 
       thisTranscript + ".iqtl.txt";
-    PP->printLOG("Writing iQTL results to [ " + iqtlFilename + " ]\n");
-    ofstream IQTL_OUT;
-    IQTL_OUT.open(iqtlFilename, ios::out);
-    if(tfMode) {
-      IQTL_OUT << "SnpA\tSnpB\tTranscript\tTF\tCoef\tP" << endl;
-    } else {
-      IQTL_OUT << "SnpA\tSnpB\tTranscript\tCoef\tP" << endl;
+    if(!WriteResults(iqtlFilename, thisTranscript, thisTFSnpNames)) {
+      error("Failed to write iQTL results file: " + iqtlFilename);
     }
-    for(uint kk=0; kk < nOuterLoop; ++kk) {
-      for(uint ll=0; ll < nInnerLoop; ++ll) {
-        double thisInteractionPval = resultsMatrixPvals(kk, ll);
-        if((thisInteractionPval > 0) && 
-           (thisInteractionPval < par::iqtl_pvalue)) {
-          string snpTF = "NA";
-          uint snpAIndex = -1;
-          if(tfMode) {
-            snpAIndex = thisTFSnpIndices[kk];
-            snpTF = thisTFSnpNames[kk];
-          } else {
-            snpAIndex = thisTranscriptSnpIndices[kk];
-          }
-          string snpAName = PP->locus[snpAIndex]->name;
-          uint snpBIndex = thisTranscriptSnpIndices[ll];
-          string snpBName = PP->locus[snpBIndex]->name;
-          if(tfMode) {
-            IQTL_OUT
-              << snpAName << "\t" 
-              << snpBName << "\t"
-              << thisTranscript << "\t"
-              << snpTF << "\t"
-              << resultsMatrixBetas(kk, ll) << "\t"
-              << thisInteractionPval << endl;
-          } else {
-            IQTL_OUT
-              << snpAName << "\t" 
-              << snpBName << "\t"
-              << thisTranscript << "\t"
-              << resultsMatrixBetas(kk, ll) << "\t"
-              << thisInteractionPval << endl;
-          }
-        }
-      }
-    }
-    IQTL_OUT.close();
     
-    PP->printLOG("Writing statistical test numbers to: " + testnumbersFilename + "\n");
-    PP->printLOG("Total models:\t" + int2str(nOuterLoop * nInnerLoop) + "\n");
+    PP->printLOG(Timestamp() + "Writing statistical test numbers to: " + testnumbersFilename + "\n");
+    PP->printLOG(Timestamp() + "Total models:\t" + int2str(nOuterLoop * nInnerLoop) + "\n");
     TESTNUMBERS << thisTranscript << "\t" << (nOuterLoop * nInnerLoop) << endl;
   } // END for each transcript loop
   
   TESTNUMBERS.close();
   LOOPINFO.close();
   
-  PP->printLOG("iQTL analysis finished\n");
+  PP->printLOG(Timestamp() + "iQTL analysis finished\n");
 
   return true;
 }
 
 bool EpistasisEQtl::RunIqtlCisTrans() {
+  PP->printLOG(Timestamp() + "iQTL Cis-Trans\n");
   if(localCis) {
-    PP->printLOG("iQTL linear regression loop: SNP x cis/trans (" + 
-      int2str(nInnerLoop) + ")\n");
+    PP->printLOG(Timestamp() + "iQTL local cis SNPs: inner loop (" +  int2str(nInnerLoop) + ")\n");
+  } else {
+    PP->printLOG(Timestamp() + "iQTL SNPs: inner loop (" +  int2str(nInnerLoop) + ")\n");
   }
   if(tfMode) {
-    PP->printLOG("iQTL linear regression loop TF: (" + 
-      int2str(nOuterLoop) + ")\n");
+    PP->printLOG(Timestamp() + "iQTL TFs: outer loop (" + int2str(nOuterLoop) + ")\n");
+  } else {
+    PP->printLOG(Timestamp() + "iQTL SNPs: outer loop(" + int2str(nOuterLoop) + ")\n");
   }
   uint badModelsTotal = 0;
   uint goodModelsTotal = 0;
-  set<uint>::const_iterator sit = outerLoopSnps.begin();
-#pragma omp parallel
-  for(uint ii=0; (ii < nOuterLoop) && (sit != outerLoopSnps.end()); ++ii, ++sit) {
-    //if(ii && (ii % 10000 == 0)) {
-    if(ii && ((ii % 1000) == 0)) {
-      cout << ii << "/" << nOuterLoop << endl;
-    }
-    uint snpAIndex = *sit;
-    string snpAName = PP->locus[snpAIndex]->name;
-    badModels = 0;
-    goodModels = 0;
+  uint threadGoodModels = 0;
+  uint threadBadModels = 0;
+  #pragma omp parallel for
+  for(uint ii=0; ii < nOuterLoop; ++ii) {
     for(uint jj=0; jj < nInnerLoop; ++jj) {
+      // cout << "Looping indices: " << "\t" << ii << "\t" << jj << endl;
+      uint snpAIndex = thisTFSnpIndices[ii];
+      string snpAName = PP->locus[snpAIndex]->name;
       uint snpBIndex = thisTranscriptSnpIndices[jj];
       string snpBName = PP->locus[snpBIndex]->name;
       Model* interactionModel = new LinearModel(PP);
@@ -329,64 +287,63 @@ bool EpistasisEQtl::RunIqtlCisTrans() {
       interactionModel->addInteraction(1, 2);
       interactionModel->label.push_back("EPI");
       interactionModel->buildDesignMatrix();
-      uint tp = 3;
+      uint modelFitParamIdx = 3;
       // add # covars to test param to get interaction param
       if(par::covar_file) {
-        tp += par::clist_number;
+        modelFitParamIdx += par::clist_number;
       }
-      interactionModel->testParameter = tp; // interaction
+      interactionModel->testParameter = modelFitParamIdx; // interaction
       interactionModel->fitLM();
       bool badModel = false;
       if(!interactionModel->isValid()) {
         if(par::verbose) {
-          PP->printLOG("WARNING: outer index " + int2str(ii) + 
+          PP->printLOG(Timestamp() + "WARNING: outer index " + int2str(ii) + 
             " inner index " + int2str(jj) + " linear model fitLM(): invalid\n");
         }
         badModel = true;
       }
       if(!interactionModel->fitConverged()) {
         if(par::verbose) {
-          PP->printLOG("WARNING: linear model fitLM(): failed to converge: SNP A: " + 
-            snpAName + "SNP B: " + snpBName + "\n");
+          PP->printLOG(Timestamp() + "WARNING: linear model fitLM(): failed to converge: SNP A: " + 
+            snpAName + ", SNP B: " + snpBName + "\n");
         }
         badModel = true;
       }
-      if(!badModel) {
-        ++goodModels;
-        ++goodModelsTotal;
-        vector_t betaInteractionCoefs = interactionModel->getCoefs();
-        double interactionValue = 
-          betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-        // vector_t betaInteractionCoefPVals = interactionModel->getPVals();
-//            double interactionPval =
-//              betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-        double interactionPval = ((LinearModel*) interactionModel)->getPValue();
-        resultsMatrixBetas(ii, jj) = interactionValue;
-        resultsMatrixPvals(ii, jj) = interactionPval;
-      } else {
-        ++badModels;
-        ++badModelsTotal;
-        resultsMatrixBetas(ii, jj) = 0.0;
-        resultsMatrixPvals(ii, jj) = 1.0;
+      #pragma omp critical
+      {
+        if(!badModel) {
+          ++threadGoodModels;
+          ++goodModelsTotal;
+          vector_t betaInteractionCoefs = interactionModel->getCoefs();
+          double interactionValue = 
+            betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+          vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+          double interactionPval =
+            betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+          // double interactionPval = ((LinearModel*) interactionModel)->getPValue();
+          resultsMatrixBetas(ii, jj) = interactionValue;
+          resultsMatrixPvals(ii, jj) = interactionPval;
+        } else {
+          ++threadBadModels;
+          ++badModelsTotal;
+          resultsMatrixBetas(ii, jj) = 0.0;
+          resultsMatrixPvals(ii, jj) = 1.0;
+        }
       }
-
       delete interactionModel;
     }
-    if(debugMode) {
-      PP->printLOG(int2str(ii) + "/" + int2str(nOuterLoop) +
-      ", inner loop good models: " + int2str(goodModels) +
-        ", bad models: " + int2str(badModels) + "\n");
-    }
   }
-  PP->printLOG("total good models: " + int2str(goodModelsTotal) +
-    ", bad models: " + int2str(badModelsTotal) + "\n");
+  goodModels = goodModelsTotal;
+  badModels = badModelsTotal;
+  PP->printLOG(Timestamp() + "iQTL Cis Trans total good models: " + int2str(goodModels) +
+    ", bad models: " + int2str(badModels) + "\n");
   
   return true;
 }
 
 bool EpistasisEQtl::RunIqtlFull() {
-  uint numSnps = PP->nl_all;
   PP->printLOG("iQTL linear regression loop: Full SNP x SNP\n");
+  uint numSnps = PP->nl_all;
 #pragma omp parallel
   for(uint ii=0; ii < numSnps; ++ii) {
     if(ii && (ii % 1000 == 0)) {
@@ -412,12 +369,12 @@ bool EpistasisEQtl::RunIqtlFull() {
       interactionModel->addInteraction(1, 2);
       interactionModel->label.push_back("EPI");
       interactionModel->buildDesignMatrix();
-      uint tp = 3;
+      uint modelFitParamIdx = 3;
       // add # covars to test param to get interaction param
       if(par::covar_file) {
-        tp += par::clist_number;
+        modelFitParamIdx += par::clist_number;
       }
-      interactionModel->testParameter = tp; // interaction
+      interactionModel->testParameter = modelFitParamIdx; // interaction
       interactionModel->fitLM();
 #pragma omp critical
 {          
@@ -438,54 +395,50 @@ bool EpistasisEQtl::RunIqtlFull() {
 }
 
 bool EpistasisEQtl::RunEqtl(string transcript) {
-    string eqtlFilename = par::output_file_name + "." + 
-      transcript + ".eqtl.txt";
-    PP->printLOG("Writing eQTL results to [ " + eqtlFilename + " ]\n");
-    std::ofstream EQTL;
-    EQTL.open(eqtlFilename, ios::out);
-    for(set<uint>::const_iterator loopIt=outerLoopSnps.begin(); 
-            loopIt != outerLoopSnps.end(); ++loopIt) {
-      uint thisSnpIndex = *loopIt;
-      string thisSnpName = PP->locus[thisSnpIndex]->name;
-      
-      Model* mainEffectModel = new LinearModel(PP);
-      mainEffectModel->setMissing();
-      mainEffectModel->addAdditiveSNP(thisSnpIndex);
-      mainEffectModel->label.push_back(thisSnpName);
-      // add covariates if specified
-      if(par::covar_file) {
-        for(uint k=0; k < par::clist_number; k++) {
-          // add covariate to the model
-          mainEffectModel->addCovariate(k);
-          mainEffectModel->label.push_back(PP->clistname[k]);
-        }
+  string eqtlFilename = par::output_file_name + "." + 
+    transcript + ".eqtl.txt";
+  PP->printLOG(Timestamp() + "RunEqtl writing eQTL results to [ " + eqtlFilename + " ]\n");
+  std::ofstream EQTL;
+  EQTL.open(eqtlFilename, ios::out);
+  for(uint i=0; i < thisTFSnpIndices.size(); ++i) {
+    uint thisSnpIndex = thisTFSnpIndices[i];
+    string thisSnpName = PP->locus[thisSnpIndex]->name;
+
+    Model* mainEffectModel = new LinearModel(PP);
+    mainEffectModel->setMissing();
+    mainEffectModel->addAdditiveSNP(thisSnpIndex);
+    mainEffectModel->label.push_back(thisSnpName);
+    // add covariates if specified
+    if(par::covar_file) {
+      for(uint k=0; k < par::clist_number; k++) {
+        // add covariate to the model
+        mainEffectModel->addCovariate(k);
+        mainEffectModel->label.push_back(PP->clistname[k]);
       }
-      // Build design matrix
-      mainEffectModel->buildDesignMatrix();
-
-      // Fit linear model
-      uint tp = 1; 
-      mainEffectModel->testParameter = tp; // single variable main effect
-      mainEffectModel->fitLM();
-
-      // Obtain estimates and statistics
-      vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
-      double mainEffectValue = betaMainEffectCoefs[tp];
-      // p-values don't include uintercept term
-      vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-      double mainEffectPValue = betaMainEffectCoefPvals[tp-1];
-
-      EQTL 
-        << thisSnpName << "\t"
-        << transcript << "\t"
-        << mainEffectValue << "\t"
-        << mainEffectPValue << endl;
-
-      delete mainEffectModel;
     }
-    EQTL.close();
+    // Build design matrix
+    mainEffectModel->buildDesignMatrix();
+    // Fit linear model
+    uint modelFitParamIdx = 1; 
+    // single variable main effect
+    mainEffectModel->testParameter = modelFitParamIdx; 
+    mainEffectModel->fitLM();
+    // obtain estimates and statistics
+    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+    double mainEffectValue = betaMainEffectCoefs[modelFitParamIdx];
+    // p-values don't include intercept term
+    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+    double mainEffectPValue = betaMainEffectCoefPvals[modelFitParamIdx-1];
+    EQTL 
+      << thisSnpName << "\t"
+      << transcript << "\t"
+      << mainEffectValue << "\t"
+      << mainEffectPValue << endl;
+    delete mainEffectModel;
+  }
+  EQTL.close();
 
-    return true;
+  return true;
 }
 
 bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
@@ -555,6 +508,8 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
 
   PP->printLOG("Read " + int2str(rows) + 
     " transcript coordinates info from ["  + coordinatesFilename + "]\n");
+ 
+  cordFilename = coordinatesFilename;
   
   return true;
 }
@@ -669,6 +624,7 @@ bool EpistasisEQtl::SetTF(bool tfFlag) {
 
 bool EpistasisEQtl::GetSnpsForTranscript(string transcript, 
   vector<uint>& snpIndices) {
+  PP->printLOG(Timestamp() + "Searching for SNPs in transcript [" + transcript + "]\n");
 
   // get transcript info
   uint chromosome = coordinates[transcript][COORD_CHROM];
@@ -677,14 +633,16 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
   uint lowerThreshold = bpStart - radius;
   uint upperThreshold = bpEnd + radius;
   
- // cout 
- //   << "GetSnpsForTranscript: chrom: " << chromosome  << ", radius: " 
- //   << radius  << ", " 
- //   << "(" << lowerThreshold << "), "
- //   << bpStart  << ", " 
- //   << bpEnd << ", "
- //   << "(" << upperThreshold << ")"
- //   << endl;
+  if(par::algorithm_verbose) {
+    cout 
+      << "GetSnpsForTranscript: chrom: " << chromosome  << ", radius: " 
+      << radius  << ", " 
+      << "(" << lowerThreshold << "), "
+      << bpStart  << ", " 
+      << bpEnd << ", "
+      << "(" << upperThreshold << ")"
+      << endl;
+  }
   
   // find SNPs matching criteria
   for(uint j=0; j < PP->locus.size(); ++j) {
@@ -710,7 +668,7 @@ bool EpistasisEQtl::GetSnpsForTranscript(string transcript,
 bool EpistasisEQtl::GetSnpsForTFs(vector<uint>& snpIndices, vector<string>& tfs) {
 
   uint allSnps = PP->locus.size();
-  PP->printLOG("Searching transcription factors in " + int2str(allSnps) + " SNPs\n");
+  PP->printLOG(Timestamp() + "Searching transcription factors in " + int2str(allSnps) + " SNPs\n");
   // for all SNPs
   for(uint thisSnpIndex=0; thisSnpIndex < allSnps; ++thisSnpIndex) {
     if(thisSnpIndex && (thisSnpIndex % 100000 == 0)) {
@@ -761,6 +719,57 @@ bool EpistasisEQtl::GetTFInfo(string tf, vector<uint>& tfInfo) {
     tfInfo.push_back(lutInfo->second[i]);
   }
   return true;
+}
+
+bool EpistasisEQtl::WriteResults(string saveFilename, 
+                                 string saveTranscript,
+                                 vector<string> saveTFSnpNames) {
+    PP->printLOG(Timestamp() + "writing iQTL results to [ " + saveFilename + " ]\n");
+    ofstream IQTL_OUT;
+    IQTL_OUT.open(saveFilename, ios::out);
+    if(tfMode) {
+      IQTL_OUT << "SnpA\tSnpB\tTranscript\tTF\tCoef\tP" << endl;
+    } else {
+      IQTL_OUT << "SnpA\tSnpB\tTranscript\tCoef\tP" << endl;
+    }
+    for(uint kk=0; kk < nOuterLoop; ++kk) {
+      for(uint ll=0; ll < nInnerLoop; ++ll) {
+        double thisInteractionPval = resultsMatrixPvals(kk, ll);
+        if((thisInteractionPval > 0) && 
+           (thisInteractionPval < par::iqtl_pvalue)) {
+          string snpTF = "NA";
+          uint snpAIndex = -1;
+          if(tfMode) {
+            snpAIndex = thisTFSnpIndices[kk];
+            snpTF = saveTFSnpNames[kk];
+          } else {
+            snpAIndex = thisTranscriptSnpIndices[kk];
+          }
+          string snpAName = PP->locus[snpAIndex]->name;
+          uint snpBIndex = thisTranscriptSnpIndices[ll];
+          string snpBName = PP->locus[snpBIndex]->name;
+          if(tfMode) {
+            IQTL_OUT
+              << snpAName << "\t" 
+              << snpBName << "\t"
+              << saveTranscript << "\t"
+              << snpTF << "\t"
+              << resultsMatrixBetas(kk, ll) << "\t"
+              << thisInteractionPval << endl;
+          } else {
+            IQTL_OUT
+              << snpAName << "\t" 
+              << snpBName << "\t"
+              << saveTranscript << "\t"
+              << resultsMatrixBetas(kk, ll) << "\t"
+              << thisInteractionPval << endl;
+          }
+        }
+      } // nInnerLoop
+    } // nOuterLoop
+    IQTL_OUT.close();
+    
+    return true;
 }
 
 bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
@@ -2194,3 +2203,4 @@ bool EpistasisEQtl::LoadDefaultTranscriptionFactorLUT() {
   transcriptFactorLUT["ZZZ3"] = {1, 78030189, 78148343};
   return true;
 }
+

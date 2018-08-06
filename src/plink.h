@@ -42,6 +42,7 @@ using namespace std;
 typedef vector<vector<int> > table_t;
 typedef vector<vector<double> > matrix_t;
 typedef vector<double> vector_t;
+typedef vector<string> vector_s;
 typedef vector<bool> boolvec_t;
 typedef vector<vector<bool> > boolmatrix_t;
 typedef vector<int> intvec_t;

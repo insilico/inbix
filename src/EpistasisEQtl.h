@@ -31,7 +31,7 @@ public:
   EpistasisEQtl();
   virtual ~EpistasisEQtl();
   void PrintState();
-  bool Run(bool debug=false);
+  bool Run();
   bool RunEqtl(std::string transcript);
   bool RunIqtlFull();
   bool RunIqtlCisTrans();
@@ -48,6 +48,8 @@ public:
   bool SetTF(bool tfFlag);
   bool GetTF() { return tfMode; }
   bool GetTFInfo(std::string tf, std::vector<uint>& tfInfo);
+  bool WriteResults(std::string saveFilename, std::string saveTranscript,
+    std::vector<std::string> saveTFSnpNames);
 private:
   bool CheckInputs();
   bool GetSnpsForTranscript(std::string transcript, 
@@ -55,7 +57,9 @@ private:
   bool GetSnpsForTFs(std::vector<uint>& snpIndices, std::vector<std::string>& tfs);
   bool LoadDefaultTranscriptionFactorLUT();
   bool IsSnpInTFs(uint chr, uint bp, std::string& tf);
-  bool debugMode;
+  std::string exprFilename;
+  std::string cordFilename;
+  bool fullInteraction;
   uint radius;
   bool localCis;
   CoordinateTable coordinates;
@@ -64,13 +68,15 @@ private:
   bool tfMode;
   uint tfRadius;
   TransciptFactorTable transcriptFactorLUT;
+  // algorithm
   std::vector<uint> thisTranscriptSnpIndices;
+  std::vector<uint> thisTFSnpIndices;
   uint nOuterLoop;
   uint nInnerLoop;
-  std::vector<uint> thisTFSnpIndices;
   uint goodModels;
   uint badModels;
   std::set<uint> outerLoopSnps;
+  std::vector<uint> innerLoopSnps;
   arma::mat resultsMatrixBetas;
   arma::mat resultsMatrixPvals;
 };

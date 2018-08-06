@@ -43,7 +43,7 @@
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "regain.h"
+#include "Regain.h"
 #include "InteractionNetwork.h"
 #include "CentralityRanker.h"
 #include "ArmadilloFuncs.h"
@@ -793,7 +793,7 @@ int main(int argc, char* argv[]) {
 
     // run the analysis
   	P.SNP2Ind();
-    if(!iqtl->Run(true)) {
+    if(!iqtl->Run()) {
       error("iQTL analysis failed");
     }
 

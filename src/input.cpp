@@ -26,6 +26,7 @@
 #include "helper.h"
 #include "nlist.h"
 #include "gvar.h"
+#include "stats.h"
 
 extern ofstream LOG;
 
@@ -730,8 +731,14 @@ bool Plink::readClusterFile(bool verbose) {
 
 bool Plink::setQtlPhenoFromNumericIndex(int index) {
   for(int i = 0; i < sample.size(); i++) {
-    sample[i]->phenotype = sample[i]->nlist[index];
-    sample[i]->missing = false;
+    double tempPheno = sample[i]->nlist[index];
+    if(realnum(tempPheno)) {
+      sample[i]->phenotype = tempPheno;
+      sample[i]->missing = false;
+    } else {
+      sample[i]->phenotype = -9;
+      sample[i]->missing = true;
+    }
   }
   par::bt = false;
   par::qt = true;

@@ -26,14 +26,14 @@ using namespace std;
 // differential coexpression
 bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
   // only works on 'numeric' data types added to PLINK by inbix
-  if(PP->nl_all) {
-    PP->printLOG("ERROR: armaDcgain requires 'numeric' attributes only\n");
-    return false;
-  }
+//  if(PP->nl_all) {
+//    PP->printLOG("ERROR: armaDcgain requires 'numeric' attributes only\n");
+//    return false;
+//  }
   // phenotypes
-  int nAff = 0;
-  int nUnaff = 0;
-  for(int i=0; i < PP->sample.size(); i++) {
+  uint nAff = 0;
+  uint nUnaff = 0;
+  for(uint i=0; i < PP->sample.size(); i++) {
     if(PP->sample[i]->aff) {
       ++nAff;
     }
@@ -82,16 +82,22 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
       ++totalTests;
       if(std::isnan(z)) {
         ++nanCount;
+        zvals(i, i) = 0;
+        pvals(i, i) = 1;
+      } else {
+        if(std::isinf(z)) {
+          ++infinityCount;
+          zvals(i, i) = 0;
+          pvals(i, i) = 1;
+        } else {
+          zvals(i, i) = z;
+          pvals(i, i) = p;
+        }
       }
-      if(std::isinf(z)) {
-        ++infinityCount;
-      }
-      zvals(i, i) = z;
-      pvals(i, i) = p;
     }
   }
   // z-test for off-diagonal elements
-  PP->printLOG("Computing coexpression for CASES and CONTROLS.\n");
+  PP->printLOG("Computing coexpression and correlation for CASES and CONTROLS.\n");
   mat X;
   mat Y;
   if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
@@ -106,10 +112,12 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
     PP->printLOG("WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix Y is not finite");
     readyToRun = false;
   }
-  // cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
-  // cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
-  // cout << "X" << endl << X.submat(0,0,4,4) << endl;
-  // cout << "Y" << endl << Y.submat(0,0,4,4) << endl;
+  if(par::algorithm_verbose) {
+    cout << "X: " << X.n_rows << " x " << X.n_cols << endl;
+    cout << "Y: " << Y.n_rows << " x " << Y.n_cols << endl;
+    cout << "X" << endl << X.submat(0,0,4,4) << endl;
+    cout << "Y" << endl << Y.submat(0,0,4,4) << endl;
+  }
   // compute covariances/correlations
   mat covMatrixX;
   mat corMatrixX;
@@ -144,9 +152,11 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
     return readyToRun;
   }
   // DEBUG
-  // cout << corMatrixX.n_rows << " x " << corMatrixX.n_cols << endl;
-  // cout << "cor(X)" << endl << corMatrixX.submat(0,0,4,4) << endl;
-  // cout << "cor(Y)" << endl << corMatrixY.submat(0,0,4,4) << endl;
+  if(par::algorithm_verbose) {
+    cout << corMatrixX.n_rows << " x " << corMatrixX.n_cols << endl;
+    cout << "cor(X)" << endl << corMatrixX.submat(0,0,4,4) << endl;
+    cout << "cor(Y)" << endl << corMatrixY.submat(0,0,4,4) << endl;
+  }
 
   // algorithm ported from the R script z_test.R
   PP->printLOG("Performing Z-tests for interactions\n");
@@ -176,27 +186,21 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
         ++totalTests;
         if(std::isinf(Z_ij)) {
           ++infinityCount;
-          zvals(i, j) = 0.0;
-          zvals(j, i) = 0.0;
-          pvals(i, j) = 1.0;
-          pvals(j, i) = 1.0;
+          zvals(i, j) = zvals(j, i) = 0.0;
+          pvals(i, j) = pvals(j, i) = 1.0;
         } else {
           if(std::isnan(Z_ij)) {
             ++nanCount;
-            zvals(i, j) = 0.0;
-            zvals(j, i) = 0.0;
-            pvals(i, j) = 1.0;
-            pvals(j, i) = 1.0;
+            zvals(i, j) = zvals(j, i) = 0.0;
+            pvals(i, j) = pvals(j, i) = 1.0;
           } else {
-            zvals(i, j) = Z_ij;
-            zvals(j, i) = Z_ij;
-            pvals(i, j) = p;
-            pvals(j, i) = p;
+            zvals(i, j) = zvals(j, i) = Z_ij;
+            pvals(i, j) = pvals(j, i) = p;
           }
         }
       } // OpenMP critical section
-    }
-  } // end OpenMP for loop
+    } // numvars inner loop
+  } // numvars outer loop - end OpenMP for loop
   PP->printLOG("" + int2str(totalTests) + " total number of tests\n");
   bool returnValue = true;
   if(returnValue && infinityCount) {
@@ -235,7 +239,7 @@ bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
 //	D <- sqrt(diag(V))
 //	R <- D %*% V %*% D
 	
-  int n = X.n_rows;
+  uint n = X.n_rows;
 
   // compute covariances
 	PP->printLOG("Computing covariance matrix\n");
@@ -250,7 +254,7 @@ bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
   // compute correlations from covariances
 	PP->printLOG("Computing correlation matrix\n");
 	mat D = zeros<mat>(covMatrix.n_cols, covMatrix.n_cols);
-	for(int i=0; i < covMatrix.n_cols; ++i) {
+	for(uint i=0; i < covMatrix.n_cols; ++i) {
 		D(i, i) = 1.0 / sqrt(covMatrix(i, i));
 	}
 	corMatrix = D * covMatrix * D;
@@ -260,7 +264,7 @@ bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
 
 bool armaComputeSparseCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
 
-  int n = X.n_rows;
+  uint n = X.n_rows;
 
   // compute covariances
 	PP->printLOG("Computing covariance matrix\n");
@@ -275,7 +279,7 @@ bool armaComputeSparseCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
   // compute correlations from covariances
 	PP->printLOG("Computing correlation matrix\n");
 	mat D = zeros<mat>(covMatrix.n_cols, covMatrix.n_cols);
-	for(int i=0; i < covMatrix.n_cols; ++i) {
+	for(uint i=0; i < covMatrix.n_cols; ++i) {
 		D(i, i) = 1.0 / sqrt(covMatrix(i, i));
 	}
 	corMatrix = D * covMatrix * D;
@@ -292,8 +296,8 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
   }
 
   bool readHeader = false;
-  int rows = 0;
-  int cols = 0;
+  uint rows = 0;
+  uint cols = 0;
   while(!matrixFile.eof()) {
 
     char nline[par::MAX_LINE_LENGTH];
@@ -306,7 +310,7 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
     // read line from text file into a vector of tokens
     string buf;
     stringstream ss(sline);
-    vector<string> tokens;
+    vector_s tokens;
     while(ss >> buf) {
       tokens.push_back(buf);
     }
@@ -333,7 +337,7 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
     vector_t dataValues;
     bool okay = true;
     dataValues.clear();
-    for(int c = 2; c < cols + 2; c++) {
+    for(uint c = 2; c < cols + 2; c++) {
       double t = 0;
       if(!from_string<double>(t, tokens[c], std::dec))
         okay = false;
@@ -341,7 +345,7 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
     }
     if(okay) {
       m.resize(rows, variableNames.size());
-			for(int i=0; i < dataValues.size(); ++i) {
+			for(uint i=0; i < dataValues.size(); ++i) {
 				m(rows-1, i) = dataValues[i];
 			}
     }
@@ -359,7 +363,7 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
   return true;
 }
 
-bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
+bool armaWriteMatrix(mat& m, string mFilename, vector_s variableNames) {
   PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
   ofstream outFile(mFilename);
   if(outFile.fail()) {
@@ -369,8 +373,8 @@ bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
   // outFile.fixed;
 
   // write the variables header
-  int hIdx = 0;
-  for(vector<string>::const_iterator hIt = variableNames.begin();
+  uint hIdx = 0;
+  for(vector_s::const_iterator hIt = variableNames.begin();
           hIt != variableNames.end(); ++hIt, ++hIdx) {
     if(hIdx) {
       outFile << "\t" << *hIt;
@@ -382,8 +386,8 @@ bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
   outFile << endl;
 
   // write the matrix
-  for(int i=0; i < m.n_rows; ++i) {
-    for(int j=0; j < m.n_cols; ++j) {
+  for(uint i=0; i < m.n_rows; ++i) {
+    for(uint j=0; j < m.n_cols; ++j) {
       if(j) {
         outFile << "\t" << m(i, j);
       }
@@ -399,7 +403,7 @@ bool armaWriteMatrix(mat& m, string mFilename, vector<string> variableNames) {
 	return true;
 }
 
-bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector<string> variableNames) {
+bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector_s variableNames) {
   PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
   ofstream outFile(mFilename);
   if(outFile.fail()) {
@@ -409,8 +413,8 @@ bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector<string> variableN
   // outFile.fixed;
 
   // write the variables header
-  int hIdx = 0;
-  for(vector<string>::const_iterator hIt = variableNames.begin();
+  uint hIdx = 0;
+  for(vector_s::const_iterator hIt = variableNames.begin();
           hIt != variableNames.end(); ++hIt, ++hIdx) {
     if(hIdx) {
       outFile << "\t" << *hIt;
@@ -422,8 +426,8 @@ bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector<string> variableN
   outFile << endl;
 
   // write the matrix
-  for(int i=0; i < m.n_rows; ++i) {
-    for(int j=0; j < m.n_cols; ++j) {
+  for(uint i=0; i < m.n_rows; ++i) {
+    for(uint j=0; j < m.n_cols; ++j) {
       if(j) {
         outFile << "\t" << m(i, j);
       }
@@ -440,12 +444,12 @@ bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector<string> variableN
 }
 
 bool armaGetPlinkNumericToMatrixAll(mat& X) {
-	int numNumerics = PP->nlistname.size();
+	uint numNumerics = PP->nlistname.size();
 	X.resize(numNumerics, numNumerics);
 	
 	// load numerics into passed matrix
-	for(int i=0; i < PP->sample.size(); i++) {
-		for(int j=0; j < numNumerics; ++j) {
+	for(uint i=0; i < PP->sample.size(); i++) {
+		for(uint j=0; j < numNumerics; ++j) {
 			X(i, j) = PP->sample[i]->nlist[j];
 		}
 	}
@@ -456,9 +460,9 @@ bool armaGetPlinkNumericToMatrixAll(mat& X) {
 bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 	
 	// determine the number of affected and unaffected individuals
-	int nAff = 0;
-	int nUnaff = 0;
-	for(int i=0; i < PP->sample.size(); i++) {
+	uint nAff = 0;
+	uint nUnaff = 0;
+	for(uint i=0; i < PP->sample.size(); i++) {
 		if(PP->sample[i]->aff) {
 			++nAff;
 		}
@@ -473,16 +477,16 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 	PP->printLOG("Detected " + int2str(nAff) + " affected and " + 
 					int2str(nUnaff) + " unaffected individuals\n");
 	// size matrices
-	int numNumerics = PP->nlistname.size();
+	uint numNumerics = PP->nlistname.size();
 	X.resize(nAff, numNumerics);
 	Y.resize(nUnaff, numNumerics);
 	
 	// load numerics into passed matrices
 	PP->printLOG("Loading case and control matrices\n");
-	int aIdx = 0;
-	int uIdx = 0;
-	for(int i=0; i < PP->sample.size(); i++) {
-		for(int j=0; j < numNumerics; ++j) {
+	uint aIdx = 0;
+	uint uIdx = 0;
+	for(uint i=0; i < PP->sample.size(); i++) {
+		for(uint j=0; j < numNumerics; ++j) {
 			if(PP->sample[i]->aff) {
 				X(aIdx, j) = PP->sample[i]->nlist[j];
 			} else {
