@@ -235,6 +235,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
+  // ***** begin of inbix numerics utilities *****
 	////////////////////////////////////////////
 	// network deconvolution - bcw - 10/22/13
   if(par::do_deconvolution) {
@@ -333,7 +334,7 @@ int main(int argc, char* argv[]) {
     
     // data set transforms prior to analysis - bcw - 10/30/13
     if(par::do_numeric_standardize) {
-      P.printLOG("Standardizing numeric variables.\n");
+      P.printLOG(Timestamp() + "Standardizing numeric variables.\n");
       if(!numericMeanCenter()) {
         error("Mean centering numerics failed.");
       }
@@ -341,7 +342,7 @@ int main(int argc, char* argv[]) {
         error("Standardizing numerics failed.");
       }
       if(par::exportDelimited) {
-        P.printLOG("Performing data set export to delimited format\n");
+        P.printLOG(Timestamp() + "Performing data set export to delimited format\n");
         // switch from SNP-major to individual-major data orientation!
         P.SNP2Ind();
         string fileExtension = ".delim";
@@ -359,35 +360,36 @@ int main(int argc, char* argv[]) {
 
 		// extract attributes listed in user file to new file
 		if(par::do_numeric_extract) {
-			P.printLOG("Extracting numeric attributes to a new numeric file.\n");
+			P.printLOG(Timestamp() + "Extracting numeric attributes to a new numeric file.\n");
 			P.outputNumericExtract(par::numeric_extract_file);
 			shutdown();
 		}
     
     // low value filter
     if(par::do_numeric_lowval_filter) {
-      P.printLOG("Numeric filter mode\n");
+      P.printLOG(Timestamp() + "Numeric filter mode\n");
       boolvec_t varIndicesThatPass(P.nlistname.size(), true);
-      P.printLOG("Running numeric low value filter\n");
+      P.printLOG(Timestamp() + "Running numeric low value filter\n");
       numericLowValueFilter(par::numeric_lowval_percentile, varIndicesThatPass);
       string filteredFilename = par::output_file_name + ".lowvalfilter.num";
-      P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
+      P.printLOG(Timestamp() + "Writing filtered numeric file [ " + filteredFilename + " ]\n");
       P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
       shutdown();
     }
     
     // low variance filter
     if(par::do_numeric_lowvar_filter) {
-      P.printLOG("Running numeric low variance filter\n");
+      P.printLOG(Timestamp() + "Running numeric low variance filter\n");
       boolvec_t varIndicesThatPass(P.nlistname.size(), true);
       numericVarianceFilter(par::numeric_lowvar_percentile, varIndicesThatPass);
       string filteredFilename = par::output_file_name + ".lowvarfilter.num";
-      P.printLOG("Writing filtered numeric file [ " + filteredFilename + " ]\n");
+      P.printLOG(Timestamp() + "Writing filtered numeric file [ " + filteredFilename + " ]\n");
       P.outputNumericFiltered(filteredFilename, varIndicesThatPass);
       shutdown();
     }
 
 	}
+  // ***** end of inbix numerics utilities *****
 
 	// Set number of individuals
 	P.n = P.sample.size();
@@ -748,10 +750,13 @@ int main(int argc, char* argv[]) {
 			P.locus[l]->allele1 = "0";
 	}
 
-	/////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////
+	// ***** begin inbix additions (not caught above as numerics utilities) *****
+  /////////////////////////////////////////////////////////////////////////////
+	
 	// perform epistatic eQTL analysis
   if(par::do_iqtl) {
-		P.printLOG("\nPerforming iQTL analysis\n");
+		P.printLOG(Timestamp() + "\nPerforming iQTL analysis\n");
 
     if(par::iqtl_expression_file == "") {
       error("Transcript expression file is required. Use --transcript-matrix");
@@ -761,7 +766,7 @@ int main(int argc, char* argv[]) {
     }
     
     // read the expression data as a numeric file in PLINK format
-		P.printLOG("Reading transcripts from [" + par::iqtl_expression_file + "]\n");
+		P.printLOG(Timestamp() + "Reading transcripts from [" + par::iqtl_expression_file + "]\n");
     par::numeric_filename = par::iqtl_expression_file;
 		if(!P.readNumericFile()) {
 			error("Cannot read eQTL expression file: " + par::iqtl_expression_file);
@@ -770,7 +775,7 @@ int main(int argc, char* argv[]) {
     EpistasisEQtl* iqtl = new EpistasisEQtl();
     
     // read transcript coordinate information from file
-		P.printLOG("Reading transcript coordinates from [" + par::iqtl_coord_file + "]\n");
+		P.printLOG(Timestamp() + "Reading transcript coordinates from [" + par::iqtl_coord_file + "]\n");
     if(!iqtl->ReadTranscriptCoordinates(par::iqtl_coord_file)) {
       error("Cannot read coordinates file: " + par::iqtl_coord_file);
     }
@@ -784,7 +789,7 @@ int main(int argc, char* argv[]) {
 	    iqtl->SetTFRadius(par::iqtl_tf_radius);
 	    if(par::iqtl_tf_coord_file != "") {
 		    // read transcription factor coordinate information from file
-				P.printLOG("Reading TF coordinates from [" + par::iqtl_tf_coord_file + "]\n");
+				P.printLOG(Timestamp() + "Reading TF coordinates from [" + par::iqtl_tf_coord_file + "]\n");
 		    if(!iqtl->ReadTranscriptFactorCoordinates(par::iqtl_tf_coord_file)) {
 		      error("Cannot read TF coordinates file: " + par::iqtl_tf_coord_file);
 		    }
@@ -815,7 +820,7 @@ int main(int argc, char* argv[]) {
 			error("Co-expression matrix is only supported in case-control data");
 		}
 		if(par::do_coexpression_all) {
-			P.printLOG("Computing coexpression for ALL variables.\n");
+			P.printLOG(Timestamp() + "Computing coexpression for ALL variables.\n");
 			mat X;
 			if(!armaGetPlinkNumericToMatrixAll(X)) {
 				error("Cannot read numeric data into matrix");
@@ -831,7 +836,7 @@ int main(int argc, char* argv[]) {
 				error("Could not compute coexpression matrix");
 			}
 		} else {
-			P.printLOG("Computing coexpression for CASES and CONTROLS.\n");
+			P.printLOG(Timestamp() + "Computing coexpression for CASES and CONTROLS.\n");
 			mat X;
 			mat Y;
 			if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
@@ -867,7 +872,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// data set export requested - bcw - 5/21/13
 	if(par::exportArff) {
-		P.printLOG("Performing data set export to Weka ARFF format\n");
+		P.printLOG(Timestamp() + "Performing data set export to Weka ARFF format\n");
 		// switch from SNP-major to individual-major data orientation!
 		P.SNP2Ind();
 		string arffFilename = par::output_file_name + ".arff";
@@ -878,7 +883,7 @@ int main(int argc, char* argv[]) {
  	/////////////////////////////////////////////////////////////////////////////
 	// delimited format for Excel, R, etc - bcw - 5/22/13
 	if(par::exportDelimited) {
-		P.printLOG("Performing data set export to delimited format\n");
+		P.printLOG(Timestamp() + "Performing data set export to delimited format\n");
 		// switch from SNP-major to individual-major data orientation!
 		P.SNP2Ind();
 		string fileExtension = ".delim";
@@ -896,7 +901,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// variable ranking requested - bcw - 5/16/13
 	if(par::do_ranking) {
-		P.printLOG("Performing variable ranking\n");
+		P.printLOG(Timestamp() + "Performing variable ranking\n");
 		P.SNP2Ind();
 		if(par::ranker_method == "centrality" ||
 						par::ranker_method == "centrality_power" ||
@@ -904,15 +909,15 @@ int main(int argc, char* argv[]) {
 			if(!par::do_regain_post) {
 				error("Centrality ranking requires a reGAIN file");
 			}
-			P.printLOG("Ranking by network centrality: " + par::ranker_method + "\n");
+			P.printLOG(Timestamp() + "Ranking by network centrality: " + par::ranker_method + "\n");
 			CentralityRanker cr(par::regainFile);
 			if(par::ranker_centrality_gamma > 0) {
-				P.printLOG("Network centrality gamma set to: " +
+				P.printLOG(Timestamp() + "Network centrality gamma set to: " +
 								dbl2str(par::ranker_centrality_gamma) + "\n");
 				cr.SetGlobalGamma(par::ranker_centrality_gamma);
 			}
 			if(par::ranker_method == "centrality_power") {
-				P.printLOG("Centrality using fixed gamma 0.85, power method\n");
+				P.printLOG(Timestamp() + "Centrality using fixed gamma 0.85, power method\n");
 				cr.SetGlobalGamma(0.85);
 				if(!cr.CalculateCentrality(POWER_METHOD)) {
 					error("Centrality ranking failed");
@@ -920,7 +925,7 @@ int main(int argc, char* argv[]) {
 			}
 			if(par::ranker_method == "centrality" ||
 							par::ranker_method == "centrality_gauss") {
-				P.printLOG("Centrality using adaptive gamma\n");
+				P.printLOG(Timestamp() + "Centrality using adaptive gamma\n");
 				if(!cr.CalculateCentrality(GAUSS_ELIMINATION)) {
 					error("Centrality ranking failed");
 				}
@@ -935,26 +940,26 @@ int main(int argc, char* argv[]) {
 						par::ranker_method == "regressionb" ||
 						par::ranker_method == "regressionp") {
 			if(par::bt) {
-				P.printLOG("Ranking by logistic regression\n");
+				P.printLOG(Timestamp() + "Ranking by logistic regression\n");
 			} else {
-				P.printLOG("Ranking by linear regression\n");
+				P.printLOG(Timestamp() + "Ranking by linear regression\n");
 			}
 			rankedlist_t ranks;
 			RegressionRankResults results;
 			if(par::ranker_method == "regressions") {
-				P.printLOG("Using regression standardized coefficient values\n");
+				P.printLOG(Timestamp() + "Using regression standardized coefficient values\n");
 				rankByRegression(REGRESSION_RANK_STAT, ranks, results);
 			}
 			if(par::ranker_method == "regressionb") {
-				P.printLOG("Using regression beta coefficient values\n");
+				P.printLOG(Timestamp() + "Using regression beta coefficient values\n");
 				rankByRegression(REGRESSION_RANK_BETA, ranks, results);
 			}
 			if(par::ranker_method == "regressionp") {
-				P.printLOG("Using regression p-values\n");
+				P.printLOG(Timestamp() + "Using regression p-values\n");
 				rankByRegression(REGRESSION_RANK_PVAL, ranks, results);
 			}
 			string outFile = par::output_file_name + ".ranks";
-			P.printLOG("Writing scores to [" + outFile + "]\n");
+			P.printLOG(Timestamp() + "Writing scores to [" + outFile + "]\n");
 			ofstream outputFileHandle(outFile);
 			int numToWrite = ranks.size();
 			int topN = par::ranker_top_n;
@@ -974,7 +979,7 @@ int main(int argc, char* argv[]) {
 			outputFileHandle.close();
 
 			string outFileDetail = par::output_file_name + ".ranks.detail";
-			P.printLOG("Writing detailed results to [" + outFileDetail + "]\n");
+			P.printLOG(Timestamp() + "Writing detailed results to [" + outFileDetail + "]\n");
 			ofstream outputFileDetailHandle(outFileDetail.c_str());
 			outputFileDetailHandle << "var\tcoef\tpval\tstat"	<< endl;
 			for(int i = 0; i < results.vars.size(); i++) {
@@ -988,8 +993,8 @@ int main(int argc, char* argv[]) {
 			outputFileDetailHandle.close();
 		}
 		if(par::ranker_method == "random") {
-			P.printLOG("Ranking Random\n");
-			P.printLOG("***** Random ranking not implemented *****\n");
+			P.printLOG(Timestamp() + "Ranking Random\n");
+			P.printLOG(Timestamp() + "***** Random ranking not implemented *****\n");
 		}
 		shutdown();
 	}
@@ -998,7 +1003,7 @@ int main(int argc, char* argv[]) {
 	// permuted GAIN - bcw - 5/23/14
 	if(par::do_ranker_permutation) {
 	
-		P.printLOG("Performing GAIN permutation analysis\n");
+		P.printLOG(Timestamp() + "Performing GAIN permutation analysis\n");
 		P.SNP2Ind();
 
 		int M = P.nlistname.size();
@@ -1096,7 +1101,7 @@ int main(int argc, char* argv[]) {
 
 		// calculate variable thresholds
 		int thresholdIndex = (int) floor(numPerms * (1.0 - par::rankerPermThreshold)) - 1;
-	 	P.printLOG("\nUsing permutation threshold [" + dbl2str(par::rankerPermThreshold) + "]\n");
+	 	P.printLOG(Timestamp() + "\nUsing permutation threshold [" + dbl2str(par::rankerPermThreshold) + "]\n");
 		// cout 
 		// 	<< "M: " << M
 		// 	<< " N: " << N 
@@ -1104,7 +1109,7 @@ int main(int argc, char* argv[]) {
 		// 	<< " threshold index: " << thresholdIndex 
 		// 	<< endl;
 	 	string saveFilename = par::output_file_name + "_thresholds.txt";
-	 	P.printLOG("Writing permutation thresholds to [" + saveFilename + "]\n");
+	 	P.printLOG(Timestamp() + "Writing permutation thresholds to [" + saveFilename + "]\n");
 		ofstream outputFileHandle(saveFilename);
 		for(int col=0; col < M; ++col) {
       vec colScores(permResults.col(col));
@@ -1126,59 +1131,59 @@ int main(int argc, char* argv[]) {
 	// NOTE: if regain file specified AND modularity assume 
 	// no transform option.
 	if(par::do_modularity) {
-		P.printLOG("Performing network modularity analysis\n");
+		P.printLOG(Timestamp() + "Performing network modularity analysis\n");
 		InteractionNetwork* network = 0;
 		// check for input file type, and construct a new network
 		if(par::sifNetwork) {
-			P.printLOG("Reading network from SIF file [" + par::sifFile + "]\n");
+			P.printLOG(Timestamp() + "Reading network from SIF file [" + par::sifFile + "]\n");
 			network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
 		}
 		if(par::afniNetwork) {
-			P.printLOG("Reading network from corr.1D file [" + par::afni1dFile + "]\n");
+			P.printLOG(Timestamp() + "Reading network from corr.1D file [" + par::afni1dFile + "]\n");
 			network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
 		}
 		if(par::do_regain_post) {
-			P.printLOG("Reading network from reGAIN file [" + par::regainFile + "]\n");
+			P.printLOG(Timestamp() + "Reading network from reGAIN file [" + par::regainFile + "]\n");
 			network = new InteractionNetwork(par::regainFile, REGAIN_FILE, false, &P);
 		}
 		if(!network) {
 			error("Network construction for modularity analysis failed for the "
 							"given inbix options");
 		}
-		P.printLOG("--- Network loaded\n");
+		P.printLOG(Timestamp() + "--- Network loaded\n");
 		network->PrintSummary();
 
 		// preprocessing transformations
 		if(par::modPowerTransform) {
-			P.printLOG("Transforming adjacency matrix connectivity using "
+			P.printLOG(Timestamp() + "Transforming adjacency matrix connectivity using "
 				"power with exponent " + dbl2str(par::modPowerTransformExponent) + "\n");
 			network->ApplyPowerTransform(par::modPowerTransformExponent);
-			P.printLOG("--- Power transformed\n");
+			P.printLOG(Timestamp() + "--- Power transformed\n");
 			network->PrintSummary();
 		}
 		if(par::modFisherTransform) {
-			P.printLOG("Transforming adjacency matrix connectivity using "
+			P.printLOG(Timestamp() + "Transforming adjacency matrix connectivity using "
 				"Fisher correlation transform\n");
 			network->ApplyFisherTransform();
-			P.printLOG("--- Fisher transformed\n");
+			P.printLOG(Timestamp() + "--- Fisher transformed\n");
 			network->PrintSummary();
 		}
 		
 		if(par::modEnableConnectivityThreshold) {
-			P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " +
+			P.printLOG(Timestamp() + "Thresholding adjacency matrix connectivity to 0 if <= " +
 							dbl2str(par::modConnectivityThreshold) + "\n");
 			network->SetConnectivityThresholding(par::modEnableConnectivityThreshold);
 			network->SetConnectivityThreshold(par::modConnectivityThreshold);
 			if(par::modUseBinaryThreshold) {
-				P.printLOG("Using binary thresholding to 1 if > threshold\n");
+				P.printLOG(Timestamp() + "Using binary thresholding to 1 if > threshold\n");
 				network->SetBinaryThresholding(par::modUseBinaryThreshold);
 			}
 		}
 
 		// compute modularity
 		ModularityResult modules = network->ModularityLeadingEigenvector();
-		P.printLOG("Total modularity Q = " + dbl2str(modules.first) + "\n");
-		P.printLOG("There are " + int2str(modules.second.size()) +
+		P.printLOG(Timestamp() + "Total modularity Q = " + dbl2str(modules.first) + "\n");
+		P.printLOG(Timestamp() + "There are " + int2str(modules.second.size()) +
 						" modules" + "\n");
 		network->ShowModuleSizes();
 		if(par::modComputeHomophily) {
@@ -1228,7 +1233,7 @@ int main(int argc, char* argv[]) {
       delete forest;
       forest = 0;
     }
-		P.printLOG("Random Forest analysis complete\n");
+		P.printLOG(Timestamp() + "Random Forest analysis complete\n");
 		shutdown();
   }
 
@@ -1236,7 +1241,7 @@ int main(int argc, char* argv[]) {
 	// Relief-F analysis requested - bcw - 8/19/16
   if(par::do_relieff) {
     if(par::do_numeric_standardize) {
-      P.printLOG("Standardizing numeric variables.\n");
+      P.printLOG(Timestamp() + "Standardizing numeric variables.\n");
       if(!numericMeanCenter()) {
         error("Mean centering numerics failed.");
       }
@@ -1247,7 +1252,7 @@ int main(int argc, char* argv[]) {
     
     // ---------------------------------------------------------------------------
     // individual-major mode for SNP bit vectors
-		P.printLOG("Loading data set for Relief-F analysis from Plink data structures\n");
+		P.printLOG(Timestamp() + "Loading data set for Relief-F analysis from Plink data structures\n");
     P.SNP2Ind();
     PlinkInternalsDataset* ds = new PlinkInternalsDataset(&P);
     if(!ds->LoadDatasetFromPlink()) {
@@ -1321,7 +1326,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// Privacy Evaporative Cooling analysis requested - bcw - 10/24/16
 	if(par::do_ec_privacy) {
-    P.printLOG("--------------------------------------------------\n");
+    P.printLOG(Timestamp() + "--------------------------------------------------\n");
 		P.printLOG(Timestamp() + "Privacy Evaporative Cooling analysis\n");
 		P.printLOG(Timestamp() + "Creating default data sets: train, holdout, test\n");
     // load the data sets: train, holdout and test from R simulations
@@ -1549,56 +1554,56 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// recursive indirect paths modularity analysis requested - bcw - 5/31/16
 	if(par::do_ripm) {
-		P.printLOG("\nPerforming rip-M analysis\n");
+		P.printLOG(Timestamp() + "\nPerforming rip-M analysis\n");
 		InteractionNetwork* network = 0;
 		// check for input file type, and construct a new network
 		if(par::sifNetwork) {
-			P.printLOG("Reading network from SIF file [" + par::sifFile + "]\n");
+			P.printLOG(Timestamp() + "Reading network from SIF file [" + par::sifFile + "]\n");
 			network = new InteractionNetwork(par::sifFile, SIF_FILE, false, &P);
 		}
 		if(par::afniNetwork) {
-			P.printLOG("Reading network from corr.1D file [" + par::afni1dFile + "]\n");
+			P.printLOG(Timestamp() + "Reading network from corr.1D file [" + par::afni1dFile + "]\n");
 			network = new InteractionNetwork(par::afni1dFile, CORR_1D_FILE, false, &P);
 		}
 		if(par::do_regain_post) {
-			P.printLOG("Reading network from reGAIN file [" + par::regainFile + "]\n");
+			P.printLOG(Timestamp() + "Reading network from reGAIN file [" + par::regainFile + "]\n");
 			network = new InteractionNetwork(par::regainFile, REGAIN_FILE, false, &P);
 		}
 		if(!network) {
 			error("Network construction for modularity analysis failed for the "
 							"given inbix options");
 		}
-		P.printLOG("--- Network loaded\n");
+		P.printLOG(Timestamp() + "--- Network loaded\n");
     network->PrintSummary();
     
 		// preprocessing transformations
 		if(par::modFisherTransform) {
-			P.printLOG("Transforming adjacency matrix connectivity using "
+			P.printLOG(Timestamp() + "Transforming adjacency matrix connectivity using "
 				"Fisher correlation transform\n");
 			network->ApplyFisherTransform();
-			P.printLOG("--- Fisher transformed\n");
+			P.printLOG(Timestamp() + "--- Fisher transformed\n");
 			network->PrintSummary();
 		}
 		
 		if(par::thresholdType == "hard") {
-			P.printLOG("Thresholding adjacency matrix connectivity to 0 if <= " +
+			P.printLOG(Timestamp() + "Thresholding adjacency matrix connectivity to 0 if <= " +
 							dbl2str(par::modConnectivityThreshold) + "\n");
 			network->SetConnectivityThresholding(par::thresholdValue);
 			network->SetConnectivityThreshold(par::thresholdValue);
 		} else {
 			if(par::thresholdType == "soft") {
-				P.printLOG("Transforming adjacency matrix connectivity using "
+				P.printLOG(Timestamp() + "Transforming adjacency matrix connectivity using "
 					"power with exponent (soft threshold): " + dbl2str(par::thresholdValue) + "\n");
 				network->ApplyPowerTransform(par::thresholdValue);
-				P.printLOG("--- Power transformed\n");
+				P.printLOG(Timestamp() + "--- Power transformed\n");
 				network->PrintSummary();
 			}
 		}
 		if(par::useWeighted) {
-			P.printLOG("Using weighted edges\n");
+			P.printLOG(Timestamp() + "Using weighted edges\n");
 			network->SetBinaryThresholding(false);
 		} else {
-			P.printLOG("Using binary edges thresholding to 1 if edge > threshold, else 0\n");
+			P.printLOG(Timestamp() + "Using binary edges thresholding to 1 if edge > threshold, else 0\n");
 			network->SetBinaryThresholding(true);
 		}
   	network->PrintSummary();
@@ -1632,21 +1637,21 @@ int main(int argc, char* argv[]) {
   // Refactored to incorporate the standalone versions of 
   // dcvar and epiqtl (iqtl). January 2018
 	if(par::do_dcvar) {
-		P.printLOG("\nPerforming dcVar analysis\n");
+		P.printLOG(Timestamp() + "\nPerforming dcVar analysis\n");
     SNP_INPUT_TYPE commandLineSrcType = SNP_SRC_PLINK;
     if(par::do_dcvar_chipseq) {
-    	P.printLOG("Using OMRF formatted filenames\n");
+    	P.printLOG(Timestamp() + "Using OMRF formatted filenames\n");
       commandLineSrcType = SNP_SRC_FILE;
     } else {
-    	P.printLOG("Using PLINK bed/ped, bim/map and fam files\n");
+    	P.printLOG(Timestamp() + "Using PLINK bed/ped, bim/map and fam files\n");
     }
     DcVar* dcvar = new DcVar(commandLineSrcType);
     if(dcvar) {
-  		P.printLOG("Initialization complete. Calling Run() method\n");
+  		P.printLOG(Timestamp() + "Initialization complete. Calling Run() method\n");
       dcvar->Run();
       delete dcvar;
     } else {
-      P.printLOG("ERORR: Unable to construct a DcVar object. Exiting\n");
+      P.printLOG(Timestamp() + "ERORR: Unable to construct a DcVar object. Exiting\n");
     }
     
     shutdown();
@@ -1656,7 +1661,7 @@ int main(int argc, char* argv[]) {
 	// dcGAIN analysis requested - bcw - 10/30/13
 	// moved algorithm to armaDcgain function - bcw - 3/12/15
 	if(par::do_differential_coexpression) {
-		P.printLOG("Performing dcGAIN analysis\n");
+		P.printLOG(Timestamp() + "Performing dcGAIN analysis\n");
     int numVars = P.nlistname.size();
     sp_mat results(numVars, numVars);
     mat pvals(numVars, numVars);
@@ -1680,7 +1685,7 @@ int main(int argc, char* argv[]) {
 	// dmGAIN analysis requested - bcw - 7/31/14
 	// from bam email modification of dcGAIN - 7/29/14
 	if(par::do_differential_modularity) {
-		P.printLOG("Performing dmGAIN analysis\n");
+		P.printLOG(Timestamp() + "Performing dmGAIN analysis\n");
     int numVars = P.nlistname.size();
     sp_mat results(numVars, numVars);
     mat pvals(numVars, numVars);
@@ -1697,7 +1702,7 @@ int main(int argc, char* argv[]) {
       }
     }
     double df = nAff + nUnaff - 2;
-		P.printLOG("Performing z-tests\n");
+		P.printLOG(Timestamp() + "Performing z-tests\n");
     for(int i=0; i < numVars; ++i) {
       // double t;
       // tTest(i, t);
@@ -1716,7 +1721,7 @@ int main(int argc, char* argv[]) {
     }
 
     // z-test for off-diagonal elements
-    P.printLOG("Computing coexpression for CASES and CONTROLS.\n");
+    P.printLOG(Timestamp() + "Computing coexpression for CASES and CONTROLS.\n");
     mat X;
     mat Y;
     if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
@@ -1740,7 +1745,7 @@ int main(int argc, char* argv[]) {
 		colvec k_2 = sum(mat(corMatrixY), 1);
 		double two_m_2 = sum(k_2);
 
-		P.printLOG("Performing Z-tests for interactions\n");
+		P.printLOG(Timestamp() + "Performing Z-tests for interactions\n");
     double n1 = nAff;
     double n2 = nUnaff;
     for(int i=0; i < numVars; ++i) {
@@ -1784,7 +1789,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {
-		P.printLOG("Performing reGAIN analysis\n");
+		P.printLOG(Timestamp() + "Performing reGAIN analysis\n");
 		P.SNP2Ind();
 		Regain* regain = new Regain(
 						par::regainCompress,
@@ -1843,7 +1848,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN post processing requested - bcw - 5/3/13
 	if(par::do_regain_post) {
-		P.printLOG("Performing reGAIN file post processing\n");
+		P.printLOG(Timestamp() + "Performing reGAIN file post processing\n");
 		P.SNP2Ind();
 		Regain* regain = new Regain(
 						par::regainCompress,
@@ -1857,11 +1862,11 @@ int main(int argc, char* argv[]) {
 			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
 		}
 		if(par::regainMatrixFormat == "upper") {
-			P.printLOG("Reformatting reGAIN matrix to upper triangular\n");
+			P.printLOG(Timestamp() + "Reformatting reGAIN matrix to upper triangular\n");
 			regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
 		} else {
 			if(par::regainMatrixFormat == "full") {
-				P.printLOG("Reformatting reGAIN matrix to full matrix\n");
+				P.printLOG(Timestamp() + "Reformatting reGAIN matrix to full matrix\n");
 				regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
 			} else {
 				error("reGAIN output format allowed options: {upper, full}");
@@ -1871,11 +1876,11 @@ int main(int argc, char* argv[]) {
 			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
 		} else {
 			if(par::regainMatrixTransform == "threshold") {
-				P.printLOG("Thresholding reGAIN matrix\n");
+				P.printLOG(Timestamp() + "Thresholding reGAIN matrix\n");
 				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
 			} else {
 				if(par::regainMatrixTransform == "abs") {
-					P.printLOG("Absolute value reGAIN matrix\n");
+					P.printLOG(Timestamp() + "Absolute value reGAIN matrix\n");
 					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
 				} else {
 					error("reGAIN output transform allowed options: {none, threshold, abs}");
@@ -1892,6 +1897,10 @@ int main(int argc, char* argv[]) {
 		shutdown();
 	}
 
+  /////////////////////////////////////////////////////////////////////////////
+	// ***** end of inbix additions *****
+  /////////////////////////////////////////////////////////////////////////////
+	
   // we're done if we have no SNPs at this point
   // (though we might have done some numeric file reading)
   if(P.nl_all == 0) {

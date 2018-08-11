@@ -67,6 +67,7 @@ AttributeRanker::AttributeRanker(ds) {
   PP->printLOG(Timestamp() + "ReliefF initialization from Plink parameters and Dataset pointer\n");
   PP = plinkPtr;
   analysisType = anaType;
+  /// samples
   m = dataset->NumInstances();
   PP->printLOG(Timestamp() + "Number of samples: m = " + int2str(m) + "\n");
   randomlySelect = true;
@@ -78,12 +79,27 @@ AttributeRanker::AttributeRanker(ds) {
     PP->printLOG(Timestamp() + "Sampling instances randomly\n");
     randomlySelect = true;
   }
-
+  /// sample weights
   weightByDistanceMethod = par::weightByDistanceMethod;
-
-  // default k, in options.h/.cpp, or from user option
-  k = par::k;
+  if((weightByDistanceMethod != "exponential")
+          && (weightByDistanceMethod != "equal")) {
+    error("ERROR: Invalid --weight-by-distance-method: " + weightByDistanceMethod);
+  }
+  weightByDistanceSigma = static_cast<double>(par::weightByDistanceSigma);
+  PP->printLOG(Timestamp() + "Weight by distance method: " + weightByDistanceMethod);
+  if(weightByDistanceMethod == "exponential") {
+    PP->printLOG(", using sigma = " + dbl2str(weightByDistanceSigma) + "\n");
+  } else {
+    PP->printLOG("\n");
+  }
+  /// default k, in options.h/.cpp, or from user option
   if(k) {
+    k = par::k;
+    if(k == 999999) {
+      // changed k default - bcw 20180810 - Marziyeh email
+      k = static_cast<uint>((m - 1.0) * 0.15);
+      PP->printLOG(Timestamp() + "NEW: Setting k = (m - 1) * 0.15 => " + int2str(k) + "\n");
+    }
     PP->printLOG(Timestamp() + "Number of nearest neighbors: k = " + int2str(k) + "\n");
     // k nearest neighbors and m randomly selected instances
     // spread differences and thus weight updates
@@ -93,10 +109,9 @@ AttributeRanker::AttributeRanker(ds) {
   } else {
     PP->printLOG(Timestamp() + "k nearest neighbors will be optimized\n");
   }
-
+  /// iterative attribute/variable removal?
   numTarget = dataset->NumVariables();
   PP->printLOG(Timestamp() + "Number of attributes: " + int2str(numTarget) + "\n");
-
   if(par::do_iterative_removal) {
     numTarget = par::relieffNumTarget;
     unsigned int numPredictors = dataset->NumVariables();
@@ -107,7 +122,6 @@ AttributeRanker::AttributeRanker(ds) {
             error("Target number of variables out of range: " + int2str(numTarget) + "\n");
       }
     }
-  
     if(par::relieffIterNumToRemove) {
       removePerIteration = par::relieffIterNumToRemove;
       PP->printLOG(Timestamp() + "Iteratively removing " + int2str(removePerIteration) + "\n");
@@ -128,7 +142,6 @@ AttributeRanker::AttributeRanker(ds) {
             "] not in valid range 1 < n < " + int2str(numPredictors));
     }
   }
-
   /// set the SNP metric function pointer based on command line params or defaults
   snpDiffMetricName = par::snpDiffMetricName;
   numDiffMetricName = par::numDiffMetricName;
@@ -172,28 +185,14 @@ AttributeRanker::AttributeRanker(ds) {
   }
   PP->printLOG(Timestamp() + "ReliefF SNP difference metric: " + snpDiffMetricName + "\n");
   PP->printLOG(Timestamp() + "ReliefF continuous difference metric: " + numDiffMetricName + "\n");
-  
-  weightByDistanceMethod = par::weightByDistanceMethod;
-  if((weightByDistanceMethod != "exponential")
-          && (weightByDistanceMethod != "equal")) {
-    error("ERROR: Invalid --weight-by-distance-method: " + weightByDistanceMethod);
-  }
-  weightByDistanceSigma = static_cast<double>(par::weightByDistanceSigma);
-  PP->printLOG(Timestamp() + "Weight by distance method: " + weightByDistanceMethod);
-  if(weightByDistanceMethod == "exponential") {
-    PP->printLOG(", using sigma = " + dbl2str(weightByDistanceSigma) + "\n");
-  } else {
-    PP->printLOG("\n");
-  }
-
-	PP->printLOG(Timestamp() + "ReliefF has " + int2str(omp_get_num_procs()) + " threads\n");
-
+  /// concatenating attribute and numeric names => score names
   vector<string> atrNames = dataset->GetAttributeNames();
   vector<string> numNames = dataset->GetNumericsNames();
   scoreNames.resize(atrNames.size() + numNames.size());
   copy(atrNames.begin(), atrNames.end(), scoreNames.begin());
   copy(numNames.begin(), numNames.end(), scoreNames.begin() + atrNames.size());
   
+	PP->printLOG(Timestamp() + "ReliefF has " + int2str(omp_get_num_procs()) + " threads\n");
   PP->printLOG(Timestamp() + "ReliefF initialization done\n");
   PP->printLOG(Timestamp() + "---------------------------------------------\n");
 }
@@ -202,7 +201,6 @@ ReliefF::~ReliefF() {
 }
 
 bool ReliefF::ComputeAttributeScores() {
-  PP->printLOG(Timestamp() + "---------------------------------------\n");
   PP->printLOG(Timestamp() + "Relief-F ComputeAttributeScores() START\n");
   
   // changed from matrix to map for ID matching - November 2011
@@ -211,6 +209,14 @@ bool ReliefF::ComputeAttributeScores() {
   /// algorithm line 1
 	W.clear();
   W.resize(dataset->NumVariables(), 0.0);
+  
+  double dblM = static_cast<double>(m);
+  vector<uint> attributeIndices = dataset->MaskGetAttributeIndices(DISCRETE_TYPE);
+  vector<string> attributeNames = dataset->MaskGetAttributeNames(DISCRETE_TYPE);
+  vector<uint> numericIndices = dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
+  vector<string> numericNames = dataset->MaskGetAttributeNames(NUMERIC_TYPE);
+  uint numAttributes = attributeIndices.size();
+  uint numNumerics = numericIndices.size();
 
   double one_over_m_times_k = 1.0 / (((double) m) * ((double) k));
   PP->printLOG(Timestamp() + "Averaging factor 1 / (m * k): "  + 
@@ -220,9 +226,6 @@ bool ReliefF::ComputeAttributeScores() {
   DatasetInstance* R_i = 0;
   // iterate over all instance IDs in the instance mask
   vector<string> instanceIds = dataset->GetInstanceIds();
-  if(instanceIds.size() != (uint) m) {
-    error("Instance IDs mask size is not equal to Relief-F sampling parameter m\n");
-  }
   /// algorithm line 2
   for(uint i=0; i < (uint) m; i++) {
     // algorithm line 3
@@ -252,22 +255,22 @@ bool ReliefF::ComputeAttributeScores() {
             "R_i->GetNNearestInstances Cannot get " + int2str(k) + " neighbors\n");
     }
 
-//    if(par::algorithm_verbose) {
-//      cout << "Instance class: " << R_i->GetClass() << ", hits: ";
-//      for(unsigned int ii = 0; ii < hits.size(); ++ii) {
-//        cout << hits[ii] << " ";
-//      }
-//      cout << endl << "Misses:" << endl;
-//      map<ClassLevel, vector<unsigned int> >::const_iterator iit;
-//      for(iit = misses.begin(); iit != misses.end(); ++iit) {
-//        cout << "Class: " << iit->first << ", misses: ";
-//        vector<unsigned int> ids = iit->second;
-//        for(unsigned int jj = 0; jj < ids.size(); ++jj) {
-//          cout << ids[jj] << " ";
-//        }
-//        cout << endl;
-//      }
-//    }
+    if(par::algorithm_verbose) {
+      cout << "Instance class: " << R_i->GetClass() << ", hits: ";
+      for(unsigned int ii = 0; ii < hits.size(); ++ii) {
+        cout << hits[ii] << " ";
+      }
+      cout << endl << "Misses:" << endl;
+      map<ClassLevel, vector<unsigned int> >::const_iterator iit;
+      for(iit = misses.begin(); iit != misses.end(); ++iit) {
+        cout << "Class: " << iit->first << ", misses: ";
+        vector<unsigned int> ids = iit->second;
+        for(unsigned int jj = 0; jj < ids.size(); ++jj) {
+          cout << ids[jj] << " ";
+        }
+        cout << endl;
+      }
+    }
 
     // check algorithm preconditions
     if(hits.size() < 1) {
@@ -294,15 +297,12 @@ bool ReliefF::ComputeAttributeScores() {
     // UPDATE WEIGHTS FOR ATTRIBUTE 'A' BASED ON THIS AND NEIGHBORING INSTANCES
     // update weights/relevance scores for each attribute averaged
     // across k nearest neighbors and m (possibly randomly) selected instances
-    unsigned int A = 0;
-    unsigned int scoresIdx = 0;
+    uint scoresIdx = 0;
     if(dataset->HasGenotypes()) {
-      vector<unsigned int> attributeIndicies =
-              dataset->MaskGetAttributeIndices(DISCRETE_TYPE);
       /// algorithm line 7
-      for(unsigned int attrIdx = 0; attrIdx < attributeIndicies.size();
-              ++attrIdx) {
-        A = attributeIndicies[attrIdx];
+      for(unsigned int attrIdx = 0; attrIdx < numAttributes; ++attrIdx) {
+        unsigned int A = attributeIndices[attrIdx];
+        string attributeName = attributeNames[A];
         double hitSum = 0.0, missSum = 0.0;
         /// algorithm line 8
         for(unsigned int j = 0; j < k; j++) {
@@ -334,15 +334,13 @@ bool ReliefF::ComputeAttributeScores() {
 
     // loop here for numeric attributes if they exist - 6/19/11
     if(dataset->HasNumerics()) {
-      vector<unsigned int> numericIndices =
-              dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
-      for(unsigned int numIdx = 0; numIdx < numericIndices.size();
-              ++numIdx) {
-        A = numericIndices[numIdx];
+      for(unsigned int numIdx = 0; numIdx < numNumerics; ++numIdx) {
+        uint N = numericIndices[numIdx];
+        string numericName = numericNames[N];
         double hitSum = 0.0, missSum = 0.0;
         for(unsigned int j = 0; j < k; j++) {
           DatasetInstance* H_j = dataset->GetInstance(hits[j]);
-          hitSum += (numDiffFuncPtr(A, R_i, H_j) * one_over_m_times_k);
+          hitSum += (numDiffFuncPtr(N, R_i, H_j) * one_over_m_times_k);
         }
 
         map<ClassLevel, vector<unsigned int> >::const_iterator mit;
@@ -355,7 +353,7 @@ bool ReliefF::ComputeAttributeScores() {
           double tempSum = 0.0;
           for(unsigned int j = 0; j < k; j++) {
             DatasetInstance* M_j = dataset->GetInstance(missIds[j]);
-            tempSum += (numDiffFuncPtr(A, R_i, M_j) * one_over_m_times_k);
+            tempSum += (numDiffFuncPtr(N, R_i, M_j) * one_over_m_times_k);
           } // nearest neighbors
           missSum += (adjustmentFactor * tempSum);
         }
@@ -363,15 +361,28 @@ bool ReliefF::ComputeAttributeScores() {
         ++scoresIdx;
       } // all numerics
     } // has numerics
-
     // happy lights
     if(i && ((i % 100) == 0)) {
       PP->printLOG(Timestamp() + int2str(i) + "/" + int2str(m) + "\n");
     }
-
-  } // number to randomly select -or all instances
+  } // end for number to randomly select -or all instances 'm'
   PP->printLOG(Timestamp() + int2str(m) + "/" + int2str(m) + " done\n");
 
+  // save final scores after all 'm' individual updates to 'W'
+  PP->printLOG(Timestamp() + "Saving final scores\n");
+  scores.clear();
+  uint scoresIdx = 0;
+  for(unsigned int attrIdx = 0; attrIdx < numAttributes; ++attrIdx) {
+    unsigned int A = attributeIndices[attrIdx];
+    scores.push_back(make_pair(W[scoresIdx], attributeNames[A]));
+    ++scoresIdx;
+  }
+  for(unsigned int numIdx = 0; numIdx < numNumerics; ++numIdx) {
+    uint N = numericIndices[numIdx];
+    scores.push_back(make_pair(W[scoresIdx], numericNames[N]));
+    ++scoresIdx;
+  }
+  
   // normalize scores if flag set
   if(normalizeScores) {
     PP->printLOG(Timestamp() + "Normalizing scores\n");
@@ -633,7 +644,8 @@ bool ReliefF::ComputeGRM() {
         distanceMatrix[j][k] = (1- A_jk);
       } else {
         A_jk = sum / N;
-        distanceMatrix[j][k] = distanceMatrix[k][j] = (1 - A_jk);
+        // added D=sqrt(2*(1-corr)) - bcw - 20180810 - Marziyeh email
+        distanceMatrix[j][k] = distanceMatrix[k][j] = sqrt(2 * (1 - A_jk));
       }
     }
     if(j && (j % 100 == 0)) {
@@ -643,19 +655,21 @@ bool ReliefF::ComputeGRM() {
   PP->printLOG(Timestamp() + int2str(numInstances) + "/" + int2str(numInstances) + " done\n");
 
   // write GRM matrix to file with output prefix
-  PP->printLOG(Timestamp() + "Writing GRM to [ " + par::output_file_name + ".grm.tab ]\n");
-  ofstream outFile(par::output_file_name + ".grm.tab");
-  for(int i=0; i < numInstances; ++i) {
-    for(int j=0; j < numInstances; ++j) {
-      if(j) {
-        outFile << "\t" << distanceMatrix[i][j];  
-      } else {
-        outFile << distanceMatrix[i][j];  
+  if(par::do_write_grm) {
+    PP->printLOG(Timestamp() + "Writing GRM to [ " + par::output_file_name + ".grm.tab ]\n");
+    ofstream outFile(par::output_file_name + ".grm.tab");
+    for(int i=0; i < numInstances; ++i) {
+      for(int j=0; j < numInstances; ++j) {
+        if(j) {
+          outFile << "\t" << distanceMatrix[i][j];  
+        } else {
+          outFile << distanceMatrix[i][j];  
+        }
       }
+      outFile << endl;
     }
-    outFile << endl;
+    outFile.close();
   }
-  outFile.close();
   
   return true;
 }

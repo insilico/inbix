@@ -31,8 +31,6 @@ RReliefF::~RReliefF() {
 }
 
 bool RReliefF::ComputeAttributeScores() {
-
-  PP->printLOG(Timestamp() + "---------------------------------------\n");
   PP->printLOG(Timestamp() + "Regression Relief-F ComputeAttributeScores() START\n");
 	// pre-compute all instance-to-instance distances and get nearest neighbors
 	PreComputeDistances();
@@ -72,7 +70,7 @@ bool RReliefF::ComputeAttributeScores() {
 	PP->printLOG(Timestamp() + "Running RRelief-F algorithm:\n");
 	vector<string> instanceIds = dataset->GetInstanceIds();
   #pragma omp parallel for
-	for (int i = 0; i < (int) m; i++) {
+	for (uint i = 0; i < (uint) m; i++) {
 
     DatasetInstance* R_i = NULL;
 		if (randomlySelect) {
@@ -118,11 +116,9 @@ bool RReliefF::ComputeAttributeScores() {
 			uint scoresIndex = 0;
       // ---------------------
 			// attributes
-			vector<uint> attributeIndicies =
-					dataset->MaskGetAttributeIndices(DISCRETE_TYPE);
-			for (uint attrIdx = 0; attrIdx < attributeIndicies.size();
+			for (uint attrIdx = 0; attrIdx < numAttributes;
 					++attrIdx) {
-				uint A = attributeIndicies[attrIdx];
+				uint A = attributeIndices[attrIdx];
 				double attrScore = snpDiffFuncPtr(A, R_i, I_j) * d_ij;
 #pragma omp critical
         {
@@ -144,9 +140,7 @@ bool RReliefF::ComputeAttributeScores() {
 			}
       // ---------------------
 			// numerics
-			vector<uint> numericIndices = 
-        dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
-			for (uint numIdx = 0; numIdx < numNumerics; ++numIdx) {
+			for (uint numIdx = 0; numIdx < numericIndices.size(); ++numIdx) {
 				uint N = numericIndices[numIdx];
 				double numScore = numDiffFuncPtr(N, R_i, I_j) * d_ij;
 #pragma omp critical
@@ -175,20 +169,23 @@ bool RReliefF::ComputeAttributeScores() {
 	PP->printLOG(Timestamp() + int2str(m) + "/" + int2str(m) + " done\n");
 
 	PP->printLOG(Timestamp() + "Computing final scores\n");
+  uint scoresIdx = 0;
   #pragma omp parralel for
   for (uint attIdx = 0; attIdx < numAttributes; ++attIdx) {
     uint A = attributeIndices[attIdx];
     string attributeName = attributeNames[A];
 #pragma omp critical
     {
-      double tempW = (ndcda[A] / ndc) - ((nda[A] - ndcda[A]) / (dblM - ndc));
+      double tempW = (ndcda[scoresIdx] / ndc) - 
+        ((nda[scoresIdx] - ndcda[scoresIdx]) / (dblM - ndc));
       if(std::isnan(tempW)) {
         error("WARNING: detected [NaN] in weight calculation, using zero instead\n");
-        W[A] = 0.0;
+        W[scoresIdx] = 0.0;
       } else {
-        W[A] = tempW;
+        W[scoresIdx] = tempW;
       }
-      scores.push_back(make_pair(W[A], attributeName));
+      scores.push_back(make_pair(W[scoresIdx], attributeName));
+      ++scoresIdx;
       // happy lights
       if (attIdx && ((attIdx % 100) == 0)) {
         PP->printLOG(Timestamp() + int2str(attIdx) + "/" + int2str(numAttributes)  + "\n");
@@ -203,17 +200,16 @@ bool RReliefF::ComputeAttributeScores() {
 #pragma omp critical
     {
       double tempW = 
-        (ndcda[numAttributes + N] / ndc) - 
-        ((nda[numAttributes + N] - 
-        ndcda[numAttributes + N]) 
-        / (dblM - ndc));
+        (ndcda[scoresIdx] / ndc) - ((nda[scoresIdx] - ndcda[scoresIdx]) / 
+          (dblM - ndc));
       if(std::isnan(tempW)) {
         error("WARNING: detected [NaN] in weight calculation, using zero instead\n");
-        W[numAttributes + N] = 0.0;
+        W[scoresIdx] = 0.0;
       } else {
-        W[numAttributes + N] = tempW;
+        W[scoresIdx] = tempW;
       }
-      scores.push_back(make_pair(W[numAttributes + N], numericName));
+      scores.push_back(make_pair(W[scoresIdx], numericName));
+      ++scoresIdx;
       // happy lights
       if (numIdx && ((numIdx % 100) == 0)) {
         PP->printLOG(Timestamp() + int2str(numIdx) + "/" + int2str(numNumerics)  + "\n");
@@ -221,6 +217,12 @@ bool RReliefF::ComputeAttributeScores() {
     }
   }
   PP->printLOG(Timestamp() + int2str(numNumerics) + "/" + int2str(numNumerics)  + "\n");
+
+  // normalize scores if flag set
+  if(normalizeScores) {
+    PP->printLOG(Timestamp() + "Normalizing scores\n");
+    NormalizeScores();
+  }
 
   PP->printLOG(Timestamp() + "Relief-F ComputeAttributeScores() END\n");
   

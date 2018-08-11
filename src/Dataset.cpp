@@ -2894,13 +2894,14 @@ bool Dataset::SetDistanceMetrics(string newSnpDiffMetricName,
 	}
 	numDiffMetricName = newNumMetricName;
 
-	cout << Timestamp() << "New SNP distance diff metric: "
-			<< snpDiffMetricName << " " << (void*) snpDiffFuncPtr << endl;
-	cout << Timestamp() << "New SNP distance nearest neighbor metric: "
-			<< snpNearestNeighborMetricName << " " 
-          << (void *) snpNearestNeighborFuncPtr << endl;
-	cout << Timestamp() << "New continuous distance metric: " 
-      << numDiffMetricName << " " << (void *) numDiffFuncPtr << endl;
+  // removed printing of metric function pointer addresses since it is 
+  // too confusing and only interesting to geeks like me - bcw - 20180810
+	cout << Timestamp() << "Set SNP distance diff metric to: "
+			<< snpDiffMetricName << endl;
+	cout << Timestamp() << "Set SNP distance nearest neighbor metric to: "
+			<< snpNearestNeighborMetricName << endl;
+	cout << Timestamp() << "Set continuous distance metric to: " 
+      << numDiffMetricName << endl;
 
 	return true;
 }

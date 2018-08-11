@@ -3149,6 +3149,9 @@ void setOptions(CArgs & a) {
     par::do_kopt = true;
     par::do_write_each_k_scores = true;
   }
+  if(a.find("--save-grm-matrix")) {
+    par::do_write_grm = true;
+  }
   if(a.find("--number-random-samples")) {
 		par::m = a.value_int("--number-random-samples");
   }
@@ -3164,10 +3167,6 @@ void setOptions(CArgs & a) {
   if(a.find("--gain-matrix")) {
     par::gainMatrixFilename = a.value("--gain-matrix");
   }
-  if(a.find("--dump-titv-file")) {
-    par::titvFilename = a.value("--dump-titv-file");
-  }
-  
   // added for recursive indirect path modularity support - bcw - 5/31/16
   if(a.find("--ripm")) {
     par::do_ripm = true;
@@ -4530,17 +4529,18 @@ void setOptions(CArgs & a) {
             << "      --snp-metric-nn           Metric for determining the difference between subjects (gm|am|nca|titv|km|grm)\n"
             << "      --snp-metric-diff         Metric for determining the diff(erence) between SNPs (gm|am|nca|titv|km)\n"
             << "      --numeric-metric          Metric for determining the difference between numeric attributes (manhattan|euclidean)\n"
-            << "      --k-nearest-neighbors     Set k nearest neighbors (0=optimize k)\n"
+            << "      --k-nearest-neighbors     Set k nearest neighbors (default: k=(m-1)*0.15), 0=optimize k\n"
             << "      --kopt-begin              Optimize k starting with kopt-begin\n"
             << "      --kopt-end                Optimize k ending with kopt-end\n"
             << "      --kopt-step               optimize k incrementing with kopt-step\n"
             << "      --write-best-k            optimize k, write best k's\n"
             << "      --write-each-k-scores     optimize k, write best scores for each k\n"
-            << "      --number-random-samples   number of random samples (0=all|1 <= n <= number of samples)\n"
+            << "      --number-random-samples   number of random samples 'm' (0=all|1 <= n <= number of samples)\n"
             << "      --weight-by-distance-method (equal|one_over_k|exponential) \n"
             << "      --weight-by-distance-sigma (default: 2) \n"
             << "      --distance-matrix <file>  Create a distance matrix for the loaded samples and exit\n"
             << "      --gain-matrix             Create a GAIN matrix for the loaded samples and exit\n"
+            << "      --save-grm-matrix         Save the GRM to file <out-prefix>.grm.tab"
             << "      --dump-titv-file          File for dumping SNP transition/transversion information\n"
             << "\n"
             << "      --randomforest            Perform a random forest classification/regression\n"

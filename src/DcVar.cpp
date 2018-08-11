@@ -807,10 +807,11 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
      dbl2str(pThreshold) + " ]\n");
   if(par::verbose) PP->printLOG("\tEntering OpenMP parallel section for [ ");
   if(par::verbose) PP->printLOG(int2str(numCombs) + " ] dcvar combination\n");
-  uint i=0, j=0;
-#pragma omp parallel for schedule(dynamic, 1) private(i, j)
-  for(i=0; i < numGenes; ++i) {
-    for(j=i + 1; j < numGenes; ++j) {
+  zVals.set_size(numGenes, numGenes);
+  pVals.ones(numGenes, numGenes);
+#pragma omp parallel for schedule(dynamic, 1)
+  for(uint i=0; i < numGenes; ++i) {
+    for(uint j=i + 1; j < numGenes; ++j) {
       // correlation between this interaction pair (i, j) in cases and controls
       vec caseVarVals1 = cases.col(i);
       vec caseVarVals2 = cases.col(j);
@@ -839,6 +840,8 @@ bool DcVar::ComputeDifferentialCorrelationZvals(string snp,
           if(p > maxP) maxP = p;
           if(p <= pThreshold) {
             ++goodPvalCount;
+            zVals(i, j) = Z_ij;
+            pVals(i, j) = p;
             string outString = snp +  "\t"  +
                     geneExprNames[i] + "\t"  +
                     geneExprNames[j] + "\t"  +
@@ -875,6 +878,8 @@ bool DcVar::ComputeDifferentialCorrelationZ(string snp,
   double minP = 1.0;
   double maxP = 0.0;
   uint goodPvalCount = 0;
+  zVals.set_size(numVars, numVars);
+  pVals.ones(numVars, numVars);
 #pragma omp parallel for schedule(dynamic, 1)
   for(uint i=0; i < numVars; ++i) {
     for(uint j=i + 1; j < numVars; ++j) {
@@ -914,12 +919,19 @@ bool DcVar::ComputeDifferentialCorrelationZ(string snp,
         ++goodPvalCount;
 #pragma omp critical 
 {
-      cout << snp << "\t"
+        zVals(i, j) = Z_ij;
+        pVals(i, j) = p;
+        if(p < minP) minP = p;
+        if(p > maxP) maxP = p;
+
+        if(par::verbose) {
+          cout << snp << "\t"
               << geneExprNames[i] << "\t" 
               << geneExprNames[j] << "\t" 
               << Z_ij << "\t"
               << p 
               << endl;
+        }
 }
       }
     }
@@ -952,10 +964,9 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
                                 int2str(numCombs) + " ] dcvar combinations\n");
   zVals.set_size(numGenes, numGenes);
   pVals.ones(numGenes, numGenes);
-  uint i, j;
-#pragma omp parallel for private(i, j) collapse(2)
-  for(i=0; i < numGenes; ++i) {
-    for(j=0; j < numGenes; ++j) {
+#pragma omp parallel for schedule(dynamic, 1)
+  for(uint i=0; i < numGenes; ++i) {
+    for(uint j=0; j < numGenes; ++j) {
       if(j <= i) continue;
       // correlation between this interaction pair (i, j) in cases and controls
       vec caseVarVals1 = cases.col(i);
@@ -998,6 +1009,8 @@ bool DcVar::ComputeDifferentialCorrelationZsparse(string snp,
 //            zout.writeLine(outString);
             zVals(i, j) = Z_ij;
             pVals(i, j) = p;
+            if(p < minP) minP = p;
+            if(p > maxP) maxP = p;
           } else {
             ++badPvalCount;
           } // end else good p

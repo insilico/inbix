@@ -218,7 +218,9 @@ double diffTITV(unsigned int attributeIndex,
   // transition/transversion adjustment
   if(dsi1->GetDatasetPtr()->GetAttributeMutationType(attributeIndex) ==
       TRANSITION_MUTATION) {
-    distance *= 0.5;
+    // updated 20180810 - bcw - Marziyeh email
+    // distance *= 0.5;
+    distance *= 0.75;
   }
   return distance;
 }

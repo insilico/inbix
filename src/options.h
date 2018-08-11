@@ -434,6 +434,7 @@ public:
   static bool do_normalize_scores;
   static bool do_iterative_removal;
   static bool do_kopt;
+  static bool do_write_grm;
 	static string distanceMatrixFilename;
 	static string gainMatrixFilename;
 	static string titvFilename;
