@@ -170,7 +170,7 @@ bool RReliefF::ComputeAttributeScores() {
 
 	PP->printLOG(Timestamp() + "Computing final scores\n");
   uint scoresIdx = 0;
-  #pragma omp parralel for
+  #pragma omp parallel for
   for (uint attIdx = 0; attIdx < numAttributes; ++attIdx) {
     uint A = attributeIndices[attIdx];
     string attributeName = attributeNames[A];
@@ -193,7 +193,7 @@ bool RReliefF::ComputeAttributeScores() {
     }
   }
   PP->printLOG(Timestamp() + int2str(numAttributes) + "/" + int2str(numAttributes)  + "\n");
-  #pragma omp parralel for
+  #pragma omp parallel for
   for (uint numIdx = 0; numIdx < numNumerics; ++numIdx) {
     uint N = numericIndices[numIdx];
     string numericName = numericNames[N];

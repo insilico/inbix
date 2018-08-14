@@ -604,10 +604,6 @@ bool EpistasisEQtl::SetLocalCis(bool localCisFlag) {
 
 
 bool EpistasisEQtl::SetTFRadius(uint newRadius) {
-  if(newRadius < 0) {
-    cerr << "Error setting TF radius to: " << newRadius << endl;
-    return false;
-  }
   // newRadius is in kilobases, but need to store a bases
   tfRadius = newRadius * 1000;
   return true;
