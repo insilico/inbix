@@ -4394,12 +4394,6 @@ void setOptions(CArgs & a) {
   //  Help -- display all options
   if(a.find("--help") || a.find("-h")) {
 
-    cout << "\n"
-            << "Please visit the PLINK website for a complete list of options\n"
-            << "\n"
-            << "A few common options are listed here:\n"
-            << "\n";
-
     cout << "inbix --file {fileroot}            Specify .ped and .map files \n"
             << "      --bfile {fileroot}        Specify .bed, .fam and .map \n"
             << "      --numeric-file {numeric file}  Specify numeric attribute file\n"
@@ -4613,7 +4607,9 @@ void setOptions(CArgs & a) {
             << "      --algorithm-verbose       Verbose output for algorithms\n"
             << "\n";
 
-    cout << "\nPlease visit the PLINK and Insilico websites for a complete list of options\n\n";
+    cout << "Please visit inbix website for more information:\n\n";
+    cout << "http://insilico.utulsa.edu/index.php/inbix/ or\n";
+    cout << "https://github.com/insilico/inbix\n";
 
     shutdown();
   }

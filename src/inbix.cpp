@@ -43,6 +43,8 @@
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include "Insilico.h"
+#include "StringUtils.h"
 #include "Regain.h"
 #include "InteractionNetwork.h"
 #include "CentralityRanker.h"
@@ -118,13 +120,12 @@ int main(int argc, char* argv[]) {
 	// Start logging, title
 	LOG.open(string(par::output_file_name + ".log").c_str());
 
-	P.printLOG("\n"
+  P.printLOG("\n"
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
 					"|----------------------------------------------------------|\n"
 					"|  (C) 2018 Bill White, GNU General Public License, v2     |\n"
-					"@----------------------------------------------------------@\n"
-					"\n");
+					"@----------------------------------------------------------@\n\n");
   
 	//////////////////////////
 	// Fully parse command line
