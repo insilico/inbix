@@ -128,7 +128,7 @@ private:
   std::vector<uint> caseIdxCol;
   std::vector<uint> ctrlIdxCol;
   // OUTPUTS
-  arma::sp_mat zVals;
+  arma::mat zVals;
   arma::mat pVals;
   // added from EpistasisEQtl (iQTL) - bcw - 1/3/18
   bool CheckInputs();

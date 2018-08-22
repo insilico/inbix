@@ -248,25 +248,19 @@ bool DcVar::RunPlink() {
       FilterPvalues(numFiltered);
       if(par::verbose) {
         PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
-        PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+        // PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
       }
     } else {
       if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
     // ------------------------------------------------------------------------
     // write results, if there are any to write
-    if(zVals.n_nonzero) {
-      PP->printLOG("[ " + int2str(zVals.n_nonzero) + 
-                   " ] values pass filtering (if used)\n");
-      string resultsFilename = 
-              par::output_file_name + "." + 
-              par::dcvar_pfilter_type + "." +
-              variantName + 
-              ".pass.tab";
-      WriteResults(resultsFilename, variantName);
-    } else {
-      PP->printLOG("WARNING: nothing to write for [ " + variantName + " ]\n");
-    }
+    string resultsFilename = 
+            par::output_file_name + "." + 
+            par::dcvar_pfilter_type + "." +
+            variantName + 
+            ".pass.tab";
+    WriteResults(resultsFilename, variantName);
     // write in case the job fails in this loop; resume with command line flag
     WriteCheckpoint(snpIdx, variantName);
   } // END all variants loop
@@ -363,24 +357,19 @@ bool DcVar::RunOMRF() {
       FilterPvalues(numFiltered);
       if(par::verbose) {
         PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
-        PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+        // PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
       }
     } else {
       if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
     }
     // ------------------------------------------------------------------------
     // write results, if there are any to write
-    if(zVals.n_nonzero) {
-      string resultsFilename = 
-              par::output_file_name + "." + 
-              par::dcvar_pfilter_type + "." +
-              snpName + 
-              ".pass.tab";
-      WriteResults(resultsFilename, snpName);
-    } else {
-      PP->printLOG("\tWARNING: nothing to write for [ " + snpName + " ]\n");
-    }
-
+    string resultsFilename = 
+            par::output_file_name + "." + 
+            par::dcvar_pfilter_type + "." +
+            snpName + 
+            ".pass.tab";
+    WriteResults(resultsFilename, snpName);
     // write in case the job fails in this loop; resume with command line flag
     WriteCheckpoint(snpIdx, snpName);
   } // end for all SNPs
@@ -505,23 +494,19 @@ bool DcVar::RunOMRFChipSeq() {
         FilterPvalues(numFiltered);
         if(par::verbose) {
           PP->printLOG("\t[ " + int2str(numFiltered) + " ] values filtered\n");
-          PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
+          //PP->printLOG("\t[ " + int2str(zVals.n_nonzero) + " ] values pass filtering\n");
         }
       } else {
         if(par::verbose) PP->printLOG("\tNo p-value filtering requested so skipping filter\n");
       }
       // ------------------------------------------------------------------------
       // write results, if there are any to write
-      if(zVals.n_nonzero) {
-        string resultsFilename = 
-                par::output_file_name + "." + 
-                par::dcvar_pfilter_type + "." +
-                foundSnpName + 
-                ".pass.tab";
-        WriteResults(resultsFilename, foundSnpName);
-      } else {
-        PP->printLOG("\tWARNING: nothing to write for [ " + foundSnpName + " ]\n");
-      }
+      string resultsFilename = 
+              par::output_file_name + "." + 
+              par::dcvar_pfilter_type + "." +
+              foundSnpName + 
+              ".pass.tab";
+      WriteResults(resultsFilename, foundSnpName);
       // write in case the job fails in this loop; resume with command line flag
       WriteCheckpoint(chipseqIdx, foundSnpName);
     } // end for all SNPs found within radius

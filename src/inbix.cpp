@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 					"@----------------------------------------------------------@\n"
 					"|        inbix        |     v" + PVERSION + PREL + "     |   " + PDATE + "     |\n"
 					"|----------------------------------------------------------|\n"
-					"|  (C) 2018 Bill White, GNU General Public License, v2     |\n"
+					"|  (C) 2018 Bill White, GNU General Public License, v3     |\n"
 					"@----------------------------------------------------------@\n\n");
   
 	//////////////////////////
@@ -1068,7 +1068,7 @@ int main(int argc, char* argv[]) {
 			}
 			
 			if(par::rankerPermMethod == "dcgain") {
-				sp_mat dcgain(M, M);
+				mat dcgain(M, M);
         mat pvals(M, M);
         if(!armaDcgain(dcgain, pvals)) {
           error("armaDcgain failed");
@@ -1662,22 +1662,29 @@ int main(int argc, char* argv[]) {
 	// dcGAIN analysis requested - bcw - 10/30/13
 	// moved algorithm to armaDcgain function - bcw - 3/12/15
 	if(par::do_differential_coexpression) {
-		P.printLOG(Timestamp() + "Performing dcGAIN analysis\n");
+		P.printLOG("\n" + Timestamp() + "Performing dcGAIN analysis\n");
     int numVars = P.nlistname.size();
-    sp_mat results(numVars, numVars);
-    mat pvals(numVars, numVars);
-    armaDcgain(results, pvals);
+    mat zvals, pvals;
+    zvals.zeros(numVars, numVars);
+    pvals.ones(numVars, numVars);\
+    armaDcgain(zvals, pvals);
     // write results
     if(par::do_dcgain_abs) {
-      for(int i=0; i < results.n_rows; ++i) {
-        for(int j=0; j < results.n_cols; ++j) {
-          results(i, j) = abs(results(i, j));
+  		P.printLOG(Timestamp() + "Applying abs() transformation\n");
+      // iterate through the sparse matrix non-zero values
+//      for(sp_mat::iterator i = results.begin(); 
+//          i != results.end(); ++i) {
+//        *i = abs(*i);
+//      }
+      for(int i=0; i < zvals.n_rows; ++i) {
+        for(int j=0; j < zvals.n_cols; ++j) {
+          zvals(i, j) = abs(zvals(i, j));
         }
       }
     }
-    string dcgainFilename = par::output_file_name + ".dcgain";
-    armaWriteSparseMatrix(results, dcgainFilename, P.nlistname);
-    string dcgainPvalsFilename = par::output_file_name + ".pvals.dcgain";
+    string dcgainFilename = par::output_file_name + ".dcgain.tab";
+    armaWriteMatrix(zvals, dcgainFilename, P.nlistname);
+    string dcgainPvalsFilename = par::output_file_name + ".pvals.dcgain.tab";
     armaWriteMatrix(pvals, dcgainPvalsFilename, P.nlistname);
     shutdown();
   }

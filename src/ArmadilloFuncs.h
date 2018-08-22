@@ -30,6 +30,8 @@ bool armaWriteSparseMatrix(arma::sp_mat& m, std::string mFilename,
 bool armaGetPlinkNumericToMatrixAll(arma::mat& X);
 bool armaGetPlinkNumericToMatrixCaseControl(arma::mat& X, arma::mat& Y);
 
-bool armaDcgain(arma::sp_mat& zvals, arma::mat& pvals, bool computeDiagonal=false);
+// sparse matrix is experimental!
+bool armaDcgain(arma::mat& zvals, arma::mat& pvals, bool computeDiagonal=false);
+// bool armaDcgainSparse(arma::sp_mat& zvals, arma::mat& pvals, bool computeDiagonal=false);
 
 #endif	/* ARMADILLOFUNCS_H */

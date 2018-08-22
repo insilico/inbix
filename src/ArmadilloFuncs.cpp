@@ -24,7 +24,7 @@ using namespace arma;
 using namespace std;
 
 // differential coexpression
-bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
+bool armaDcgain(mat& zvals, mat& pvals, bool computeDiagonal) {
   // only works on 'numeric' data types added to PLINK by inbix
 //  if(PP->nl_all) {
 //    PP->printLOG("ERROR: armaDcgain requires 'numeric' attributes only\n");
@@ -42,25 +42,23 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
     }
   }
   if((nAff == 0) || (nUnaff == 0)) {
-    PP->printLOG("ERROR: Single phenotype detected");
-    return false;
+    error("ERROR: Single phenotype detected");
   }
   if((nAff < 4) || (nUnaff < 4)) {
-    PP->printLOG("ERROR: zTest requires at least 4 individuals in a each phenotype group");
-    return false;
+    error("zTest requires at least 4 individuals in a each phenotype group");
   }
   double df = nAff + nUnaff - 2;
-  PP->printLOG("Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
-  PP->printLOG("WARNING: all main effect (matrix diagonal) p-values are set to 1.\n");
+  PP->printLOG(Timestamp() + "Performing z-tests with " + dbl2str(df) + " degrees of freedom\n");
+  PP->printLOG(Timestamp() + "NOTE: all main effect (matrix diagonal) p-values are set to 1.\n");
   uint numVars = PP->nlistname.size();
   bool readyToRun = true;
   uint infinityCount = 0;
   uint nanCount = 0;
   uint totalTests = 0;
   if(computeDiagonal) {
-    PP->printLOG("Performing Z-tests for zVals and pVals matrix diagonals\n");
+    PP->printLOG(Timestamp() + "Performing Z-tests for zVals and pVals matrix diagonals\n");
   } else {
-    PP->printLOG("Setting matrix diagonals zVals to 0.0 and pVals to 1.0\n");
+    PP->printLOG(Timestamp() + "Setting matrix diagonals zVals to 0.0 and pVals to 1.0\n");
   }
   // main effects loop
   #pragma omp parallel for
@@ -77,39 +75,39 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
         error("Z-test failed for variable index [ " + int2str(i) + " ]");
       }
     }
+    double newZ = 0.0;
+    double newP = 1.0;
+    if(std::isnan(z)) {
+      ++nanCount;
+    } else {
+      if(std::isinf(z)) {
+        ++infinityCount;
+      } else {
+        newZ = z;
+        newP = p;
+      }
+    }
     #pragma omp critical
     {
+      zvals(i, i) = z;
+      pvals(i, i) = p;
       ++totalTests;
-      if(std::isnan(z)) {
-        ++nanCount;
-        zvals(i, i) = 0;
-        pvals(i, i) = 1;
-      } else {
-        if(std::isinf(z)) {
-          ++infinityCount;
-          zvals(i, i) = 0;
-          pvals(i, i) = 1;
-        } else {
-          zvals(i, i) = z;
-          pvals(i, i) = p;
-        }
-      }
     }
   }
   // z-test for off-diagonal elements
-  PP->printLOG("Computing coexpression and correlation for CASES and CONTROLS.\n");
+  PP->printLOG(Timestamp() + "Computing coexpression and correlation for CASES and CONTROLS.\n");
   mat X;
   mat Y;
   if(!armaGetPlinkNumericToMatrixCaseControl(X, Y)) {
-    PP->printLOG("WARNING: Cannot read numeric data into case-control matrices");
+    PP->printLOG(Timestamp() + "WARNING: Cannot read numeric data into case-control matrices");
     readyToRun = false;
   }
   if(!X.is_finite()) {
-    PP->printLOG("WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix X is not finite\n");
+    PP->printLOG(Timestamp() + "WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix X is not finite\n");
     readyToRun = false;
   }
   if(!Y.is_finite()) {
-    PP->printLOG("WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix Y is not finite");
+    PP->printLOG(Timestamp() + "WARNING: armaGetPlinkNumericToMatrixCaseControl(X, Y) matrix Y is not finite");
     readyToRun = false;
   }
   if(par::algorithm_verbose) {
@@ -122,29 +120,29 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
   mat covMatrixX;
   mat corMatrixX;
   if(readyToRun && !armaComputeCovariance(X, covMatrixX, corMatrixX)) {
-    PP->printLOG("WARNING: Could not compute coexpression matrix for cases\n");
+    PP->printLOG(Timestamp() + "WARNING: Could not compute coexpression matrix for cases\n");
     readyToRun = false;
   }
   if(readyToRun && !covMatrixX.is_finite()) {
-    PP->printLOG("WARNING: armaComputeCovariance(X, covMatrixX, corMatrixX) covMatrixX matrix is not finite");
+    PP->printLOG(Timestamp() + "WARNING: armaComputeCovariance(X, covMatrixX, corMatrixX) covMatrixX matrix is not finite");
     readyToRun = false;
   }
   if(readyToRun && !corMatrixX.is_finite()) {
-    PP->printLOG("WARNING: armaComputeCovariance(X, corMatrixX, corMatrixX) corMatrixX matrix is not finite");
+    PP->printLOG(Timestamp() + "WARNING: armaComputeCovariance(X, corMatrixX, corMatrixX) corMatrixX matrix is not finite");
     readyToRun = false;
   }
   mat covMatrixY;
   mat corMatrixY;
   if(readyToRun && !armaComputeCovariance(Y, covMatrixY, corMatrixY)) {
-    PP->printLOG("WARNING: Could not compute coexpression matrix for controls");
+    PP->printLOG(Timestamp() + "WARNING: Could not compute coexpression matrix for controls");
     readyToRun = false;
   }
   if(readyToRun && !covMatrixY.is_finite()) {
-    PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite");
+    PP->printLOG(Timestamp() + "WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite");
     readyToRun = false;
   }
   if(readyToRun && !corMatrixY.is_finite()) {
-    PP->printLOG("WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite");
+    PP->printLOG(Timestamp() + "WARNING: armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite");
     readyToRun = false;
   }
   // are all the prerequisites satisfied?
@@ -159,14 +157,10 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
   }
 
   // algorithm ported from the R script z_test.R
-  PP->printLOG("Performing Z-tests for interactions\n");
-  uint i, j;
-#pragma omp parallel for private(i, j) collapse(2)
-  for(i=0; i < numVars; ++i) {
-    for(j=0; j < numVars; ++j) {
-      if(i <= j) {
-        continue;
-      }
+  PP->printLOG(Timestamp() + "Performing Z-tests for interactions\n");
+  #pragma omp parallel for
+  for(uint i=0; i < numVars; ++i) {
+    for(uint j=i + 1; j < numVars; ++j) {
       double r_ij_1 = corMatrixX(i, j);
       double r_ij_2 = corMatrixY(i, j);
       if((r_ij_1 == 1) || (r_ij_2 == 1)) {
@@ -176,47 +170,43 @@ bool armaDcgain(sp_mat& zvals, mat& pvals, bool computeDiagonal) {
       double z_ij_2 = 0.5 * log((abs((1 + r_ij_2) / (1 - r_ij_2))));
       double Z_ij = abs(z_ij_1 - z_ij_2) / sqrt((1.0 / (nAff - 3.0) + 1.0 / (nUnaff - 3.0)));
       double p = 2 * normdist(-abs(Z_ij)); 
+      double newZ = 0.0;
+      double newP = 1.0;
+      if(std::isinf(Z_ij)) {
+        ++infinityCount;
+      } else {
+        if(std::isnan(Z_ij)) {
+          ++nanCount;
+        } else {
+          newZ = Z_ij;
+          newP = p;
+        }
+      }
       #pragma omp critical
       {
-        // happy lights
-        if(i && ((i % 1000) == 0) && (j == (i + 1))) {
-          PP->printLOG(Timestamp() + " - " + int2str(i) + " of " + int2str(numVars) + "\n");
-        }
         // update shared memory variables
+        zvals(i, j) = zvals(j, i) = newZ;
+        pvals(i, j) = pvals(j, i) = newP;
         ++totalTests;
-        if(std::isinf(Z_ij)) {
-          ++infinityCount;
-          zvals(i, j) = zvals(j, i) = 0.0;
-          pvals(i, j) = pvals(j, i) = 1.0;
-        } else {
-          if(std::isnan(Z_ij)) {
-            ++nanCount;
-            zvals(i, j) = zvals(j, i) = 0.0;
-            pvals(i, j) = pvals(j, i) = 1.0;
-          } else {
-            zvals(i, j) = zvals(j, i) = Z_ij;
-            pvals(i, j) = pvals(j, i) = p;
-          }
-        }
       } // OpenMP critical section
     } // numvars inner loop
   } // numvars outer loop - end OpenMP for loop
-  PP->printLOG("" + int2str(totalTests) + " total number of tests\n");
+  PP->printLOG(Timestamp() + int2str(totalTests) + " tests performed\n");
   bool returnValue = true;
   if(returnValue && infinityCount) {
-    PP->printLOG("ERROR(S): " + int2str(infinityCount) + " infinite Z values found\n");
+    PP->printLOG(Timestamp() + "ERROR(S): " + int2str(infinityCount) + " infinite Z values found\n");
     returnValue = false;
   }
   if(returnValue && nanCount) {
-    PP->printLOG("ERROR(S): " + int2str(nanCount) + " nan Z values found\n");
+    PP->printLOG(Timestamp() + "ERROR(S): " + int2str(nanCount) + " nan Z values found\n");
     returnValue = false;
   }
   if(returnValue && !zvals.is_finite()) {
-    PP->printLOG("ERROR(S): armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite\n");
+    PP->printLOG(Timestamp() + "ERROR(S): armaComputeCovariance(Y, covMatrixY, corMatrixY) covMatrixX matrix is not finite\n");
     returnValue = false;
   }
   if(returnValue && !pvals.is_finite()) {
-    PP->printLOG("ERROR(S): armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite\n");
+    PP->printLOG(Timestamp() + "ERROR(S): armaComputeCovariance(Y, covMatrixY, corMatrixY) corMatrixX matrix is not finite\n");
     returnValue = false;
   }
 
@@ -242,7 +232,7 @@ bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
   uint n = X.n_rows;
 
   // compute covariances
-	PP->printLOG("Computing covariance matrix\n");
+	PP->printLOG(Timestamp() + "Computing covariance matrix\n");
 	vec one = ones<vec>(n);
   mat P = one * one.t() / n;
 	mat diag1(n, n);
@@ -252,7 +242,7 @@ bool armaComputeCovariance(mat X, mat& covMatrix, mat& corMatrix) {
 	covMatrix = xStar.t() * xStar / (n - 1);
 
   // compute correlations from covariances
-	PP->printLOG("Computing correlation matrix\n");
+	PP->printLOG(Timestamp() + "Computing correlation matrix\n");
 	mat D = zeros<mat>(covMatrix.n_cols, covMatrix.n_cols);
 	for(uint i=0; i < covMatrix.n_cols; ++i) {
 		D(i, i) = 1.0 / sqrt(covMatrix(i, i));
@@ -267,7 +257,7 @@ bool armaComputeSparseCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
   uint n = X.n_rows;
 
   // compute covariances
-	PP->printLOG("Computing covariance matrix\n");
+	PP->printLOG(Timestamp() + "Computing covariance matrix\n");
 	vec one = ones<vec>(n);
   mat P = one * one.t() / n;
 	mat diag1(n, n);
@@ -277,7 +267,7 @@ bool armaComputeSparseCovariance(mat X, sp_mat& covMatrix, sp_mat& corMatrix) {
 	covMatrix = xStar.t() * xStar / (n - 1);
 
   // compute correlations from covariances
-	PP->printLOG("Computing correlation matrix\n");
+	PP->printLOG(Timestamp() + "Computing correlation matrix\n");
 	mat D = zeros<mat>(covMatrix.n_cols, covMatrix.n_cols);
 	for(uint i=0; i < covMatrix.n_cols; ++i) {
 		D(i, i) = 1.0 / sqrt(covMatrix(i, i));
@@ -357,17 +347,18 @@ bool armaReadMatrix(string mFilename, mat& m, vector<string>& variableNames) {
   }
   matrixFile.close();
 
-  PP->printLOG("Read matrix from [" + mFilename + "]: " + 
+  PP->printLOG(Timestamp() + "Read matrix from [" + mFilename + "]: " + 
   int2str(rows) + " rows x " + int2str(cols) + " columns\n");
     
   return true;
 }
 
 bool armaWriteMatrix(mat& m, string mFilename, vector_s variableNames) {
-  PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
+  PP->printLOG(Timestamp() + "Writing matrix [ " + mFilename + " ]\n");
   ofstream outFile(mFilename);
   if(outFile.fail()) {
-    return false;
+    error("armaWriteMatrix failed");
+    //return false;
   }
   // outFile.precision(6);
   // outFile.fixed;
@@ -407,7 +398,8 @@ bool armaWriteSparseMatrix(sp_mat& m, string mFilename, vector_s variableNames) 
   PP->printLOG("Writing matrix [ " + mFilename + " ]\n");
   ofstream outFile(mFilename);
   if(outFile.fail()) {
-    return false;
+    error("armaWriteSparseMatrix failed");
+    // return false;
   }
   // outFile.precision(6);
   // outFile.fixed;
@@ -474,7 +466,7 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
       }
 		}
 	}
-	PP->printLOG("Detected " + int2str(nAff) + " affected and " + 
+	PP->printLOG(Timestamp() + "Detected " + int2str(nAff) + " affected and " + 
 					int2str(nUnaff) + " unaffected individuals\n");
 	// size matrices
 	uint numNumerics = PP->nlistname.size();
@@ -482,7 +474,7 @@ bool armaGetPlinkNumericToMatrixCaseControl(mat& X, mat& Y) {
 	Y.resize(nUnaff, numNumerics);
 	
 	// load numerics into passed matrices
-	PP->printLOG("Loading case and control matrices\n");
+	PP->printLOG(Timestamp() + "Loading case and control matrices\n");
 	uint aIdx = 0;
 	uint uIdx = 0;
 	for(uint i=0; i < PP->sample.size(); i++) {
