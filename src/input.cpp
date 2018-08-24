@@ -28,6 +28,8 @@
 #include "gvar.h"
 #include "stats.h"
 
+#include "Insilico.h"
+
 extern ofstream LOG;
 
 void Plink::readData() {
@@ -1201,7 +1203,7 @@ bool Plink::readNumericFile() {
   n = nvalid;
 
   // happy lights
-  printLOG("Read "
+  printLOG(Timestamp() + "Read "
           + int2str(numNumerics)
           + " numeric attributes from [ "
           + par::numeric_filename
@@ -1301,7 +1303,7 @@ bool Plink::readCovariateFile() {
   }
 
 
-  printLOG("Reading covariate from [ " + par::covar_filename + " ] with ");
+  printLOG(Timestamp() + "Reading covariate from [ " + par::covar_filename + " ] with ");
   printLOG("nonmissing values for " + int2str(nvalid) + " individuals\n");
 
   return true;
@@ -1442,7 +1444,7 @@ bool Plink::readCovListFile() {
   }
 
 
-  printLOG("Reading "
+  printLOG(Timestamp() + "Reading "
           + int2str(par::clist_number)
           + " covariates from [ "
           + par::clist_filename

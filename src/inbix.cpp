@@ -752,12 +752,12 @@ int main(int argc, char* argv[]) {
 	}
 
   /////////////////////////////////////////////////////////////////////////////
-	// ***** begin inbix additions (not caught above as numerics utilities) *****
+	// *** begin inbix additions (not caught above as numerics utilities) **** //
   /////////////////////////////////////////////////////////////////////////////
 	
 	// perform epistatic eQTL analysis
   if(par::do_iqtl) {
-		P.printLOG(Timestamp() + "\nPerforming iQTL analysis\n");
+		P.printLOG("\n" + Timestamp() + "Performing iQTL analysis\n");
 
     if(par::iqtl_expression_file == "") {
       error("Transcript expression file is required. Use --transcript-matrix");
@@ -1076,7 +1076,7 @@ int main(int argc, char* argv[]) {
 		    if(par::do_dcgain_abs) {
 		      for(int i=0; i < dcgain.n_rows; ++i) {
 		        for(int j=i + 1; j < dcgain.n_cols; ++j) {
-		          dcgain(i, j) = abs(dcgain(i, j));
+		          dcgain(i, j) = dcgain(j, i) = abs(dcgain(i, j));
 		        }
 		      }
 		    }
@@ -1672,10 +1672,10 @@ int main(int argc, char* argv[]) {
     if(par::do_dcgain_abs) {
   		P.printLOG(Timestamp() + "Applying abs() transformation\n");
       // iterate through the sparse matrix non-zero values
-//      for(sp_mat::iterator i = results.begin(); 
-//          i != results.end(); ++i) {
-//        *i = abs(*i);
-//      }
+      //      for(sp_mat::iterator i = results.begin(); 
+      //          i != results.end(); ++i) {
+      //        *i = abs(*i);
+      //      }
       for(int i=0; i < zvals.n_rows; ++i) {
         for(int j=0; j < zvals.n_cols; ++j) {
           zvals(i, j) = abs(zvals(i, j));

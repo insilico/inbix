@@ -114,7 +114,7 @@ void EpistasisEQtl::PrintState() {
 }
 
 bool EpistasisEQtl::Run() {
-  PP->printLOG("\n" + Timestamp() + "Running iQTL\n");
+  PP->printLOG(Timestamp() + "Running iQTL\n");
   if(!CheckInputs()) {
     error("iQTL::CheckInputs() failed\n");
   }
@@ -342,7 +342,7 @@ bool EpistasisEQtl::RunIqtlCisTrans() {
 }
 
 bool EpistasisEQtl::RunIqtlFull() {
-  PP->printLOG("iQTL linear regression loop: Full SNP x SNP\n");
+  PP->printLOG(Timestamp() + "iQTL linear regression loop: Full SNP x SNP\n");
   uint numSnps = PP->nl_all;
 #pragma omp parallel
   for(uint ii=0; ii < numSnps; ++ii) {
@@ -506,7 +506,7 @@ bool EpistasisEQtl::ReadTranscriptCoordinates(string coordinatesFilename) {
   }
   coordinatesFile.close();
 
-  PP->printLOG("Read " + int2str(rows) + 
+  PP->printLOG(Timestamp() + "Read " + int2str(rows) + 
     " transcript coordinates info from ["  + coordinatesFilename + "]\n");
  
   cordFilename = coordinatesFilename;
@@ -581,7 +581,7 @@ bool EpistasisEQtl::ReadTranscriptFactorCoordinates(string coordinatesFilename) 
   }
   coordinatesFile.close();
 
-  PP->printLOG("Read " + int2str(rows) + 
+  PP->printLOG(Timestamp() + "Read " + int2str(rows) + 
     " transcription factor coordinates info from ["  + coordinatesFilename + "]\n");
   
   return true;
