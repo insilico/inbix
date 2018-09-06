@@ -44,7 +44,7 @@ CentralityRanker::CentralityRanker(string gainFileParam, bool isUpperTriangular)
   Gdiag.resize(n, n);
 }
 
-CentralityRanker::CentralityRanker(double** variablesMatrix, unsigned int dim,
+CentralityRanker::CentralityRanker(matrix_t variablesMatrix, unsigned int dim,
 		vector<string>& varNames)
 {
 	// setup G matrix for  algorithm

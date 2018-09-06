@@ -351,6 +351,7 @@ void Model::buildDesignMatrix() {
 	/////////////////////////////////////////
 	// VIF-based check for multicollinearity
   // commented out - bcw - 10/31/13
+  // it's back not sure when it was uncommented - bcw - 9/5/18
 	all_valid = checkVIF();
   if(par::verbose && !all_valid) {
     P->printLOG("WARNING: checkVIF() failed\n");
@@ -541,6 +542,8 @@ bool Model::checkVIF() {
 	if(!flag) all_valid = false;
 
 	if(par::verbose) {
+    cout << "svd_inverse() failed\n";
+    cout << "all_valid flag set to false, so model->isValid() returns false\n";
 		cout << "VIF on diagonals\n";
 		display(c);
 		cout << "\n";

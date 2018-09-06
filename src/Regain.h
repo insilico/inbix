@@ -6,7 +6,7 @@
  * regression in calculating main effects and interactions of SNPs and 
  * numeric attributes.
  * 
- * Originaly Created:  02/02/2012
+ * Originally Created:  02/02/2012 as a part of ENCORE
  * Author:  Nick Davis, nick-davis@utulsa.edu
  * =============================================================================
  */
@@ -36,9 +36,10 @@ enum RegainOutputTransform {
 
 class Regain {
 public:
-	Regain(bool compr, double sifthr, bool compo);
-	Regain(bool compr, double sifthr, bool integrative, bool compo,
-					bool fdrpr = false, bool initMatrixFromData = true);
+	Regain(bool compressionFlag, double sifThreshold, bool componentsFlag);
+	Regain(bool compressionFlag, double sifThreshold, bool integrative, 
+         bool componentsFlag, bool fdrPruneFlag = false, 
+         bool initMatrixFromData = true);
 	~Regain();
   // read a reGAIN file for post processing
   bool readRegainFromFile(std::string regainFilename);
@@ -64,11 +65,11 @@ public:
 	// calculate epistatic interaction between two SNPs or numeric attributes,
 	// or a SNP and a numeric attribute
 	void interactionEffect(uint varIndex1, bool var1IsNumeric, 
-        uint varIndex2, bool var2IsNumeric);
+                         uint varIndex2, bool var2IsNumeric);
 	// calculate epistatic interaction between two SNPs or numeric attributes,
 	// or a SNP and a numeric attribute; no main effects, i.e., "pure"
 	void pureInteractionEffect(uint varIndex1, bool var1IsNumeric, 
-        uint varIndex2, bool var2IsNumeric);
+                             uint varIndex2, bool var2IsNumeric);
 	// write contents of reGAIN or reGAIN p-value matrix to file.  Integrative
 	// reGAIN files have a '.int.' in the filename, p-values have a '.pvals.'
 	// If fdr is true, the filename is .pruned.regain, and the log output
@@ -88,7 +89,7 @@ public:
   void setFailureValue(double fValue);
   bool updateStats();
   bool logMatrixStats();
-  double** getRawMatrix() { return regainMatrix; }
+  matrix_t getRawMatrix() { return regainMatrix; }
 private:
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
@@ -124,8 +125,8 @@ private:
 	std::ofstream NUM_SIF;
 	std::ofstream INT_SIF;
 	// in memory arrays
-	double** regainMatrix;
-	double** regainPMatrix;
+  matrix_t regainMatrix;
+  matrix_t regainPMatrix;
 	// collection of all interaction terms as mat_el types
 	vector<matrixElement> gainIntPvals;
   // regression warnings - bcw - 4/30/13
@@ -136,7 +137,7 @@ private:
   double failureValue;
   uint nanCount;
   uint infCount;
-  // some regain calculation stats
+  // some global regain calculation stats
   double minMainEffect;
   double maxMainEffect;
   double minInteraction;

@@ -18,7 +18,9 @@
 #include <algorithm>
 #include <iterator>
 #include <sstream>
+
 #include <omp.h>
+
 // PLINK functions and data types
 #include "plink.h"
 #include "options.h"
@@ -35,17 +37,17 @@ bool pvalComparator(const matrixElement &l, const matrixElement &r) {
   return l.first < r.first;
 }
 
-Regain::Regain(bool compr, double sifthr, bool compo) {
-  writeCompressedFormat = compr;
-  sifThresh = sifthr;
-  writeComponents = compo;
+Regain::Regain(bool compressionFlag, double sifThreshold, bool componentsFlag) {
+  writeCompressedFormat = compressionFlag;
+  sifThresh = sifThreshold;
+  writeComponents = componentsFlag;
   // defaults
   integratedAttributes = false;
   doFdrPrune = false;
   useOutputThreshold = false;
   outputThreshold = 0.0;
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
-  outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
+  outputFormat = REGAIN_OUTPUT_FORMAT_FULL;
   pureInteractions = false;
   failureValue = 0;
   nanCount = 0;
@@ -56,14 +58,15 @@ Regain::Regain(bool compr, double sifthr, bool compo) {
   maxInteraction = 0;
 }
 
-Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
-  bool fdrpr, bool initMatrixFromData) {
+Regain::Regain(bool compressionFlag, double sifThreshold, 
+               bool integrative, bool componentsFlag,
+               bool fdrPruneFlag, bool initMatrixFromData) {
   // set class vars to passed args
-  writeCompressedFormat = compr;
-  sifThresh = sifthr;
+  writeCompressedFormat = compressionFlag;
+  sifThresh = sifThreshold;
   integratedAttributes = integrative;
-  writeComponents = compo;
-  doFdrPrune = fdrpr;
+  writeComponents = componentsFlag;
+  doFdrPrune = fdrPruneFlag;
 
   // set integrative/normal regain vars
   // additional ext for integrative
@@ -142,23 +145,14 @@ Regain::Regain(bool compr, double sifthr, bool integrative, bool compo,
       numAttributes = PP->nl_all;
     }
     PP->printLOG("Total number of attributes [ " + int2str(numAttributes) + " ]\n");
-
-    regainMatrix = new double*[numAttributes];
-    regainPMatrix = new double*[numAttributes];
-    // allocate reGAIN matrix
-    for(uint i = 0; i < numAttributes; ++i) {
-      regainMatrix[i] = new double[numAttributes];
-    }
-    // allocate reGAIN p-value matrix
-    for(uint i = 0; i < numAttributes; ++i) {
-      regainPMatrix[i] = new double[numAttributes];
-    }
+    sizeMatrix(regainMatrix, numAttributes, numAttributes);
+    sizeMatrix(regainPMatrix, numAttributes, numAttributes);
   }
 
-  useOutputThreshold = false;
-  outputThreshold = 0.0;
+  useOutputThreshold = par::regainMatrixThreshold;
+  outputThreshold = par::regainMatrixThresholdValue;
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
-  outputFormat = REGAIN_OUTPUT_FORMAT_UPPER;
+  outputFormat = REGAIN_OUTPUT_FORMAT_FULL;
 
   pureInteractions = false;
   failureValue = 0;
@@ -224,20 +218,6 @@ Regain::~Regain() {
   // close BETAS and SIF ofstreams
   BETAS.close();
   SIF.close();
-
-  // free regain matrix memory
-  for(uint i = 0; i < numAttributes; ++i) {
-    delete [] regainMatrix[i];
-  }
-  delete [] regainMatrix;
-
-  // free regain p-value matrix memory
-  if(regainPMatrix) {
-    for(uint i = 0; i < numAttributes; ++i) {
-      delete [] regainPMatrix[i];
-    }
-    delete [] regainPMatrix;
-  }
 }
 
 bool Regain::readRegainFromFile(string regainFilename) {
@@ -273,10 +253,8 @@ bool Regain::readRegainFromFile(string regainFilename) {
       // process reGAIN file header
       numAttributes = tokens.size();
       readHeader = true;
-      regainMatrix = new double*[numAttributes];
-      // allocate reGAIN matrix and add column names
+      sizeMatrix(regainMatrix, numAttributes, numAttributes);
       for(uint i = 0; i < numAttributes; ++i) {
-        regainMatrix[i] = new double[numAttributes];
         attributeNames.push_back(tokens[i]);
       }
       continue;
@@ -394,30 +372,27 @@ bool Regain::writeRegainToSifFile(string newSifFilename) {
 }
 
 void Regain::run() {
-  uint varIndex1, varIndex2;
   // reset the warnings list
   warnings.resize(0);
+  failures.resize(0);
   // OpenMP parallelization of this outer loop
   uint numThreads = omp_get_num_threads();
   uint numProcs = omp_get_num_procs();
   cout << "OpenMP: " << numThreads << " threads available" << endl;
   cout << "OpenMP: " << numProcs << " processors available" << endl;
-#pragma omp parallel for schedule(dynamic, 1) private(varIndex1, varIndex2)
-  for(varIndex1 = 0; varIndex1 < numAttributes; varIndex1++) {
-    for(varIndex2 = 0; varIndex2 < numAttributes; varIndex2++) {
-      // We've already performed this test, since the matrix is symmetric
-      if(varIndex1 > varIndex2) continue;
-
+#pragma omp parallel for schedule(dynamic, 1)
+  for(uint varIndex1 = 0; varIndex1 < numAttributes; varIndex1++) {
+    for(uint varIndex2 = 0; varIndex2 < numAttributes; varIndex2++) {
       // main effect of SNP/numeric attribute 1 - diagonal of the reGAIN matrix
       if(varIndex1 == varIndex2) {
         mainEffect(varIndex1, varIndex1 >= PP->nl_all);
       } else {
         if(pureInteractions) {
           pureInteractionEffect(varIndex1, varIndex1 >= PP->nl_all,
-            varIndex2, varIndex2 >= PP->nl_all);
+                                varIndex2, varIndex2 >= PP->nl_all);
         } else {
           interactionEffect(varIndex1, varIndex1 >= PP->nl_all,
-            varIndex2, varIndex2 >= PP->nl_all);
+                            varIndex2, varIndex2 >= PP->nl_all);
         }
       }
     }
@@ -779,7 +754,7 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
           // interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
-          interactionValue = 0;
+          useFailureValue = true;
           ++infCount;
           stringstream ss;
           ss << "Regression test statistic is +/-infinity on coefficient "
@@ -787,7 +762,7 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
           warnings.push_back(ss.str());
         }
         if(std::isnan(interactionValue)) {
-          interactionValue = 0;
+          useFailureValue = true;
           ++nanCount;
           stringstream ss;
           ss << "Regression test statistic is not a number NaN on coefficient "
@@ -877,7 +852,7 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
       }
     }
 
-    // end pragma    
+    // end critical section OMP pragma    
   }
 
   // free model memory
@@ -1143,7 +1118,7 @@ void Regain::pureInteractionEffect(uint varIndex1, bool var1IsNumeric,
 }
 
 void Regain::writeRegain(bool pvals, bool fdrprune) {
-  double** regainMat;
+  matrix_t regainMat;
   if(pvals) {
     regainMat = regainPMatrix;
   } else {

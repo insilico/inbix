@@ -20,7 +20,7 @@ public:
 	// construct using a file representing the variable interactions matrix
 	CentralityRanker(std::string gainFileParam, bool isUpperTriangular=false);
 	// matrix constructor for calling as a library method
-	CentralityRanker(double** variablesMatrix, unsigned int dim,
+	CentralityRanker(matrix_t variablesMatrix, unsigned int dim,
 			std::vector<std::string>& variableNames);
 	CentralityRanker(arma::mat& A, std::vector<std::string> varNames);
 	CentralityRanker(arma::sp_mat& A, std::vector<std::string> varNames);
