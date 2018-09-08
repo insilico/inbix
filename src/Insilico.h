@@ -109,6 +109,19 @@ const static uint MIN_NUM_SUBJ_PER_GROUP = 4;
 /// E N U M S
 
 /**
+ * \enum RegressionInvalidType.
+ * Type of error that caused regression model failure.
+ */
+enum RegressionInvalidType {
+	REGRESSION_INVALID_NONE, /**<  */
+	REGRESSION_INVALID_SVDINV, /**<  */
+	REGRESSION_INVALID_EMPTY, /**<  */
+	REGRESSION_INVALID_MULTICOLL, /**<  */
+	REGRESSION_INVALID_VIF, /**<  */
+	REGRESSION_INVALID_LINHYPOTH /**<  */
+};
+
+/**
  * \enum OutputDatasetType.
  * Type of data set to write filtered output.
  */

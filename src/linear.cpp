@@ -16,6 +16,7 @@
 #include "helper.h"
 #include "options.h"
 #include "stats.h"
+#include "Insilico.h"
 
 LinearModel::LinearModel(Plink * p_) {
 	P = p_;
@@ -258,10 +259,15 @@ void LinearModel::fitLM() {
 	coef.resize(np);
 	sizeMatrix(S, np, np);
 
-	if(np == 0 || nind == 0 || !all_valid) {
+	if(np == 0 || nind == 0) {
+    invalidType = REGRESSION_INVALID_EMPTY;
 		return;
 	}
 
+  if(!all_valid) {
+    return;
+  }
+  
 	// sets meanY and varY
 	setVariance();
 
@@ -318,6 +324,7 @@ void LinearModel::fitLM() {
 	bool flag = svdcmp(u, w, v);
 	if(!flag) {
 		all_valid = false;
+    invalidType = REGRESSION_INVALID_SVDINV;
 		return;
 	}
 
@@ -387,7 +394,8 @@ void LinearModel::fitLM() {
 	S0 = svd_inverse(S0, flag);
 	if(!flag) {
 		all_valid = false;
-		return;
+    invalidType = REGRESSION_INVALID_SVDINV;
+  	return;
 	}
 
 	if(par::verbose) {

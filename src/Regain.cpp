@@ -417,11 +417,11 @@ void Regain::run() {
   }
 
   if(failures.size()) {
-    double numCombinations = (numAttributes * (numAttributes - 1)) / 2.0;
+    double numCombinations = static_cast<double>(numAttributes * numAttributes);
     double numFailures = (double) failures.size();
-    double percentFailures = (numFailures / (numCombinations + numAttributes)) * 100.0;
+    double percentFailures = (numFailures / numCombinations) * 100.0;
     PP->printLOG(dbl2str(numFailures) + " failures in " + 
-      dbl2str(numCombinations + numAttributes)+ " regression models "
+      dbl2str(numCombinations)+ " regression models "
       + dbl2str(percentFailures) + "%\n");
     string failureFilename = par::output_file_name + ".regression.failures";
     PP->printLOG("Writing failure messages to [ " + failureFilename + " ]\n");
@@ -671,71 +671,93 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
   // fit linear model coefficients
   interactionModel->fitLM();
 
+  vector_t betaInteractionCoefs = interactionModel->getCoefs();
+  vector_t betaInteractionCoefPVals = interactionModel->getPVals();
+  double interactionPval = 
+    betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+  vector_t interactionModelSE = interactionModel->getSE();
+  // calculate statistical test value from beta/SE (t-test or z-test)
+  vector_t::const_iterator bIt = betaInteractionCoefs.begin();
+  vector_t::const_iterator sIt = interactionModelSE.begin();
+  vector_t regressTestStatValues;
+  for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
+    regressTestStatValues.push_back(*bIt / *sIt);
+  }
+  if (par::algorithm_verbose) {
+    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+      << "\t" << coef1Label << "\t" << coef2Label
+      << "\t" << setw(12) << betaInteractionCoefs[3]
+      << "\t" << setw(12) << betaInteractionCoefPVals[2]
+      << "\t" << setw(12) << interactionModelSE[3]
+      << "\t" << setw(12)
+      << betaInteractionCoefs[3] / interactionModelSE[3]
+      << endl;
+  }
+
   // Was the model fitting method successful?
+  double interactionValue = 0;
+  double interactionValueTransformed = 0;
+  bool useFailureValue = false;
 #pragma omp critical
   {
-    double interactionValue = 0;
-    double interactionPval = 0;
-    double interactionValueTransformed = 0;
-    bool useFailureValue = false;
-    vector_t betaInteractionCoefs;
-    vector_t betaInteractionCoefPVals;
     if(!interactionModel->isValid()) {
+      RegressionInvalidType invalidReason = 
+              interactionModel->getRegressionFailureType();
       string failMsg = "FAILURE: Invalid regression fit for interaction "
         "variables [" + coef1Label + "], [" + coef2Label + "]\n";
-      failures.push_back(failMsg);
+      switch(invalidReason) {
+        case REGRESSION_INVALID_NONE:
+          failMsg += "Error code REGRESSION_INVALID_NONE detected";
+          break;
+        case REGRESSION_INVALID_SVDINV:
+          failMsg += "SVD inverse failed";
+          break;
+        case REGRESSION_INVALID_EMPTY:
+          failMsg += "Empty model, either individuals or parameters";
+          break;
+        case REGRESSION_INVALID_MULTICOLL:
+          failMsg += "Possible multicollinearity";
+          break;
+        case REGRESSION_INVALID_VIF:
+          failMsg += "VIF check failed";
+          break;
+        case REGRESSION_INVALID_LINHYPOTH:
+          failMsg += "Linear model hypothesis failed";
+          break;
+        default:
+          failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
+          break;
+      }
       useFailureValue = true;
+      failures.push_back(failMsg);
     }
     else {
-      betaInteractionCoefs = interactionModel->getCoefs();
-      betaInteractionCoefPVals = interactionModel->getPVals();
-      interactionPval =
-        betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-      vector_t interactionModelSE = interactionModel->getSE();
-      // calculate statistical test value from beta/SE (t-test or z-test)
-      vector_t::const_iterator bIt = betaInteractionCoefs.begin();
-      vector_t::const_iterator sIt = interactionModelSE.begin();
-      vector_t regressTestStatValues;
-      for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
-        regressTestStatValues.push_back(*bIt / *sIt);
-      }
-      // !!!!! DEBUGGING RAW VALUES !!!!!
-#if defined(DEBUG_REGAIN)
-      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-        << "\t" << coef1Label << "\t" << coef2Label
-        << "\t" << setw(12) << betaInteractionCoefs[3]
-        << "\t" << setw(6) << betaInteractionCoefPVals[2]
-        << "\t" << setw(12) << interactionModelSE[3]
-        << "\t" << setw(12)
-        << betaInteractionCoefs[3] / interactionModelSE[3]
-        << endl;
-#endif    
-
       if(par::regainUseBetaValues) {
         interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
         if(interactionPval > par::regainLargeCoefPvalue) {
           stringstream ss;
           ss << "Large p-value [" << interactionPval
             << "] on coefficient for interaction variables ["
-            << coef1Label << "][" << coef2Label << "]";
+            << coef1Label << "][" << coef2Label << "]\n";
           warnings.push_back(ss.str());
-          // interactionValue = 0;
         }
         if(std::isinf(interactionValue)) {
+          useFailureValue = true;
           ++infCount;
           stringstream ss;
           ss << "Regression test statistic is +/-infinity on coefficient "
-            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+            << "for interaction variables [" << coef1Label << "][" 
+            << coef2Label << "]\n";
           warnings.push_back(ss.str());
-          interactionValue = 0;
         }
         if(std::isnan(interactionValue)) {
+          useFailureValue = true;
           ++nanCount;
           stringstream ss;
           ss << "Regression test statistic is not a number NaN on coefficient "
-            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+            << "for interaction variables [" << coef1Label << "][" 
+            << coef2Label << "]\n";
           warnings.push_back(ss.str());
-          interactionValue = 0;
         }
       } else {
         interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
@@ -743,7 +765,7 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
           stringstream ss;
           ss << "Large test statistic value [" << interactionValue
             << "] on coefficient for interaction variables ["
-            << coef1Label << "][" << coef2Label << "]";
+            << coef1Label << "][" << coef2Label << "]\n";
           warnings.push_back(ss.str());
           if(interactionValue < 0) {
             interactionValue = -par::regainLargeCoefTvalue;
@@ -758,7 +780,8 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
           ++infCount;
           stringstream ss;
           ss << "Regression test statistic is +/-infinity on coefficient "
-            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+            << "for interaction variables [" << coef1Label << "][" 
+            << coef2Label << "]\n";
           warnings.push_back(ss.str());
         }
         if(std::isnan(interactionValue)) {
@@ -766,7 +789,8 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
           ++nanCount;
           stringstream ss;
           ss << "Regression test statistic is not a number NaN on coefficient "
-            << "for interaction variables [" << coef1Label << "][" << coef2Label << "]";
+            << "for interaction variables [" << coef1Label << "][" 
+            << coef2Label << "]\n";
           warnings.push_back(ss.str());
         }
       }

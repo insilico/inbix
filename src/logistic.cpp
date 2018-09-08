@@ -62,10 +62,15 @@ void LogisticModel::fitLM() {
 	coef.resize(np);
 	sizeMatrix(S, np, np);
 
-	if(np == 0 || nind == 0 || !all_valid) {
+	if(np == 0 || nind == 0) {
+    invalidType = REGRESSION_INVALID_EMPTY;
 		return;
 	}
 
+  if (!all_valid) {
+    return;
+  }
+  
 	if(par::verbose) {
 		for(int i = 0; i < nind; i++) {
 			cout << i << "\t"
@@ -114,6 +119,7 @@ void LogisticModel::fitLM() {
 		T = svd_inverse(T, flag);
 		if(!flag) {
 			all_valid = false;
+      invalidType = REGRESSION_INVALID_SVDINV;
 			return;
 		}
 
@@ -176,6 +182,7 @@ void LogisticModel::fitLM() {
 	S = svd_inverse(S, flag);
 	if(!flag) {
 		all_valid = false;
+    invalidType = REGRESSION_INVALID_SVDINV;
 		return;
 	}
 

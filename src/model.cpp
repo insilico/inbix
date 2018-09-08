@@ -15,6 +15,7 @@
 #include "helper.h"
 #include "phase.h"
 #include "stats.h"
+#include "Insilico.h"
 
 Model::Model() {
 	np = nind = 0;
@@ -23,6 +24,7 @@ Model::Model() {
 	order.clear();
 	sex_effect = false;
 	all_valid = true;
+  invalidType = REGRESSION_INVALID_NONE;
 	has_snps = true;
 	testParameter = 1; // Permutation test parameter
 
@@ -352,8 +354,9 @@ void Model::buildDesignMatrix() {
 	// VIF-based check for multicollinearity
   // commented out - bcw - 10/31/13
   // it's back not sure when it was uncommented - bcw - 9/5/18
-	all_valid = checkVIF();
-  if(par::verbose && !all_valid) {
+	// all_valid = checkVIF();
+  if(!all_valid) {
+    invalidType = REGRESSION_INVALID_VIF;
     P->printLOG("WARNING: checkVIF() failed\n");
   }
 
@@ -374,6 +377,7 @@ vector<bool> Model::validParameters() {
 	if(np == 0 || nind == 0) {
 		vector<bool> v(np, false);
 		all_valid = false;
+    invalidType = REGRESSION_INVALID_EMPTY;
 		return v;
 	}
 
@@ -405,6 +409,7 @@ vector<bool> Model::validParameters() {
 				if(S[i][j] / sqrt(S[i][i] * S[j][j]) > 0.99999) {
 					valid[i] = false;
 					all_valid = false;
+          invalidType = REGRESSION_INVALID_MULTICOLL;
 					break;
 				}
 			}
@@ -469,7 +474,10 @@ double Model::linearHypothesis(matrix_t & H, vector_t & h) {
 
 	bool flag = true;
 	inner = svd_inverse(inner, flag);
-	if(!flag) all_valid = false;
+	if(!flag) {
+    all_valid = false;
+    invalidType = REGRESSION_INVALID_SVDINV;
+  }
 
 	vector_t tmp2;
 	tmp2.resize(nc, 0);
@@ -539,7 +547,10 @@ bool Model::checkVIF() {
 	// Get inverse
 	bool flag = true;
 	c = svd_inverse(c, flag);
-	if(!flag) all_valid = false;
+	if(!flag) {
+    all_valid = false;
+    invalidType = REGRESSION_INVALID_SVDINV;
+  }
 
 	if(par::verbose) {
     cout << "svd_inverse() failed\n";

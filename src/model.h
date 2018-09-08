@@ -14,7 +14,8 @@
 #include <vector>
 
 #include "plink.h"
-
+#include "Insilico.h"
+        
 using namespace std;
 
 class Model {
@@ -96,6 +97,8 @@ public:
 
 	// index of the parameter to perform statistical tests
 	int testParameter;
+  
+  RegressionInvalidType getRegressionFailureType() { return invalidType; }
 protected:
 	Plink * P;
 
@@ -115,6 +118,7 @@ protected:
 	bool sex_effect;
 
 	vector<bool> valid;
+  RegressionInvalidType invalidType;
 	bool all_valid;
 
 	// beta coefficients for each term/parameter in the model
