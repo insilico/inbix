@@ -484,85 +484,108 @@ void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
   // set test parameter index for main effect regression
   uint testParameter = 1;
   mainEffectModel->testParameter = testParameter; // single variable main effect
+
   mainEffectModel->fitLM();
 
+  // Obtain estimates and statistics
+  vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
+  // p-values don't include intercept term
+  vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
+  double mainEffectPval = betaMainEffectCoefPvals[testParameter - 1];
+  vector_t mainEffectModelSE = mainEffectModel->getSE();
+
+  double mainEffectValue = 0;
+  bool useFailureValue = false;
 #pragma omp critical
   {
     // Was the model fitting method successful?
-    bool useFailureValue = false;
     if(!mainEffectModel->isValid()) {
       string failMsg = "WARNING: Invalid main effect regression fit for variable [" +
         coefLabel + "]";
+      RegressionInvalidType invalidReason = 
+              mainEffectModel->getRegressionFailureType();
+      switch(invalidReason) {
+        case REGRESSION_INVALID_NONE:
+          failMsg += "Error code REGRESSION_INVALID_NONE detected";
+          break;
+        case REGRESSION_INVALID_SVDINV:
+          failMsg += "SVD inverse failed";
+          break;
+        case REGRESSION_INVALID_EMPTY:
+          failMsg += "Empty model, either individuals or parameters";
+          break;
+        case REGRESSION_INVALID_MULTICOLL:
+          failMsg += "Possible multicollinearity";
+          break;
+        case REGRESSION_INVALID_VIF:
+          failMsg += "VIF check failed";
+          break;
+        case REGRESSION_INVALID_LINHYPOTH:
+          failMsg += "Linear model hypothesis failed";
+          break;
+        default:
+          failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
+          break;
+      }
       failures.push_back(failMsg);
       useFailureValue = true;
-    }
-
-    // Obtain estimates and statistics
-    vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
-    // p-values don't include intercept term
-    vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-    double mainEffectPval = betaMainEffectCoefPvals[testParameter - 1];
-    vector_t mainEffectModelSE = mainEffectModel->getSE();
-
-    // always use first coefficient after intercept as main effect term
-    double mainEffectValue = 0;
-    if(par::regainUseBetaValues) {
-      mainEffectValue = betaMainEffectCoefs[testParameter];
-      // report large p-value of coefficient as a warning
-      if(mainEffectPval > par::regainLargeCoefPvalue) {
-        stringstream ss;
-        ss << "Large p-value [" << mainEffectPval
-          << "] on coefficient for variable [" << coefLabel << "]";
-        warnings.push_back(ss.str());
-        mainEffectValue = 0;
-      }
-      if(std::isinf(mainEffectValue)) {
-        mainEffectValue = 0;
-        ++infCount;
-      }
-      if(std::isnan(mainEffectValue)) {
-        mainEffectValue = 0;
-        ++nanCount;
-      }
     } else {
-      mainEffectValue = betaMainEffectCoefs[testParameter] /
-        mainEffectModelSE[testParameter];
-      // report large t-test value of coefficient as a warning
-      if(mainEffectValue > par::regainLargeCoefTvalue) {
-        stringstream ss;
-        ss << "Large test statistic value [" << mainEffectValue
-          << "] on coefficient for variable [" << coefLabel << "]";
-        warnings.push_back(ss.str());
-        mainEffectValue = par::regainLargeCoefTvalue;
-      }
-      if(std::isinf(mainEffectValue)) {
-        mainEffectValue = par::regainLargeCoefTvalue;
-        ++infCount;
-      }
-      if(std::isnan(mainEffectValue)) {
-        mainEffectValue = 0;
-        ++nanCount;
-      }
-    }
-
-    double mainEffectValueTransformed = mainEffectValue;
-    switch(outputTransform) {
-      case REGAIN_OUTPUT_TRANSFORM_NONE:
-        break;
-      case REGAIN_OUTPUT_TRANSFORM_THRESH:
-        if(mainEffectValue < outputThreshold) {
-          mainEffectValueTransformed = 0.0;
+      if(par::regainUseBetaValues) {
+        mainEffectValue = betaMainEffectCoefs[testParameter];
+        // report large p-value of coefficient as a warning
+        if(mainEffectPval > par::regainLargeCoefPvalue) {
+          stringstream ss;
+          ss << "Large p-value [" << mainEffectPval
+            << "] on coefficient for variable [" << coefLabel << "]";
+          warnings.push_back(ss.str());
         }
-        break;
-      case REGAIN_OUTPUT_TRANSFORM_ABS:
-        mainEffectValueTransformed = fabs(mainEffectValue);
-        break;
+        if(std::isinf(mainEffectValue)) {
+          useFailureValue = true;
+          ++infCount;
+        }
+        if(std::isnan(mainEffectValue)) {
+          useFailureValue = true;
+          ++nanCount;
+        }
+      } else {
+        mainEffectValue = betaMainEffectCoefs[testParameter] /
+          mainEffectModelSE[testParameter];
+        // report large t-test value of coefficient as a warning
+        if(mainEffectValue > par::regainLargeCoefTvalue) {
+          stringstream ss;
+          ss << "Large test statistic value [" << mainEffectValue
+            << "] on coefficient for variable [" << coefLabel << "]";
+          warnings.push_back(ss.str());
+          mainEffectValue = par::regainLargeCoefTvalue;
+        }
+        if(std::isinf(mainEffectValue)) {
+          useFailureValue = true;
+          ++infCount;
+        }
+        if(std::isnan(mainEffectValue)) {
+          useFailureValue = true;
+          ++nanCount;
+        }
+      }
     }
 
-    if(useFailureValue) {
+    if (useFailureValue) {
       regainMatrix[varIndex][varIndex] = failureValue;
       regainPMatrix[varIndex][varIndex] = 1.0;
     } else {
+      double mainEffectValueTransformed = mainEffectValue;
+      switch(outputTransform) {
+        case REGAIN_OUTPUT_TRANSFORM_NONE:
+          break;
+        case REGAIN_OUTPUT_TRANSFORM_THRESH:
+          if(mainEffectValue < outputThreshold) {
+            mainEffectValueTransformed = 0.0;
+          }
+          break;
+        case REGAIN_OUTPUT_TRANSFORM_ABS:
+          mainEffectValueTransformed = fabs(mainEffectValue);
+          break;
+      }
       regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
       if(par::do_regain_pvalue_threshold) {
         if(mainEffectPval > par::regainPvalueThreshold) {
@@ -571,7 +594,7 @@ void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
       }
       regainPMatrix[varIndex][varIndex] = mainEffectPval;
     }
-
+    
     // update main effect betas file
     if(varIsNumeric) {
       MEBETAS << PP->nlistname[varIndex - PP->nl_all];
@@ -695,8 +718,8 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
   }
 
   // Was the model fitting method successful?
-  double interactionValue = 0;
-  double interactionValueTransformed = 0;
+  double interactionValue = 0.0;
+  double interactionValueTransformed = 0.0;
   bool useFailureValue = false;
 #pragma omp critical
   {
@@ -795,45 +818,44 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
         }
       }
 
-      interactionValueTransformed = interactionValue;
-      switch(outputTransform) {
-        case REGAIN_OUTPUT_TRANSFORM_NONE:
-          break;
-        case REGAIN_OUTPUT_TRANSFORM_THRESH:
-          if(interactionValue < outputThreshold) {
-            interactionValueTransformed = 0.0;
+      if (useFailureValue) {
+        interactionValueTransformed = failureValue;
+        interactionPval = 1.0;
+      } else {
+        interactionValueTransformed = interactionValue;
+        switch(outputTransform) {
+          case REGAIN_OUTPUT_TRANSFORM_NONE:
+            break;
+          case REGAIN_OUTPUT_TRANSFORM_THRESH:
+            if(interactionValue < outputThreshold) {
+              interactionValueTransformed = 0.0;
+            }
+            break;
+          case REGAIN_OUTPUT_TRANSFORM_ABS:
+            interactionValueTransformed = fabs(interactionValue);
+            break;
+        }
+        if(par::do_regain_pvalue_threshold) {
+          if(interactionPval > par::regainPvalueThreshold) {
+            interactionValueTransformed = 0;
+            interactionValueTransformed = 0;
           }
-          break;
-        case REGAIN_OUTPUT_TRANSFORM_ABS:
-          interactionValueTransformed = fabs(interactionValue);
-          break;
+        }
       }
     }
     
-    if(useFailureValue) {
-      regainMatrix[varIndex1][varIndex2] = failureValue;
-      regainMatrix[varIndex2][varIndex1] = failureValue;
-      regainPMatrix[varIndex1][varIndex2] = 1.0;
-      regainPMatrix[varIndex2][varIndex1] = 1.0;
-    } else {
-      regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
-      regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
-      if(par::do_regain_pvalue_threshold) {
-        if(interactionPval > par::regainPvalueThreshold) {
-          regainMatrix[varIndex1][varIndex2] = 0;
-          regainMatrix[varIndex2][varIndex1] = 0;
-        }
-      }
-      regainPMatrix[varIndex1][varIndex2] = interactionPval;
-      regainPMatrix[varIndex2][varIndex1] = interactionPval;
-    }
-
+    regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
+    regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
+    regainPMatrix[varIndex1][varIndex2] = interactionPval;
+    regainPMatrix[varIndex2][varIndex1] = interactionPval;
+    
     // store p-value along with (varIndex1, varIndex2) location of
     // item.  This is used later for FDR pruning
+    // TODO: account for invalid values/useFailureValue flag is true
     if(doFdrPrune) {
       pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
-      matrixElement interactionPvalElement =
-        make_pair(interactionPval, indexPair);
+      matrixElement interactionPvalElement;
+      interactionPvalElement = make_pair(interactionPval, indexPair);
       gainIntPvals.push_back(interactionPvalElement);
     }
 
