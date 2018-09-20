@@ -241,7 +241,7 @@ void LinearModel::standardise() {
 
 void LinearModel::fitLM() {
 
-	if(par::verbose) {
+	if(par::algorithm_verbose) {
 		for(int i = 0; i < nind; i++) {
 			cout << "VO " << i << "\t"
 							<< Y[i] << "\t";
@@ -398,7 +398,7 @@ void LinearModel::fitLM() {
   	return;
 	}
 
-	if(par::verbose) {
+	if(par::algorithm_verbose) {
 		cout << "beta...\n";
 		display(coef);
 		cout << "Sigma(S0b)\n";
@@ -462,7 +462,7 @@ void LinearModel::fitLM() {
 		multMatrix(tmp1, S0, S);
 	}
 
-	if(par::verbose) {
+	if(par::algorithm_verbose) {
 		cout << "coefficients:\n";
 		display(coef);
 		cout << "var-cov matrix:\n";

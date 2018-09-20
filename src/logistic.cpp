@@ -71,7 +71,7 @@ void LogisticModel::fitLM() {
     return;
   }
   
-	if(par::verbose) {
+	if(par::algorithm_verbose) {
 		for(int i = 0; i < nind; i++) {
 			cout << i << "\t"
 							<< Y[i] << "\t";
@@ -190,7 +190,7 @@ void LogisticModel::fitLM() {
 		HuberWhite();
 	}
 
-	if(par::verbose) {
+	if(par::algorithm_verbose) {
 		cout << "beta\n";
 		display(coef);
 		cout << "Sigma\n";

@@ -487,15 +487,23 @@ void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
 
   mainEffectModel->fitLM();
 
-  // Obtain estimates and statistics
-  vector_t betaMainEffectCoefs = mainEffectModel->getCoefs();
-  // p-values don't include intercept term
-  vector_t betaMainEffectCoefPvals = mainEffectModel->getPVals();
-  double mainEffectPval = betaMainEffectCoefPvals[testParameter - 1];
-  vector_t mainEffectModelSE = mainEffectModel->getSE();
-
-  double mainEffectValue = 0;
+  vector_t betaMainEffectCoefs;
+  vector_t betaMainEffectCoefPvals;
+  double mainEffectPval;
+  vector_t mainEffectModelSE;
   bool useFailureValue = false;
+  if(!mainEffectModel->fitConverged()) {
+    useFailureValue = true;
+  } else {
+    // Obtain estimates and statistics
+    betaMainEffectCoefs = mainEffectModel->getCoefs();
+    // p-values don't include intercept term
+    betaMainEffectCoefPvals = mainEffectModel->getPVals();
+    mainEffectPval = betaMainEffectCoefPvals[testParameter - 1];
+    mainEffectModelSE = mainEffectModel->getSE();
+  }
+  
+  double mainEffectValue = 0;
 #pragma omp critical
   {
     // Was the model fitting method successful?
@@ -694,33 +702,44 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
   // fit linear model coefficients
   interactionModel->fitLM();
 
-  vector_t betaInteractionCoefs = interactionModel->getCoefs();
-  vector_t betaInteractionCoefPVals = interactionModel->getPVals();
-  double interactionPval = 
-    betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-  vector_t interactionModelSE = interactionModel->getSE();
-  // calculate statistical test value from beta/SE (t-test or z-test)
-  vector_t::const_iterator bIt = betaInteractionCoefs.begin();
-  vector_t::const_iterator sIt = interactionModelSE.begin();
+  vector_t betaInteractionCoefs;
+  vector_t betaInteractionCoefPVals;
+  double interactionPval;
+  vector_t interactionModelSE;
+  vector_t::const_iterator bIt;
+  vector_t::const_iterator sIt;
   vector_t regressTestStatValues;
-  for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
-    regressTestStatValues.push_back(*bIt / *sIt);
+  bool useFailureValue = false;
+  if(!interactionModel->fitConverged()) {
+    useFailureValue = true;
+  } else {
+    betaInteractionCoefs = interactionModel->getCoefs();
+    betaInteractionCoefPVals = interactionModel->getPVals();
+    interactionPval = 
+            betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+    interactionModelSE = interactionModel->getSE();
+    // calculate statistical test value from beta/SE (t-test or z-test)
+    bIt = betaInteractionCoefs.begin();
+    sIt = interactionModelSE.begin();
+    regressTestStatValues;
+    for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
+      regressTestStatValues.push_back(*bIt / *sIt);
+    }
+    if (par::algorithm_verbose) {
+      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
+        << "\t" << coef1Label << "\t" << coef2Label
+        << "\t" << setw(12) << betaInteractionCoefs[3]
+        << "\t" << setw(12) << betaInteractionCoefPVals[2]
+        << "\t" << setw(12) << interactionModelSE[3]
+        << "\t" << setw(12)
+        << betaInteractionCoefs[3] / interactionModelSE[3]
+        << endl;
+    }
   }
-  if (par::algorithm_verbose) {
-    cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-      << "\t" << coef1Label << "\t" << coef2Label
-      << "\t" << setw(12) << betaInteractionCoefs[3]
-      << "\t" << setw(12) << betaInteractionCoefPVals[2]
-      << "\t" << setw(12) << interactionModelSE[3]
-      << "\t" << setw(12)
-      << betaInteractionCoefs[3] / interactionModelSE[3]
-      << endl;
-  }
-
+  
   // Was the model fitting method successful?
   double interactionValue = 0.0;
   double interactionValueTransformed = 0.0;
-  bool useFailureValue = false;
 #pragma omp critical
   {
     if(!interactionModel->isValid()) {

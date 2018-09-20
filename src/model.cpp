@@ -780,13 +780,13 @@ double Model::buildTypedInteraction(Individual* person, int j) {
               "second variable: " + int2str(var2.second));
   }
 
-#if defined(REGAIN_DEBUG)
-	cout << "Model::buildTypedInteraction: " 
-					<< "var1 index: " << var1.first << " | value: " << var1Val 
-					<< ", var2 index: " << var2.first << " | value: " << var2Val 
-					<< ", interaction value: " << (var1Val * var2Val)
-					<< endl;
-#endif
+  if(par::algorithm_verbose) {
+    cout << "Model::buildTypedInteraction: " 
+            << "var1 index: " << var1.first << " | value: " << var1Val 
+            << ", var2 index: " << var2.first << " | value: " << var2Val 
+            << ", interaction value: " << (var1Val * var2Val)
+            << endl;
+  }
 	
 	return(var1Val * var2Val);
 }
