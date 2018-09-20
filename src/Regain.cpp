@@ -710,8 +710,14 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
   vector_t::const_iterator sIt;
   vector_t regressTestStatValues;
   bool useFailureValue = false;
+  double interactionValue = 0.0;
+  double interactionValueTransformed = 0.0;
   if(!interactionModel->fitConverged()) {
+    cout << "Model " << coef1Label << " " << coef2Label 
+            << " failed to converge" << endl;
     useFailureValue = true;
+    interactionValueTransformed = failureValue;
+    interactionPval = 1.0;
   } else {
     betaInteractionCoefs = interactionModel->getCoefs();
     betaInteractionCoefPVals = interactionModel->getPVals();
@@ -735,112 +741,104 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
         << betaInteractionCoefs[3] / interactionModelSE[3]
         << endl;
     }
-  }
   
-  // Was the model fitting method successful?
-  double interactionValue = 0.0;
-  double interactionValueTransformed = 0.0;
-#pragma omp critical
-  {
-    if(!interactionModel->isValid()) {
-      RegressionInvalidType invalidReason = 
-              interactionModel->getRegressionFailureType();
-      string failMsg = "FAILURE: Invalid regression fit for interaction "
-        "variables [" + coef1Label + "], [" + coef2Label + "]\n";
-      switch(invalidReason) {
-        case REGRESSION_INVALID_NONE:
-          failMsg += "Error code REGRESSION_INVALID_NONE detected";
-          break;
-        case REGRESSION_INVALID_SVDINV:
-          failMsg += "SVD inverse failed";
-          break;
-        case REGRESSION_INVALID_EMPTY:
-          failMsg += "Empty model, either individuals or parameters";
-          break;
-        case REGRESSION_INVALID_MULTICOLL:
-          failMsg += "Possible multicollinearity";
-          break;
-        case REGRESSION_INVALID_VIF:
-          failMsg += "VIF check failed";
-          break;
-        case REGRESSION_INVALID_LINHYPOTH:
-          failMsg += "Linear model hypothesis failed";
-          break;
-        default:
-          failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
-          break;
+    // Was the model fitting valid?
+    #pragma omp critical
+    {
+      if(!interactionModel->isValid()) {
+        RegressionInvalidType invalidReason = 
+                interactionModel->getRegressionFailureType();
+        string failMsg = "FAILURE: Invalid regression fit for interaction "
+          "variables [" + coef1Label + "], [" + coef2Label + "]\n";
+        switch(invalidReason) {
+          case REGRESSION_INVALID_NONE:
+            failMsg += "Error code REGRESSION_INVALID_NONE detected";
+            break;
+          case REGRESSION_INVALID_SVDINV:
+            failMsg += "SVD inverse failed";
+            break;
+          case REGRESSION_INVALID_EMPTY:
+            failMsg += "Empty model, either individuals or parameters";
+            break;
+          case REGRESSION_INVALID_MULTICOLL:
+            failMsg += "Possible multicollinearity";
+            break;
+          case REGRESSION_INVALID_VIF:
+            failMsg += "VIF check failed";
+            break;
+          case REGRESSION_INVALID_LINHYPOTH:
+            failMsg += "Linear model hypothesis failed";
+            break;
+          default:
+            failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
+            break;
+        }
+        useFailureValue = true;
+        failures.push_back(failMsg);
       }
-      useFailureValue = true;
-      failures.push_back(failMsg);
-    }
-    else {
-      if(par::regainUseBetaValues) {
-        interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-        if(interactionPval > par::regainLargeCoefPvalue) {
-          stringstream ss;
-          ss << "Large p-value [" << interactionPval
-            << "] on coefficient for interaction variables ["
-            << coef1Label << "][" << coef2Label << "]\n";
-          warnings.push_back(ss.str());
-        }
-        if(std::isinf(interactionValue)) {
-          useFailureValue = true;
-          ++infCount;
-          stringstream ss;
-          ss << "Regression test statistic is +/-infinity on coefficient "
-            << "for interaction variables [" << coef1Label << "][" 
-            << coef2Label << "]\n";
-          warnings.push_back(ss.str());
-        }
-        if(std::isnan(interactionValue)) {
-          useFailureValue = true;
-          ++nanCount;
-          stringstream ss;
-          ss << "Regression test statistic is not a number NaN on coefficient "
-            << "for interaction variables [" << coef1Label << "][" 
-            << coef2Label << "]\n";
-          warnings.push_back(ss.str());
-        }
-      } else {
-        interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-        if(fabs(interactionValue) > par::regainLargeCoefTvalue) {
-          stringstream ss;
-          ss << "Large test statistic value [" << interactionValue
-            << "] on coefficient for interaction variables ["
-            << coef1Label << "][" << coef2Label << "]\n";
-          warnings.push_back(ss.str());
-          if(interactionValue < 0) {
-            interactionValue = -par::regainLargeCoefTvalue;
-          } else {
-            interactionValue = par::regainLargeCoefTvalue;
+      else {
+        if(par::regainUseBetaValues) {
+          interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
+          if(interactionPval > par::regainLargeCoefPvalue) {
+            stringstream ss;
+            ss << "Large p-value [" << interactionPval
+              << "] on coefficient for interaction variables ["
+              << coef1Label << "][" << coef2Label << "]\n";
+            warnings.push_back(ss.str());
           }
-          // DEBUG TEST
-          // interactionValue = 0;
+          if(std::isinf(interactionValue)) {
+            useFailureValue = true;
+            ++infCount;
+            stringstream ss;
+            ss << "Regression test statistic is +/-infinity on coefficient "
+              << "for interaction variables [" << coef1Label << "][" 
+              << coef2Label << "]\n";
+            warnings.push_back(ss.str());
+          }
+          if(std::isnan(interactionValue)) {
+            useFailureValue = true;
+            ++nanCount;
+            stringstream ss;
+            ss << "Regression test statistic is not a number NaN on coefficient "
+              << "for interaction variables [" << coef1Label << "][" 
+              << coef2Label << "]\n";
+            warnings.push_back(ss.str());
+          }
+        } else {
+          interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
+          if(fabs(interactionValue) > par::regainLargeCoefTvalue) {
+            stringstream ss;
+            ss << "Large test statistic value [" << interactionValue
+              << "] on coefficient for interaction variables ["
+              << coef1Label << "][" << coef2Label << "]\n";
+            warnings.push_back(ss.str());
+            if(interactionValue < 0) {
+              interactionValue = -par::regainLargeCoefTvalue;
+            } else {
+              interactionValue = par::regainLargeCoefTvalue;
+            }
+            // DEBUG TEST
+            // interactionValue = 0;
+          }
+          if(std::isinf(interactionValue)) {
+            useFailureValue = true;
+            ++infCount;
+            stringstream ss;
+            ss << "Regression test statistic is +/-infinity on coefficient "
+              << "for interaction variables [" << coef1Label << "][" 
+              << coef2Label << "]\n";
+            warnings.push_back(ss.str());
+          }
+          if(std::isnan(interactionValue)) {
+            useFailureValue = true;
+            ++nanCount;
+            stringstream ss;
+            ss << "Regression test statistic is not a number NaN on coefficient "
+              << "for interaction variables [" << coef1Label << "][" 
+              << coef2Label << "]\n";
+            warnings.push_back(ss.str());
+          }
         }
-        if(std::isinf(interactionValue)) {
-          useFailureValue = true;
-          ++infCount;
-          stringstream ss;
-          ss << "Regression test statistic is +/-infinity on coefficient "
-            << "for interaction variables [" << coef1Label << "][" 
-            << coef2Label << "]\n";
-          warnings.push_back(ss.str());
-        }
-        if(std::isnan(interactionValue)) {
-          useFailureValue = true;
-          ++nanCount;
-          stringstream ss;
-          ss << "Regression test statistic is not a number NaN on coefficient "
-            << "for interaction variables [" << coef1Label << "][" 
-            << coef2Label << "]\n";
-          warnings.push_back(ss.str());
-        }
-      }
-
-      if (useFailureValue) {
-        interactionValueTransformed = failureValue;
-        interactionPval = 1.0;
-      } else {
         interactionValueTransformed = interactionValue;
         switch(outputTransform) {
           case REGAIN_OUTPUT_TRANSFORM_NONE:
