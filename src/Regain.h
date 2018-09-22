@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "zfstream.h"
+#include "model.h"
 
 #include "Insilico.h"
 
@@ -32,6 +33,11 @@ enum RegainOutputTransform {
   REGAIN_OUTPUT_TRANSFORM_NONE, 
   REGAIN_OUTPUT_TRANSFORM_ABS, 
   REGAIN_OUTPUT_TRANSFORM_THRESH
+};
+
+enum RegainRegressionModelType {
+  REGRESSION_MODEL_MAIN_EFFECT,
+  REGRESSION_MODEL_INTERACTION
 };
 
 class Regain {
@@ -90,7 +96,15 @@ public:
   bool updateStats();
   bool logMatrixStats();
   matrix_t getRawMatrix() { return regainMatrix; }
+  void writeFailures();
+  void writeWarnings();
 private:
+  Model* createUnivariateModel(uint varIndex, bool varIsNumeric);
+  Model* createInteractionModel(uint varIndex1, bool var1IsNumeric,
+                                uint varIndex2, bool var2IsNumeric);
+  bool fitModelParameters();
+  bool checkValue(std::string coefLabel, double checkVal, double checkPval,
+                  double& returnVal, double& returnPVal);
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
   double outputThreshold;
@@ -127,6 +141,8 @@ private:
 	// in memory arrays
   matrix_t regainMatrix;
   matrix_t regainPMatrix;
+  Model* currentModel;
+  uint testParameter;
 	// collection of all interaction terms as mat_el types
 	vector<matrixElement> gainIntPvals;
   // regression warnings - bcw - 4/30/13

@@ -56,6 +56,7 @@ Regain::Regain(bool compressionFlag, double sifThreshold, bool componentsFlag) {
   maxMainEffect = 0;
   minInteraction = 0;
   maxInteraction = 0;
+  testParameter = 1;
 }
 
 Regain::Regain(bool compressionFlag, double sifThreshold, 
@@ -67,13 +68,11 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
   integratedAttributes = integrative;
   writeComponents = componentsFlag;
   doFdrPrune = fdrPruneFlag;
-
   // set integrative/normal regain vars
   // additional ext for integrative
   string ext = integratedAttributes ? ".block" : "";
   // header in betas files
   string hdr = integratedAttributes ? "attr" : "SNP";
-
   // open output files
   string beta_f = par::output_file_name + ext + ".betas";
   string mebeta_f = par::output_file_name + ext + ".mebetas";
@@ -81,11 +80,9 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
   MEBETAS.open(mebeta_f, ios::out);
   PP->printLOG("Writing interaction beta values to [ " + beta_f + " ]\n");
   PP->printLOG("Writing main effect beta values to [ " + mebeta_f + " ]\n");
-
   // TODO: remove these set precision options?
   BETAS.precision(6);
   MEBETAS.precision(6);
-
   // print header
   if(par::regainPureInteractions) {
     BETAS << hdr << "1\t" << hdr << "2\tB_0";
@@ -104,7 +101,6 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
     }
     BETAS << "\tB_I\tB_I P-VAL" << endl;
   }
-
   MEBETAS << hdr << "\tB_0\tB_1\tB_1 P-VAL";
   if(par::covar_file) {
     for(uint i = 0; i < par::clist_number; i++) {
@@ -113,7 +109,6 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
     }
   }
   MEBETAS << endl;
-
   string sif_f = par::output_file_name + ext + ".sif";
   SIF.open(sif_f, ios::out);
   PP->printLOG("Writing Cytoscape network file (SIF) to [ " + sif_f + " ]\n");
@@ -135,7 +130,6 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
       int_sif_f + " ]\n");
     INT_SIF.precision(6);
   }
-
   if(initMatrixFromData) {
     // total number of attributes
     numAttributes = 0;
@@ -148,12 +142,10 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
     sizeMatrix(regainMatrix, numAttributes, numAttributes);
     sizeMatrix(regainPMatrix, numAttributes, numAttributes);
   }
-
   useOutputThreshold = par::regainMatrixThreshold;
   outputThreshold = par::regainMatrixThresholdValue;
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
   outputFormat = REGAIN_OUTPUT_FORMAT_FULL;
-
   pureInteractions = false;
   failureValue = 0;
   nanCount = 0;
@@ -162,6 +154,7 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
   maxMainEffect = 0;
   minInteraction = 0;
   maxInteraction = 0;
+  testParameter = 1;
 }
 
 void Regain::setFailureValue(double fValue) {
@@ -227,7 +220,6 @@ bool Regain::readRegainFromFile(string regainFilename) {
   if(REGAIN.fail()) {
     return false;
   }
-
   // read matrix entries
   bool readHeader = false;
   uint matrixRow = 0;
@@ -236,11 +228,9 @@ bool Regain::readRegainFromFile(string regainFilename) {
   while(!REGAIN.eof()) {
     char nline[par::MAX_LINE_LENGTH];
     REGAIN.getline(nline, par::MAX_LINE_LENGTH, '\n');
-
     // convert to string
     string sline = nline;
     if(sline == "") continue;
-
     // read line from text file into a vector of tokens
     string buf;
     stringstream ss(sline);
@@ -248,7 +238,6 @@ bool Regain::readRegainFromFile(string regainFilename) {
     while(ss >> buf) {
       tokens.push_back(buf);
     }
-
     if(!readHeader) {
       // process reGAIN file header
       numAttributes = tokens.size();
@@ -283,13 +272,11 @@ bool Regain::readRegainFromFile(string regainFilename) {
 }
 
 bool Regain::writeRegainToFile(string newRegainFilename) {
-
   PP->printLOG("Writing REGAIN matrix [ " + newRegainFilename + " ]\n");
   ofstream outFile(newRegainFilename);
   if(outFile.fail()) {
     return false;
   }
-
   // write header
   uint hIdx = 0;
   for(vector<string>::const_iterator hIt = attributeNames.begin();
@@ -301,7 +288,6 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
     }
   }
   outFile << endl;
-
   // write matrix entries, possibly transformed
   double valueToWrite = 0;
   for(uint i = 0; i < numAttributes; ++i) {
@@ -348,13 +334,11 @@ bool Regain::writeRegainToFile(string newRegainFilename) {
 }
 
 bool Regain::writeRegainToSifFile(string newSifFilename) {
-
   PP->printLOG("Writing REGAIN matrix to SIF [ " + newSifFilename + " ]\n");
   ofstream outFile(newSifFilename);
   if(outFile.fail()) {
     return false;
   }
-
   for(uint i = 0; i < numAttributes; ++i) {
     for(uint j = i + 1; j < numAttributes; ++j) {
       string attr1 = attributeNames[i];
@@ -365,7 +349,6 @@ bool Regain::writeRegainToSifFile(string newSifFilename) {
       }
     }
   }
-
   outFile.close();
 
   return true;
@@ -397,42 +380,8 @@ void Regain::run() {
       }
     }
   } // Next pair of SNPs/numeric attributes
-
-  // report warnings to stdout - bcw - 4/30/13
-  if(warnings.size()) {
-    double numCombinations = (numAttributes * (numAttributes - 1)) / 2.0;
-    double numFailures = (double) warnings.size();
-    double percentFailures = (numFailures / (numCombinations + numAttributes)) * 100.0;
-    PP->printLOG(dbl2str(numFailures) + " warnings in " + 
-      dbl2str(numCombinations + numAttributes)+ " regression models "
-      + dbl2str(percentFailures) + "%\n");
-    string failureFilename = par::output_file_name + ".regression.warnings";
-    PP->printLOG("Writing warning messages to [ " + failureFilename + " ]\n");
-    ofstream failureFile(failureFilename);
-    for(vector<string>::const_iterator wIt = warnings.begin();
-      wIt != warnings.end(); ++wIt) {
-      failureFile << *wIt << endl;
-    }
-    failureFile.close();
-  }
-
-  if(failures.size()) {
-    double numCombinations = static_cast<double>(numAttributes * numAttributes);
-    double numFailures = (double) failures.size();
-    double percentFailures = (numFailures / numCombinations) * 100.0;
-    PP->printLOG(dbl2str(numFailures) + " failures in " + 
-      dbl2str(numCombinations)+ " regression models "
-      + dbl2str(percentFailures) + "%\n");
-    string failureFilename = par::output_file_name + ".regression.failures";
-    PP->printLOG("Writing failure messages to [ " + failureFilename + " ]\n");
-    ofstream failureFile(failureFilename);
-    for(vector<string>::const_iterator fIt = failures.begin();
-      fIt != failures.end(); ++fIt) {
-      failureFile << *fIt << endl;
-    }
-    failureFile.close();
-  }
-
+  writeWarnings();
+  writeFailures();
   if(nanCount) {
     PP->printLOG("Detected [ " + int2str(nanCount) + " ] NaN's\n");
   }
@@ -441,21 +390,95 @@ void Regain::run() {
   }
 }
 
-void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
-  Model *mainEffectModel;
+bool Regain::fitModelParameters() {
+  bool success = true;
+  // build design matrix and fit the model parameters
+  currentModel->buildDesignMatrix();
+  currentModel->fitLM();
+  // Was the model fitting method successful?
+  if(!currentModel->isValid()) {
+    string failMsg = "WARNING: Invalid regression fit: ";
+    RegressionInvalidType invalidReason = 
+            currentModel->getRegressionFailureType();
+    switch(invalidReason) {
+      case REGRESSION_INVALID_NONE:
+        failMsg += "Error code REGRESSION_INVALID_NONE detected";
+        break;
+      case REGRESSION_INVALID_SVDINV:
+        failMsg += "SVD inverse failed";
+        break;
+      case REGRESSION_INVALID_EMPTY:
+        failMsg += "Empty model, either individuals or parameters";
+        break;
+      case REGRESSION_INVALID_MULTICOLL:
+        failMsg += "Possible multicollinearity";
+        break;
+      case REGRESSION_INVALID_VIF:
+        failMsg += "VIF check failed";
+        break;
+      case REGRESSION_INVALID_LINHYPOTH:
+        failMsg += "Linear model hypothesis failed";
+        break;
+      default:
+        failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
+        break;
+    }
+    failures.push_back(failMsg);
+    success = false;
+  }
+  if(!currentModel->fitConverged()) {
+    success = false;
+  }  
+  return success;
+}
 
+bool Regain::checkValue(string coefLabel, double checkVal, double checkPval, 
+                        double& returnVal, double& returnPval) {
+  returnVal = checkVal;
+  returnPval = checkPval;
+  bool useFailureValue = false;
+  // report large p-value of coefficient as a warning
+  if(checkPval > par::regainLargeCoefPvalue) {
+    stringstream ss;
+    ss << "Large p-value [" << checkPval
+      << "] on coefficient for variable [" << coefLabel << "]";
+    warnings.push_back(ss.str());
+  }
+  if(std::isinf(checkVal)) {
+    useFailureValue = true;
+    ++infCount;
+    stringstream ss;
+    ss << "Regression test statistic is +/-infinity on coefficient "
+      << "for interaction variable [ " << coefLabel << " ]\n";
+    warnings.push_back(ss.str());
+  } 
+  if(std::isnan(checkVal)) {
+    useFailureValue = true;
+    ++nanCount;
+    stringstream ss;
+    ss << "Regression test statistic is not a number NaN on coefficient "
+      << "for interaction variable [ " << coefLabel << "] \n";
+    warnings.push_back(ss.str());
+  }
+  if(useFailureValue) {
+    returnVal = failureValue;
+    returnPval = 1.0;
+  } 
+  return useFailureValue;  
+}
+
+Model* Regain::createUnivariateModel(uint varIndex, bool varIsNumeric) {
+  currentModel = 0;
   // logistic regression for binary phenotypes (traits), linear otherwise
   if(par::bt) {
     LogisticModel* m = new LogisticModel(PP);
-    mainEffectModel = m;
+    currentModel = m;
   } else {
     LinearModel* m = new LinearModel(PP);
-    mainEffectModel = m;
+    currentModel = m;
   }
-
   // Set missing data
-  mainEffectModel->setMissing();
-
+  currentModel->setMissing();
   // label for regression model
   string coefLabel = "";
   if(varIsNumeric) {
@@ -463,146 +486,117 @@ void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
   } else {
     coefLabel = PP->locus[varIndex]->name;
   }
-
   // Main effect of SNP/numeric attribute
   if(varIsNumeric) {
-    mainEffectModel->addNumeric(varIndex - PP->nl_all);
+    currentModel->addNumeric(varIndex - PP->nl_all);
   } else {
-    mainEffectModel->addAdditiveSNP(varIndex);
+    currentModel->addAdditiveSNP(varIndex);
   }
-  mainEffectModel->label.push_back(coefLabel);
-
+  currentModel->label.push_back(coefLabel);
+  testParameter = 1;
+  currentModel->testParameter = testParameter; // single variable main effect
   // add covariates if specified
   if(par::covar_file) {
-    addCovariates(*mainEffectModel);
+    addCovariates(*currentModel);
   }
 
-  // Build design matrix
-  mainEffectModel->buildDesignMatrix();
+  return currentModel;
+}
 
-  // Fit linear model
-  // set test parameter index for main effect regression
-  uint testParameter = 1;
-  mainEffectModel->testParameter = testParameter; // single variable main effect
+Model* Regain::createInteractionModel(uint varIndex1, bool var1IsNumeric, 
+                                      uint varIndex2, bool var2IsNumeric) {
+  // attempt to fit a model and retrieve the estimated parameters
+  double newVal = 0;
+  double newPval = 1.0;
+  currentModel = 0;
+  // logistic regression for binary phenotypes (traits), linear otherwise
+  if(par::bt) {
+    LogisticModel* m = new LogisticModel(PP);
+    currentModel = m;
+  } else {
+    LinearModel* m = new LinearModel(PP);
+    currentModel = m;
+  }
+  // Set missing data
+  currentModel->setMissing();
+  // labels in regression model
+  string coef1Label = "";
+  if(var1IsNumeric) {
+    coef1Label = PP->nlistname[varIndex1 - PP->nl_all];
+  } else {
+    coef1Label = PP->locus[varIndex1]->name;
+  }
+  string coef2Label = "";
+  if(var2IsNumeric) {
+    coef2Label = PP->nlistname[varIndex2 - PP->nl_all];
+  } else {
+    coef2Label = PP->locus[varIndex2]->name;
+  }
+  // Main effect of SNP/numeric attribute 1
+  if(var1IsNumeric) {
+    currentModel->addNumeric(varIndex1 - PP->nl_all);
+  } else {
+    currentModel->addAdditiveSNP(varIndex1);
+  }
+  currentModel->label.push_back(coef1Label);
+  // Main effect of SNP/numeric attribute 2
+  if(var2IsNumeric) {
+    currentModel->addNumeric(varIndex2 - PP->nl_all);
+  } else {
+    currentModel->addAdditiveSNP(varIndex2);
+  }
+  currentModel->label.push_back(coef2Label);
+  currentModel->addInteraction(1, 2);
+  currentModel->label.push_back("EPI");
+  testParameter = 3;
+  // add covariates if specified
+  if(par::covar_file) {
+    addCovariates(*currentModel);
+    testParameter += par::clist_number;
+  }
 
-  mainEffectModel->fitLM();
+  return currentModel;
+}
 
+void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
+  // setup regression model
+  Model *currentModel = createUnivariateModel(varIndex, varIsNumeric);
+  // attempt to fit a model and retrieve the estimated parameters
+  double newVal = 0;
+  double newPval = 1.0;
+  // get the estimated parameters
   vector_t betaMainEffectCoefs;
   vector_t betaMainEffectCoefPvals;
   double mainEffectPval;
   vector_t mainEffectModelSE;
-  bool useFailureValue = false;
-  if(!mainEffectModel->fitConverged()) {
-    useFailureValue = true;
-  } else {
+  if(fitModelParameters()) {
     // Obtain estimates and statistics
-    betaMainEffectCoefs = mainEffectModel->getCoefs();
+    betaMainEffectCoefs = currentModel->getCoefs();
     // p-values don't include intercept term
-    betaMainEffectCoefPvals = mainEffectModel->getPVals();
+    betaMainEffectCoefPvals = currentModel->getPVals();
     mainEffectPval = betaMainEffectCoefPvals[testParameter - 1];
-    mainEffectModelSE = mainEffectModel->getSE();
+    mainEffectModelSE = currentModel->getSE();
+    double mainEffectValue = failureValue;
+    if(par::regainUseBetaValues) {
+      mainEffectValue = betaMainEffectCoefs[testParameter];
+    } else {
+      mainEffectValue = betaMainEffectCoefs[testParameter] /
+        mainEffectModelSE[testParameter];
+    }
+    checkValue("", mainEffectValue, mainEffectPval, newVal, newPval);
   }
   
-  double mainEffectValue = 0;
+  // update class variables and open file
 #pragma omp critical
   {
-    // Was the model fitting method successful?
-    if(!mainEffectModel->isValid()) {
-      string failMsg = "WARNING: Invalid main effect regression fit for variable [" +
-        coefLabel + "]";
-      RegressionInvalidType invalidReason = 
-              mainEffectModel->getRegressionFailureType();
-      switch(invalidReason) {
-        case REGRESSION_INVALID_NONE:
-          failMsg += "Error code REGRESSION_INVALID_NONE detected";
-          break;
-        case REGRESSION_INVALID_SVDINV:
-          failMsg += "SVD inverse failed";
-          break;
-        case REGRESSION_INVALID_EMPTY:
-          failMsg += "Empty model, either individuals or parameters";
-          break;
-        case REGRESSION_INVALID_MULTICOLL:
-          failMsg += "Possible multicollinearity";
-          break;
-        case REGRESSION_INVALID_VIF:
-          failMsg += "VIF check failed";
-          break;
-        case REGRESSION_INVALID_LINHYPOTH:
-          failMsg += "Linear model hypothesis failed";
-          break;
-        default:
-          failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
-          break;
-      }
-      failures.push_back(failMsg);
-      useFailureValue = true;
-    } else {
-      if(par::regainUseBetaValues) {
-        mainEffectValue = betaMainEffectCoefs[testParameter];
-        // report large p-value of coefficient as a warning
-        if(mainEffectPval > par::regainLargeCoefPvalue) {
-          stringstream ss;
-          ss << "Large p-value [" << mainEffectPval
-            << "] on coefficient for variable [" << coefLabel << "]";
-          warnings.push_back(ss.str());
-        }
-        if(std::isinf(mainEffectValue)) {
-          useFailureValue = true;
-          ++infCount;
-        }
-        if(std::isnan(mainEffectValue)) {
-          useFailureValue = true;
-          ++nanCount;
-        }
-      } else {
-        mainEffectValue = betaMainEffectCoefs[testParameter] /
-          mainEffectModelSE[testParameter];
-        // report large t-test value of coefficient as a warning
-        if(mainEffectValue > par::regainLargeCoefTvalue) {
-          stringstream ss;
-          ss << "Large test statistic value [" << mainEffectValue
-            << "] on coefficient for variable [" << coefLabel << "]";
-          warnings.push_back(ss.str());
-          mainEffectValue = par::regainLargeCoefTvalue;
-        }
-        if(std::isinf(mainEffectValue)) {
-          useFailureValue = true;
-          ++infCount;
-        }
-        if(std::isnan(mainEffectValue)) {
-          useFailureValue = true;
-          ++nanCount;
-        }
+    // update the matrices
+    regainMatrix[varIndex][varIndex] = newVal;
+    regainPMatrix[varIndex][varIndex] = newPval;
+    if(par::do_regain_pvalue_threshold) {
+      if(newPval > par::regainPvalueThreshold) {
+        regainMatrix[varIndex][varIndex] = 0;
       }
     }
-
-    if (useFailureValue) {
-      regainMatrix[varIndex][varIndex] = failureValue;
-      regainPMatrix[varIndex][varIndex] = 1.0;
-    } else {
-      double mainEffectValueTransformed = mainEffectValue;
-      switch(outputTransform) {
-        case REGAIN_OUTPUT_TRANSFORM_NONE:
-          break;
-        case REGAIN_OUTPUT_TRANSFORM_THRESH:
-          if(mainEffectValue < outputThreshold) {
-            mainEffectValueTransformed = 0.0;
-          }
-          break;
-        case REGAIN_OUTPUT_TRANSFORM_ABS:
-          mainEffectValueTransformed = fabs(mainEffectValue);
-          break;
-      }
-      regainMatrix[varIndex][varIndex] = mainEffectValueTransformed;
-      if(par::do_regain_pvalue_threshold) {
-        if(mainEffectPval > par::regainPvalueThreshold) {
-          regainMatrix[varIndex][varIndex] = 0;
-        }
-      }
-      regainPMatrix[varIndex][varIndex] = mainEffectPval;
-    }
-    
     // update main effect betas file
     if(varIsNumeric) {
       MEBETAS << PP->nlistname[varIndex - PP->nl_all];
@@ -623,7 +617,7 @@ void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
   } // end #prgama critical
 
   // free model memory
-  delete mainEffectModel;
+  delete currentModel;
 }
 
 void Regain::addCovariates(Model &m) {
@@ -635,21 +629,7 @@ void Regain::addCovariates(Model &m) {
 }
 
 void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
-  uint varIndex2, bool var2IsNumeric) {
-  Model* interactionModel;
-
-  // logistic regression for binary phenotypes (traits), linear otherwise
-  if(par::bt) {
-    LogisticModel* m = new LogisticModel(PP);
-    interactionModel = m;
-  } else {
-    LinearModel* m = new LinearModel(PP);
-    interactionModel = m;
-  }
-
-  // Set missing data
-  interactionModel->setMissing();
-
+                               uint varIndex2, bool var2IsNumeric) {
   // labels in regression model
   string coef1Label = "";
   if(var1IsNumeric) {
@@ -663,67 +643,26 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
   } else {
     coef2Label = PP->locus[varIndex2]->name;
   }
-
-  // Main effect of SNP/numeric attribute 1
-  if(var1IsNumeric) {
-    interactionModel->addNumeric(varIndex1 - PP->nl_all);
-  } else {
-    interactionModel->addAdditiveSNP(varIndex1);
-  }
-  interactionModel->label.push_back(coef1Label);
-
-  // Main effect of SNP/numeric attribute 2
-  if(var2IsNumeric) {
-    interactionModel->addNumeric(varIndex2 - PP->nl_all);
-  } else {
-    interactionModel->addAdditiveSNP(varIndex2);
-  }
-  interactionModel->label.push_back(coef2Label);
-
-  // add covariates if specified
-  if(par::covar_file) addCovariates(*interactionModel);
-
-  // interaction
-  interactionModel->addInteraction(1, 2);
-  interactionModel->label.push_back("EPI");
-
-  // Build design matrix
-  interactionModel->buildDesignMatrix();
-
-  // set test parameter index for interaction regression
-  // TODO: change this when considering main effects in model or not
-  uint testParameter = 3;
-  // add # covars to test param to get interaction param
-  if(par::covar_file) {
-    testParameter += par::clist_number;
-  }
-  interactionModel->testParameter = testParameter; // interaction
-
-  // fit linear model coefficients
-  interactionModel->fitLM();
-
+  Model *currentModel = createInteractionModel(varIndex1, var1IsNumeric,
+                                               varIndex2, var2IsNumeric);
+     // get the estimated parameters
   vector_t betaInteractionCoefs;
   vector_t betaInteractionCoefPVals;
+  double interactionVal;
   double interactionPval;
   vector_t interactionModelSE;
   vector_t::const_iterator bIt;
   vector_t::const_iterator sIt;
   vector_t regressTestStatValues;
-  bool useFailureValue = false;
-  double interactionValue = 0.0;
-  double interactionValueTransformed = 0.0;
-  if(!interactionModel->fitConverged()) {
-    cout << "Model " << coef1Label << " " << coef2Label 
-            << " failed to converge" << endl;
-    useFailureValue = true;
-    interactionValueTransformed = failureValue;
-    interactionPval = 1.0;
-  } else {
-    betaInteractionCoefs = interactionModel->getCoefs();
-    betaInteractionCoefPVals = interactionModel->getPVals();
+  double newVal = 0;
+  double newPval = 1.0;
+  if(fitModelParameters()) {
+    // model converged, so get the estimated parameters and statistics
+    betaInteractionCoefs = currentModel->getCoefs();
+    betaInteractionCoefPVals = currentModel->getPVals();
     interactionPval = 
             betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
-    interactionModelSE = interactionModel->getSE();
+    interactionModelSE = currentModel->getSE();
     // calculate statistical test value from beta/SE (t-test or z-test)
     bIt = betaInteractionCoefs.begin();
     sIt = interactionModelSE.begin();
@@ -731,151 +670,24 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
     for(; bIt != betaInteractionCoefs.end(); ++bIt, ++sIt) {
       regressTestStatValues.push_back(*bIt / *sIt);
     }
-    if (par::algorithm_verbose) {
-      cout << (interactionModel->fitConverged() ? "TRUE" : "FALSE")
-        << "\t" << coef1Label << "\t" << coef2Label
-        << "\t" << setw(12) << betaInteractionCoefs[3]
-        << "\t" << setw(12) << betaInteractionCoefPVals[2]
-        << "\t" << setw(12) << interactionModelSE[3]
-        << "\t" << setw(12)
-        << betaInteractionCoefs[3] / interactionModelSE[3]
-        << endl;
-    }
+    checkValue("", interactionVal, interactionPval, newVal, newPval);  
+  }
   
-    // Was the model fitting valid?
-    #pragma omp critical
-    {
-      if(!interactionModel->isValid()) {
-        RegressionInvalidType invalidReason = 
-                interactionModel->getRegressionFailureType();
-        string failMsg = "FAILURE: Invalid regression fit for interaction "
-          "variables [" + coef1Label + "], [" + coef2Label + "]\n";
-        switch(invalidReason) {
-          case REGRESSION_INVALID_NONE:
-            failMsg += "Error code REGRESSION_INVALID_NONE detected";
-            break;
-          case REGRESSION_INVALID_SVDINV:
-            failMsg += "SVD inverse failed";
-            break;
-          case REGRESSION_INVALID_EMPTY:
-            failMsg += "Empty model, either individuals or parameters";
-            break;
-          case REGRESSION_INVALID_MULTICOLL:
-            failMsg += "Possible multicollinearity";
-            break;
-          case REGRESSION_INVALID_VIF:
-            failMsg += "VIF check failed";
-            break;
-          case REGRESSION_INVALID_LINHYPOTH:
-            failMsg += "Linear model hypothesis failed";
-            break;
-          default:
-            failMsg += "Regression invalid failure type detected: " + int2str(invalidReason);
-            break;
-        }
-        useFailureValue = true;
-        failures.push_back(failMsg);
-      }
-      else {
-        if(par::regainUseBetaValues) {
-          interactionValue = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-          if(interactionPval > par::regainLargeCoefPvalue) {
-            stringstream ss;
-            ss << "Large p-value [" << interactionPval
-              << "] on coefficient for interaction variables ["
-              << coef1Label << "][" << coef2Label << "]\n";
-            warnings.push_back(ss.str());
-          }
-          if(std::isinf(interactionValue)) {
-            useFailureValue = true;
-            ++infCount;
-            stringstream ss;
-            ss << "Regression test statistic is +/-infinity on coefficient "
-              << "for interaction variables [" << coef1Label << "][" 
-              << coef2Label << "]\n";
-            warnings.push_back(ss.str());
-          }
-          if(std::isnan(interactionValue)) {
-            useFailureValue = true;
-            ++nanCount;
-            stringstream ss;
-            ss << "Regression test statistic is not a number NaN on coefficient "
-              << "for interaction variables [" << coef1Label << "][" 
-              << coef2Label << "]\n";
-            warnings.push_back(ss.str());
-          }
-        } else {
-          interactionValue = regressTestStatValues[regressTestStatValues.size() - 1];
-          if(fabs(interactionValue) > par::regainLargeCoefTvalue) {
-            stringstream ss;
-            ss << "Large test statistic value [" << interactionValue
-              << "] on coefficient for interaction variables ["
-              << coef1Label << "][" << coef2Label << "]\n";
-            warnings.push_back(ss.str());
-            if(interactionValue < 0) {
-              interactionValue = -par::regainLargeCoefTvalue;
-            } else {
-              interactionValue = par::regainLargeCoefTvalue;
-            }
-            // DEBUG TEST
-            // interactionValue = 0;
-          }
-          if(std::isinf(interactionValue)) {
-            useFailureValue = true;
-            ++infCount;
-            stringstream ss;
-            ss << "Regression test statistic is +/-infinity on coefficient "
-              << "for interaction variables [" << coef1Label << "][" 
-              << coef2Label << "]\n";
-            warnings.push_back(ss.str());
-          }
-          if(std::isnan(interactionValue)) {
-            useFailureValue = true;
-            ++nanCount;
-            stringstream ss;
-            ss << "Regression test statistic is not a number NaN on coefficient "
-              << "for interaction variables [" << coef1Label << "][" 
-              << coef2Label << "]\n";
-            warnings.push_back(ss.str());
-          }
-        }
-        interactionValueTransformed = interactionValue;
-        switch(outputTransform) {
-          case REGAIN_OUTPUT_TRANSFORM_NONE:
-            break;
-          case REGAIN_OUTPUT_TRANSFORM_THRESH:
-            if(interactionValue < outputThreshold) {
-              interactionValueTransformed = 0.0;
-            }
-            break;
-          case REGAIN_OUTPUT_TRANSFORM_ABS:
-            interactionValueTransformed = fabs(interactionValue);
-            break;
-        }
-        if(par::do_regain_pvalue_threshold) {
-          if(interactionPval > par::regainPvalueThreshold) {
-            interactionValueTransformed = 0;
-            interactionValueTransformed = 0;
-          }
-        }
-      }
-    }
-    
-    regainMatrix[varIndex1][varIndex2] = interactionValueTransformed;
-    regainMatrix[varIndex2][varIndex1] = interactionValueTransformed;
-    regainPMatrix[varIndex1][varIndex2] = interactionPval;
-    regainPMatrix[varIndex2][varIndex1] = interactionPval;
-    
+#pragma omp critical
+  {
+    regainMatrix[varIndex1][varIndex2] = newVal;
+    regainMatrix[varIndex2][varIndex1] = newVal;
+    regainPMatrix[varIndex1][varIndex2] = newPval;
+    regainPMatrix[varIndex2][varIndex1] = newPval;
     // store p-value along with (varIndex1, varIndex2) location of
     // item.  This is used later for FDR pruning
     // TODO: account for invalid values/useFailureValue flag is true
     if(doFdrPrune) {
       pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
       matrixElement interactionPvalElement;
-      interactionPvalElement = make_pair(interactionPval, indexPair);
+      interactionPvalElement = make_pair(newPval, indexPair);
       gainIntPvals.push_back(interactionPvalElement);
     }
-
     // update BETAS file
     BETAS << coef1Label << "\t" << coef2Label;
     for(uint  i = 0; i < betaInteractionCoefs.size(); ++i) {
@@ -889,37 +701,34 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
       }
     }
     BETAS << endl;
-
     // update SIF files); add to SIF if interaction >= SIF threshold
-    if(interactionValueTransformed >= sifThresh) {
-      SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+    if(newVal >= sifThresh) {
+      SIF << coef1Label << "\t" << newVal << "\t"
         << coef2Label << endl;
       if(writeComponents) {
         // numeric
         if(var1IsNumeric && var2IsNumeric) {
-          NUM_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+          NUM_SIF << coef1Label << "\t" << newVal << "\t"
             << coef2Label << endl;
         }// integrative
         else if(var1IsNumeric && !var2IsNumeric) {
-          INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+          INT_SIF << coef1Label << "\t" << newVal << "\t"
             << coef2Label << endl;
         }// integrative
         else if(!var1IsNumeric && var2IsNumeric) {
-          INT_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+          INT_SIF << coef1Label << "\t" << newVal << "\t"
             << coef2Label << endl;
         }// SNP
         else {
-          SNP_SIF << coef1Label << "\t" << interactionValueTransformed << "\t"
+          SNP_SIF << coef1Label << "\t" << newVal << "\t"
             << coef2Label << endl;
         }
       }
     }
-
-    // end critical section OMP pragma    
-  }
+  } // end critical section OMP pragma
 
   // free model memory
-  delete interactionModel;
+  delete currentModel;
 }
 
 void Regain::pureInteractionEffect(uint varIndex1, bool var1IsNumeric,
@@ -1474,4 +1283,43 @@ bool Regain::logMatrixStats() {
   PP->printLOG("maximum interaction [ " + dbl2str(maxInteraction) + " ]\n");
 
   return true;
+}
+
+void Regain::writeFailures() {
+  if(failures.size()) {
+    double numCombinations = static_cast<double>(numAttributes * numAttributes);
+    double numFailures = (double) failures.size();
+    double percentFailures = (numFailures / numCombinations) * 100.0;
+    PP->printLOG(dbl2str(numFailures) + " failures in " + 
+      dbl2str(numCombinations)+ " regression models "
+      + dbl2str(percentFailures) + "%\n");
+    string failureFilename = par::output_file_name + ".regression.failures";
+    PP->printLOG("Writing failure messages to [ " + failureFilename + " ]\n");
+    ofstream failureFile(failureFilename);
+    for(vector<string>::const_iterator fIt = failures.begin();
+      fIt != failures.end(); ++fIt) {
+      failureFile << *fIt << endl;
+    }
+    failureFile.close();
+  }
+}
+  
+  void Regain::writeWarnings() {
+  // report warnings to stdout - bcw - 4/30/13
+  if(warnings.size()) {
+    double numCombinations = (numAttributes * (numAttributes - 1)) / 2.0;
+    double numFailures = (double) warnings.size();
+    double percentFailures = (numFailures / (numCombinations + numAttributes)) * 100.0;
+    PP->printLOG(dbl2str(numFailures) + " warnings in " + 
+      dbl2str(numCombinations + numAttributes)+ " regression models "
+      + dbl2str(percentFailures) + "%\n");
+    string failureFilename = par::output_file_name + ".regression.warnings";
+    PP->printLOG("Writing warning messages to [ " + failureFilename + " ]\n");
+    ofstream failureFile(failureFilename);
+    for(vector<string>::const_iterator wIt = warnings.begin();
+      wIt != warnings.end(); ++wIt) {
+      failureFile << *wIt << endl;
+    }
+    failureFile.close();
+  }
 }
