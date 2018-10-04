@@ -74,6 +74,7 @@
 // thin, system-call interfaces to R packages through scripts
 #include "Deseq.h"
 #include "Edger.h"
+#include "RegainMinimal.h"
 
 using namespace std;
 using namespace arma;
@@ -1795,6 +1796,20 @@ int main(int argc, char* argv[]) {
   }
 
 	/////////////////////////////////////////////////////////////////////////////
+	// reGAIN analysis requested - bcw - 10/4/18
+	if(par::do_regain_minimal) {
+		P.printLOG(Timestamp() + "Performing MINIMAL reGAIN analysis\n");
+		P.SNP2Ind();
+    RegainMinimal regain;
+		regain.run();
+		regain.logOutputOptions();
+		regain.logMatrixStats();
+		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.min.tab");
+		// stop inbix processing
+		shutdown();
+  }
+
+	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 	if(par::do_regain) {
 		P.printLOG(Timestamp() + "Performing reGAIN analysis\n");
@@ -1838,7 +1853,9 @@ int main(int argc, char* argv[]) {
 		} else {
 			regain->performPureInteraction(false);
 		}
+    // end pre-processing
 		regain->run();
+    // begin post-processing
 		if(par::regainFdrPrune) {
 			regain->writeRegain(false);
 			regain->fdrPrune(par::regainFdr);

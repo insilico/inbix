@@ -81,8 +81,8 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
   PP->printLOG("Writing interaction beta values to [ " + beta_f + " ]\n");
   PP->printLOG("Writing main effect beta values to [ " + mebeta_f + " ]\n");
   // TODO: remove these set precision options?
-  BETAS.precision(6);
-  MEBETAS.precision(6);
+//  BETAS.precision(6);
+//  MEBETAS.precision(6);
   // print header
   if(par::regainPureInteractions) {
     BETAS << hdr << "1\t" << hdr << "2\tB_0";
@@ -146,8 +146,8 @@ Regain::Regain(bool compressionFlag, double sifThreshold,
   outputThreshold = par::regainMatrixThresholdValue;
   outputTransform = REGAIN_OUTPUT_TRANSFORM_NONE;
   outputFormat = REGAIN_OUTPUT_FORMAT_FULL;
-  pureInteractions = false;
-  failureValue = 0;
+  pureInteractions = par::regainPureInteractions;
+  failureValue = par::regainFailValue;
   nanCount = 0;
   infCount = 0;
   minMainEffect = 0;
@@ -356,28 +356,36 @@ bool Regain::writeRegainToSifFile(string newSifFilename) {
 
 void Regain::run() {
   // reset the warnings list
-  warnings.resize(0);
-  failures.resize(0);
+  warnings.clear();
+  failures.clear();
   // OpenMP parallelization of this outer loop
   uint numThreads = omp_get_num_threads();
   uint numProcs = omp_get_num_procs();
   cout << "OpenMP: " << numThreads << " threads available" << endl;
   cout << "OpenMP: " << numProcs << " processors available" << endl;
-#pragma omp parallel for schedule(dynamic, 1)
-  for(uint varIndex1 = 0; varIndex1 < numAttributes; varIndex1++) {
-    for(uint varIndex2 = 0; varIndex2 < numAttributes; varIndex2++) {
-      // main effect of SNP/numeric attribute 1 - diagonal of the reGAIN matrix
-      if(varIndex1 == varIndex2) {
-        mainEffect(varIndex1, varIndex1 >= PP->nl_all);
-      } else {
-        if(pureInteractions) {
-          pureInteractionEffect(varIndex1, varIndex1 >= PP->nl_all,
-                                varIndex2, varIndex2 >= PP->nl_all);
-        } else {
-          interactionEffect(varIndex1, varIndex1 >= PP->nl_all,
+  // all main effects
+  cout << "Run all main effects models" << endl;
+  #pragma omp parallel for
+  for(int k=0; k < numAttributes; k++) {
+    mainEffect(k, k >= PP->nl_all);
+  } // Next SNP/numeric attribute
+  // all pairs, triangular loop manually expanded and made parallel
+  // since this is not intuitive to do with OpenMP pragmas
+  cout << "Run all interaction effects models" << endl;
+  #pragma omp parallel for
+  for(int k=0; k < numAttributes * (numAttributes + 1) / 2; k++) {
+    uint varIndex1 = k / (numAttributes + 1);
+    uint varIndex2 = k % (numAttributes + 1);
+    if(varIndex2 > varIndex1) {
+      varIndex1 = numAttributes - varIndex1 - 1;
+      varIndex2 = numAttributes - varIndex2;
+    }
+    if(pureInteractions) {
+      pureInteractionEffect(varIndex1, varIndex1 >= PP->nl_all,
                             varIndex2, varIndex2 >= PP->nl_all);
-        }
-      }
+    } else {
+      interactionEffect(varIndex1, varIndex1 >= PP->nl_all,
+                        varIndex2, varIndex2 >= PP->nl_all);
     }
   } // Next pair of SNPs/numeric attributes
   writeWarnings();
@@ -463,7 +471,14 @@ bool Regain::checkValue(string coefLabel, double checkVal, double checkPval,
   if(useFailureValue) {
     returnVal = failureValue;
     returnPval = 1.0;
-  } 
+  } else {
+    if(outputTransform == REGAIN_OUTPUT_TRANSFORM_ABS) {
+      if(checkVal < 0) { 
+        returnVal = checkVal * -1;
+      }
+    }
+  }
+  
   return useFailureValue;  
 }
 
@@ -561,6 +576,7 @@ Model* Regain::createInteractionModel(uint varIndex1, bool var1IsNumeric,
 void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
   // setup regression model
   Model *currentModel = createUnivariateModel(varIndex, varIsNumeric);
+  // update class variables and open file
   // attempt to fit a model and retrieve the estimated parameters
   double newVal = 0;
   double newPval = 1.0;
@@ -584,37 +600,42 @@ void Regain::mainEffect(uint varIndex, bool varIsNumeric) {
         mainEffectModelSE[testParameter];
     }
     checkValue("", mainEffectValue, mainEffectPval, newVal, newPval);
-  }
-  
-  // update class variables and open file
 #pragma omp critical
-  {
-    // update the matrices
-    regainMatrix[varIndex][varIndex] = newVal;
-    regainPMatrix[varIndex][varIndex] = newPval;
-    if(par::do_regain_pvalue_threshold) {
-      if(newPval > par::regainPvalueThreshold) {
-        regainMatrix[varIndex][varIndex] = 0;
+    {
+      // update the matrices
+      regainMatrix[varIndex][varIndex] = newVal;
+      regainPMatrix[varIndex][varIndex] = newPval;
+      if(par::do_regain_pvalue_threshold) {
+        if(newPval > par::regainPvalueThreshold) {
+          regainMatrix[varIndex][varIndex] = 0;
+        }
       }
-    }
-    // update main effect betas file
-    if(varIsNumeric) {
-      MEBETAS << PP->nlistname[varIndex - PP->nl_all];
-    } else {
-      MEBETAS << PP->locus[varIndex]->name;
-    }
-    for(uint  i = 0; i < betaMainEffectCoefs.size(); ++i) {
-      // B0 coefficient doesn't have pval
-      if(i == 0) {
-        MEBETAS << "\t" << betaMainEffectCoefs[i];
+      // update main effect betas file
+      if(varIsNumeric) {
+        MEBETAS << PP->nlistname[varIndex - PP->nl_all];
       } else {
-        // adjust pvals index since there's no B0 pval
-        MEBETAS << "\t" << betaMainEffectCoefs[i]
-          << "\t" << betaMainEffectCoefPvals[i - 1];
+        MEBETAS << PP->locus[varIndex]->name;
       }
+      for(uint i = 0; i < betaMainEffectCoefs.size(); ++i) {
+        // B0 coefficient doesn't have pval
+        if(i == 0) {
+          MEBETAS << "\t" << betaMainEffectCoefs[i];
+        } else {
+          // adjust pvals index since there's no B0 pval
+          MEBETAS << "\t" << betaMainEffectCoefs[i]
+            << "\t" << betaMainEffectCoefPvals[i - 1];
+        }
+      }
+      MEBETAS << endl;
     }
-    MEBETAS << endl;
-  } // end #prgama critical
+  } else {
+#pragma omp critical
+    {
+      regainMatrix[varIndex][varIndex] = newVal;
+      regainPMatrix[varIndex][varIndex] = newPval;
+      MEBETAS << "MODEL FAILED" << endl;
+    }
+  }
 
   // free model memory
   delete currentModel;
@@ -671,61 +692,71 @@ void Regain::interactionEffect(uint varIndex1, bool var1IsNumeric,
       regressTestStatValues.push_back(*bIt / *sIt);
     }
     checkValue("", interactionVal, interactionPval, newVal, newPval);  
-  }
-  
+    // update class variables and open file
 #pragma omp critical
-  {
-    regainMatrix[varIndex1][varIndex2] = newVal;
-    regainMatrix[varIndex2][varIndex1] = newVal;
-    regainPMatrix[varIndex1][varIndex2] = newPval;
-    regainPMatrix[varIndex2][varIndex1] = newPval;
-    // store p-value along with (varIndex1, varIndex2) location of
-    // item.  This is used later for FDR pruning
-    // TODO: account for invalid values/useFailureValue flag is true
-    if(doFdrPrune) {
-      pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
-      matrixElement interactionPvalElement;
-      interactionPvalElement = make_pair(newPval, indexPair);
-      gainIntPvals.push_back(interactionPvalElement);
-    }
-    // update BETAS file
-    BETAS << coef1Label << "\t" << coef2Label;
-    for(uint  i = 0; i < betaInteractionCoefs.size(); ++i) {
-      // B0 coefficient doesn't have pval
-      if(i == 0) {
-        BETAS << "\t" << betaInteractionCoefs[i];
-      } else {
-        // adjust pvals index since there's no B0 pval
-        BETAS << "\t" << betaInteractionCoefs[i]
-          << "\t" << betaInteractionCoefPVals[i - 1];
+    {
+      regainMatrix[varIndex1][varIndex2] = newVal;
+      regainMatrix[varIndex2][varIndex1] = newVal;
+      regainPMatrix[varIndex1][varIndex2] = newPval;
+      regainPMatrix[varIndex2][varIndex1] = newPval;
+      // store p-value along with (varIndex1, varIndex2) location of
+      // item.  This is used later for FDR pruning
+      // TODO: account for invalid values/useFailureValue flag is true
+      if(doFdrPrune) {
+        pair<int, int> indexPair = make_pair(varIndex1, varIndex2);
+        matrixElement interactionPvalElement;
+        interactionPvalElement = make_pair(newPval, indexPair);
+        gainIntPvals.push_back(interactionPvalElement);
       }
-    }
-    BETAS << endl;
-    // update SIF files); add to SIF if interaction >= SIF threshold
-    if(newVal >= sifThresh) {
-      SIF << coef1Label << "\t" << newVal << "\t"
-        << coef2Label << endl;
-      if(writeComponents) {
-        // numeric
-        if(var1IsNumeric && var2IsNumeric) {
-          NUM_SIF << coef1Label << "\t" << newVal << "\t"
-            << coef2Label << endl;
-        }// integrative
-        else if(var1IsNumeric && !var2IsNumeric) {
-          INT_SIF << coef1Label << "\t" << newVal << "\t"
-            << coef2Label << endl;
-        }// integrative
-        else if(!var1IsNumeric && var2IsNumeric) {
-          INT_SIF << coef1Label << "\t" << newVal << "\t"
-            << coef2Label << endl;
-        }// SNP
-        else {
-          SNP_SIF << coef1Label << "\t" << newVal << "\t"
-            << coef2Label << endl;
+      // update BETAS file
+      BETAS << coef1Label << "\t" << coef2Label;
+      for(uint  i = 0; i < betaInteractionCoefs.size(); ++i) {
+        // B0 coefficient doesn't have pval
+        if(i == 0) {
+          BETAS << "\t" << betaInteractionCoefs[i];
+        } else {
+          // adjust pvals index since there's no B0 pval
+          BETAS << "\t" << betaInteractionCoefs[i]
+            << "\t" << betaInteractionCoefPVals[i - 1];
+        }
+      }
+      BETAS << endl;
+      // update SIF files); add to SIF if interaction >= SIF threshold
+      if(newVal >= sifThresh) {
+        SIF << coef1Label << "\t" << newVal << "\t"
+          << coef2Label << endl;
+        if(writeComponents) {
+          // numeric
+          if(var1IsNumeric && var2IsNumeric) {
+            NUM_SIF << coef1Label << "\t" << newVal << "\t"
+              << coef2Label << endl;
+          }// integrative
+          else if(var1IsNumeric && !var2IsNumeric) {
+            INT_SIF << coef1Label << "\t" << newVal << "\t"
+              << coef2Label << endl;
+          }// integrative
+          else if(!var1IsNumeric && var2IsNumeric) {
+            INT_SIF << coef1Label << "\t" << newVal << "\t"
+              << coef2Label << endl;
+          }// SNP
+          else {
+            SNP_SIF << coef1Label << "\t" << newVal << "\t"
+              << coef2Label << endl;
+          }
         }
       }
     }
-  } // end critical section OMP pragma
+  } else {
+    // update class variables and open file
+#pragma omp critical
+    {
+      regainMatrix[varIndex1][varIndex2] = newVal;
+      regainMatrix[varIndex2][varIndex1] = newVal;
+      regainPMatrix[varIndex1][varIndex2] = newPval;
+      regainPMatrix[varIndex2][varIndex1] = newPval;
+      BETAS << "MODEL FAILED" << endl;
+    }
+  }
 
   // free model memory
   delete currentModel;

@@ -2870,6 +2870,10 @@ void setOptions(CArgs & a) {
     par::do_regain = true;
   }
 
+  if(a.find("--regain-minimal")) {
+    par::do_regain_minimal = true;
+  }
+
   if(a.find("--regain-use-beta-values")) {
     par::regainUseBetaValues = true;
   }
@@ -4464,7 +4468,8 @@ void setOptions(CArgs & a) {
             << "      --numeric-low-variance-filter {percentile}  Remove variables with variance below given percentile\n"
             << "      --numeric-standardize                       Subtract the numeric variable means and divide by standard deviations before analysis\n"            
             << "\n"
-            << "      --regain                                    Perform a reGAIN analysis   \n"
+            << "      --regain                                    Perform a reGAIN analysis\n"
+            << "      --regain-minimal                            Perform a reGAIN analysis (minimal)\n"
             << "      --regain-file {regain file}                 Postprocess an existing reGAIN file\n"
             << "      --regain-use-beta-values                    Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions                  Exclude main effects from interactions\n"
