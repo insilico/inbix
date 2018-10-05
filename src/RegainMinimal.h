@@ -31,21 +31,33 @@ public:
 	RegainMinimal();
 	~RegainMinimal();
   void SetDefaults();
-  // read a reGAIN file for post processing
-  bool readRegainMinimalFromFile(std::string regainFilename);
-  // write reGAIN matrix to a new file
-  bool writeRegainMinimalToFile(std::string newRegainMinimalFilename);
-  // write reGAIN matrix to a new SIF file
-  bool writeRegainMinimalToSifFile(std::string newSifFilename);
+  // set the value to use when regression procedure fails
+  void setFailureValue(double fValue);
   // set output threshold
   bool setOutputThreshold(double threshold);
   // set output type
   bool setOutputTransform(RegainMinimalOutputTransform transform);
   // print output options to stdout and the inbix log
   void logOutputOptions();
+  bool logMatrixStats();
 	// iterate over all SNPs and numeric attributes (if present), calculating
 	// regression for main effect and interaction terms
 	void run();
+  matrix_t getRawMatrix() { return regainMatrix; }
+  // read a reGAIN file
+  bool readRegainMinimalFromFile(std::string regainFilename);
+  // write reGAIN matrix to a new file
+  bool writeRegainMinimalToFile(std::string newRegainMinimalFilename);
+  bool writeRegainMinimalPvalsToFile(std::string newRegainMinimalPvalsFilename);
+  // write reGAIN matrix to a new SIF file
+  bool writeRegainMinimalToSifFile(std::string newSifFilename);
+private:
+  Model* createUnivariateModel(uint varIndex, bool varIsNumeric);
+  Model* createInteractionModel(uint varIndex1, bool var1IsNumeric,
+                                uint varIndex2, bool var2IsNumeric);
+  bool fitModelParameters(Model* thisModel, uint thisCoefIdx);
+  bool checkValue(std::string coefLabel, double checkVal, double checkPval,
+                  double& returnVal, double& returnPVal);
 	// calculate main effect regression coefficients for diagonal terms	
 	void mainEffect(uint varIndex, bool varIsNumeric);
 	// add covariate terms to model, handling multiple covariates
@@ -54,20 +66,9 @@ public:
 	// or a SNP and a numeric attribute
 	void interactionEffect(uint varIndex1, bool var1IsNumeric, 
                          uint varIndex2, bool var2IsNumeric);
-  // set the value to use when regression procedure fails
-  void setFailureValue(double fValue);
   bool updateStats();
-  bool logMatrixStats();
-  matrix_t getRawMatrix() { return regainMatrix; }
   void writeFailures();
   void writeWarnings();
-private:
-  Model* createUnivariateModel(uint varIndex, bool varIsNumeric);
-  Model* createInteractionModel(uint varIndex1, bool var1IsNumeric,
-                                uint varIndex2, bool var2IsNumeric);
-  bool fitModelParameters(Model* thisModel, uint thisCoefIdx);
-  bool checkValue(std::string coefLabel, double checkVal, double checkPval,
-                  double& returnVal, double& returnPVal);
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
   double outputThreshold;

@@ -1805,6 +1805,8 @@ int main(int argc, char* argv[]) {
 		regain.logOutputOptions();
 		regain.logMatrixStats();
 		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.min.tab");
+		regain.writeRegainMinimalPvalsToFile(par::output_file_name + ".regain.min.pvals.tab");
+    regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.min.sif");
 		// stop inbix processing
 		shutdown();
   }
