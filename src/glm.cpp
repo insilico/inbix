@@ -34,11 +34,11 @@
 // Set dependent (adds intercept)  lm.setDependent(Y);
 // Addive effects, labels          lm.addAdditiveSNP(CSNP*); 
 //                                 lm.label.push_back("ADD");
-//	                           lm.addDominanceSNP(CSNP*);
+//	                               lm.addDominanceSNP(CSNP*);
 // Sex effect?                     lm.addSexEffect();
 //                                 lm.label.push_back("SEX");
 // Covariates?                     lm.addCovariate(int);
-//              	           lm.label.push_back("COV"+int2str(c+1));
+//              	                 lm.label.push_back("COV"+int2str(c+1));
 // Interactions?       	           lm.addInteraction(int,int);
 // Build design matrix             lm.buildDesignMatrix();
 // Fit logistic model              lm.fitLM();

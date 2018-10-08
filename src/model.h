@@ -107,7 +107,8 @@ protected:
 
 	// number of individuals
 	int nind;
-	// number of parameters/coefficients: intercept + main effects + interaction
+	// number of parameters/coefficients: 
+  // intercept + main effects + covars + interaction
 	int np; 
 
 	bool has_snps;

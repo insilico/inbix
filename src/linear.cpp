@@ -271,11 +271,6 @@ void LinearModel::fitLM() {
 	// sets meanY and varY
 	setVariance();
 
-	// from command line parameter --standard-beta
-	if(par::standard_beta) {
-		standardise();
-	}
-
 	// looks like the only place this ever gets set - bcw - 4/29/13
 	sig.resize(nind, sqrt(1.0 / sqrt((double) nind)));
 
@@ -394,6 +389,7 @@ void LinearModel::fitLM() {
 	S0 = svd_inverse(S0, flag);
 	if(!flag) {
 		all_valid = false;
+    converged = false;
     invalidType = REGRESSION_INVALID_SVDINV;
   	return;
 	}
@@ -568,6 +564,7 @@ void LinearModel::reset() {
 	Y.clear();
 	X.clear();
 	miss.clear();
+  converged = false;
 }
 
 void LinearModel::displayResults(ofstream & OUT, Locus * loc) {

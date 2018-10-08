@@ -1800,13 +1800,25 @@ int main(int argc, char* argv[]) {
 	if(par::do_regain_minimal) {
 		P.printLOG(Timestamp() + "Performing MINIMAL reGAIN analysis\n");
 		P.SNP2Ind();
+    // from command line parameter
+    if(par::do_numeric_standardize) {
+      P.printLOG(Timestamp() + "Standardizing numeric variables.\n");
+      if(!numericMeanCenter()) {
+        error("Mean centering numerics failed.");
+      }
+      if(!numericStandardize()) {
+        error("Standardizing numerics failed.");
+      }
+    }
     RegainMinimal regain;
+    regain.saveRunInfo(true);
 		regain.run();
 		regain.logOutputOptions();
 		regain.logMatrixStats();
 		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.min.tab");
 		regain.writeRegainMinimalPvalsToFile(par::output_file_name + ".regain.min.pvals.tab");
     regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.min.sif");
+    regain.writeRegainMinimalRunInfo(par::output_file_name + ".runinfo.tab");
 		// stop inbix processing
 		shutdown();
   }
@@ -1816,6 +1828,16 @@ int main(int argc, char* argv[]) {
 	if(par::do_regain) {
 		P.printLOG(Timestamp() + "Performing reGAIN analysis\n");
 		P.SNP2Ind();
+    // from command line parameter
+    if(par::do_numeric_standardize) {
+      P.printLOG(Timestamp() + "Standardizing numeric variables.\n");
+      if(!numericMeanCenter()) {
+        error("Mean centering numerics failed.");
+      }
+      if(!numericStandardize()) {
+        error("Standardizing numerics failed.");
+      }
+    }
 		Regain* regain = new Regain(
 						par::regainCompress,
 						par::regainSifThreshold,

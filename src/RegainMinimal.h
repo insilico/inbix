@@ -14,6 +14,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string>
 
 #include "zfstream.h"
 #include "model.h"
@@ -26,11 +27,30 @@ enum RegainMinimalOutputTransform {
   REGAIN_MINIMAL_OUTPUT_TRANSFORM_THRESH
 };
 
+class RunRecord {
+public:
+  RunRecord();
+  ~RunRecord();
+  void Print(ostream& outFile);
+  std::vector<std::string> vars;
+  vector_t coefs;
+  vector_t pvals;
+  vector_t stders;
+};
+
+class RunInfo {
+public:
+  RunInfo();
+  ~RunInfo();
+  void Print(string outFilename);
+  std::vector<RunRecord> models;
+};
+
 class RegainMinimal {
 public:
 	RegainMinimal();
 	~RegainMinimal();
-  void SetDefaults();
+  void setDefaults();
   // set the value to use when regression procedure fails
   void setFailureValue(double fValue);
   // set output threshold
@@ -51,6 +71,8 @@ public:
   bool writeRegainMinimalPvalsToFile(std::string newRegainMinimalPvalsFilename);
   // write reGAIN matrix to a new SIF file
   bool writeRegainMinimalToSifFile(std::string newSifFilename);
+  bool saveRunInfo(bool paramSaveRunInfo);
+  bool writeRegainMinimalRunInfo(std::string newRunInfoFilename);
 private:
   Model* createUnivariateModel(uint varIndex, bool varIsNumeric);
   Model* createInteractionModel(uint varIndex1, bool var1IsNumeric,
@@ -69,10 +91,15 @@ private:
   bool updateStats();
   void writeFailures();
   void writeWarnings();
+  void printFittedModel(Model* thisModel);
+
   // output options - bcw - 4/30/13
   bool useOutputThreshold;
   double outputThreshold;
   RegainMinimalOutputTransform outputTransform;
+  // bcw - 10/18/18
+  bool saveRuninfoFlag;
+  RunInfo runinfo;
 	// num attributes (SNPs + numeric for integrative, SNPs for normal regain)
 	uint numAttributes;
   // vector of attribute names of the regain matrix columns

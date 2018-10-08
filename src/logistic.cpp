@@ -68,6 +68,7 @@ void LogisticModel::fitLM() {
 	}
 
   if (!all_valid) {
+    converged - false;
     return;
   }
   
@@ -119,6 +120,7 @@ void LogisticModel::fitLM() {
 		T = svd_inverse(T, flag);
 		if(!flag) {
 			all_valid = false;
+      converged = false;
       invalidType = REGRESSION_INVALID_SVDINV;
 			return;
 		}
@@ -182,6 +184,7 @@ void LogisticModel::fitLM() {
 	S = svd_inverse(S, flag);
 	if(!flag) {
 		all_valid = false;
+    converged = false;
     invalidType = REGRESSION_INVALID_SVDINV;
 		return;
 	}
@@ -193,7 +196,7 @@ void LogisticModel::fitLM() {
 	if(par::algorithm_verbose) {
 		cout << "beta\n";
 		display(coef);
-		cout << "Sigma\n";
+		cout << "\nSigma\n";
 		display(S);
 		cout << "\n";
 	}
@@ -226,6 +229,7 @@ vector_t LogisticModel::getSE() {
 void LogisticModel::reset() {
 	np = 0;
 	nind = 0;
+  converged = false;
 	coef.clear();
 	S.clear();
 	Y.clear();

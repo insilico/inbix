@@ -29,9 +29,49 @@
 #include "RegainMinimal.h"
 #include "Insilico.h"
 
+RunRecord::RunRecord() { ; }
+RunRecord::~RunRecord() { ; }
+void RunRecord::Print(ostream& outFile) {
+  if(!vars.size()) {
+    error("In RunRecord::Print: no models to print");
+  }
+  if(vars.size() != coefs.size()) {
+    error("In RunRecord::Print: vars.size() != coefs.size()");
+  }
+  if(vars.size() != stders.size()) {
+    error("In RunRecord::Print: vars.size() != stders.size()");
+  }
+  if(vars.size() != (pvals.size() + 1)) {
+    error("In RunRecord::Print: vars.size() != (pvals.size() + 1)");
+  }
+  for(uint i=0; i < vars.size(); ++i) {
+    if(i) {
+      outFile << "\t";
+    }
+    outFile << 
+            vars[i] << "\t" << 
+            coefs[i]<< "\t" << 
+            stders[i];
+    if(i) { 
+      outFile << "\t" << pvals[i];
+    }
+  }
+  outFile << endl; 
+}
+// ---------------------------
+RunInfo::RunInfo() { ; }
+RunInfo::~RunInfo() { ; }
+void RunInfo::Print(string outFilename) {
+  ofstream outFile(outFilename);
+  for (uint i=0; i < models.size(); ++i) { 
+    models[i].Print(outFile); 
+  } 
+  outFile.close();
+}
+
 RegainMinimal::RegainMinimal() {
   // defaults
-  SetDefaults();
+  setDefaults();
 
   numAttributes = PP->nl_all + PP->nlistname.size();
   PP->printLOG("Total number of attributes [ " + int2str(numAttributes) + " ]\n");
@@ -58,12 +98,13 @@ RegainMinimal::RegainMinimal() {
       setOutputTransform(REGAIN_MINIMAL_OUTPUT_TRANSFORM_NONE);
     }
   }
+  
 }
 
 RegainMinimal::~RegainMinimal() {
 }
 
-void RegainMinimal::SetDefaults() {
+void RegainMinimal::setDefaults() {
   useOutputThreshold = par::regainMatrixThreshold;
   outputThreshold = par::regainMatrixThresholdValue;
   failureValue = par::regainFailValue;
@@ -73,6 +114,7 @@ void RegainMinimal::SetDefaults() {
   maxMainEffect = 0;
   minInteraction = 0;
   maxInteraction = 0;
+  saveRuninfoFlag = false;
 }
 
 void RegainMinimal::setFailureValue(double fValue) {
@@ -106,6 +148,17 @@ void RegainMinimal::logOutputOptions() {
   }
   PP->printLOG("Regression failure substitution value [ " +
     dbl2str(failureValue) + " ]\n");
+}
+
+bool RegainMinimal::saveRunInfo(bool paramSaveRunInfo) {
+  saveRuninfoFlag = paramSaveRunInfo;
+  return true;
+}
+
+bool RegainMinimal::writeRegainMinimalRunInfo(std::string newRunInfoFilename) {
+  PP->printLOG("Writing REGAIN_MINIMAL run info [ " + newRunInfoFilename + " ]\n");
+  runinfo.Print(newRunInfoFilename);
+  return true;
 }
 
 void RegainMinimal::run() {
@@ -267,10 +320,10 @@ bool RegainMinimal::fitModelParameters(Model* thisModel, uint thisCoefIdx) {
     failures.push_back(failMsg);
     success = false;
   }
-  if(!thisModel->fitConverged()) {
-    failures.push_back("Model failed to converge");
-    success = false;
-  }  
+//  if(!thisModel->fitConverged()) {
+//    failures.push_back("Model failed to converge");
+//    success = false;
+//  }  
   return success;
 }
 
@@ -336,10 +389,26 @@ void RegainMinimal::mainEffect(uint varIndex, bool varIsNumeric) {
       mainEffectValue = betaMainEffectCoefs[thisModel->testParameter] /
         mainEffectModelSE[thisModel->testParameter];
     }
-    checkValue("", mainEffectValue, mainEffectPval, newVal, newPval);
-  } 
+    #pragma omp critical
+    {
+      if(saveRuninfoFlag) {
+        RunRecord runRecord;
+        copy(thisModel->label.begin(), thisModel->label.end(),
+             back_inserter(runRecord.vars));
+        copy(betaMainEffectCoefs.begin(), betaMainEffectCoefs.end(),
+             back_inserter(runRecord.coefs));
+        copy(betaMainEffectCoefPvals.begin(), betaMainEffectCoefPvals.end(),
+             back_inserter(runRecord.pvals));
+        copy(mainEffectModelSE.begin(), mainEffectModelSE.end(),
+             back_inserter(runRecord.stders));
+        runinfo.models.push_back(runRecord);
+      }
+    }
+    checkValue(attributeNames[varIndex], mainEffectValue, mainEffectPval, newVal, newPval);
+  }
   #pragma omp critical
   {
+    printFittedModel(thisModel);
     // update the matrices
     if(outputTransform == REGAIN_MINIMAL_OUTPUT_TRANSFORM_ABS) {
       newVal = fabs(newVal);
@@ -384,8 +453,8 @@ void RegainMinimal::interactionEffect(uint varIndex1, bool var1IsNumeric,
   Model *thisModel = createInteractionModel(varIndex1, var1IsNumeric,
                                             varIndex2, var2IsNumeric);
   // fit the model and get the estimated parameters
-  vector_t betaInteractionCoefs;
-  vector_t betaInteractionCoefPVals;
+  vector_t betaCoefs;
+  vector_t betaCoefPVals;
   double interactionVal = failureValue;
   double interactionPval = 1.0;
   vector_t interactionModelSE;
@@ -395,24 +464,40 @@ void RegainMinimal::interactionEffect(uint varIndex1, bool var1IsNumeric,
   double newPval = 1.0;
   if(fitModelParameters(thisModel, 3)) {
     // model converged, so get the estimated parameters and statistics
-    betaInteractionCoefs = thisModel->getCoefs();
-    interactionVal = betaInteractionCoefs[betaInteractionCoefs.size() - 1];
-    betaInteractionCoefPVals = thisModel->getPVals();
+    betaCoefs = thisModel->getCoefs();
+    interactionVal = betaCoefs[betaCoefs.size() - 1];
+    betaCoefPVals = thisModel->getPVals();
     interactionPval = 
-            betaInteractionCoefPVals[betaInteractionCoefPVals.size() - 1];
+            betaCoefPVals[betaCoefPVals.size() - 1];
     interactionModelSE = thisModel->getSE();
     // calculate statistical test value from beta/SE (t-test or z-test)
     if(par::regainUseBetaValues) {
-      interactionVal = betaInteractionCoefs[thisModel->testParameter];
+      interactionVal = betaCoefs[thisModel->testParameter];
     } else {
-      interactionVal = betaInteractionCoefs[thisModel->testParameter] /
+      interactionVal = betaCoefs[thisModel->testParameter] /
         interactionModelSE[thisModel->testParameter];
     }
-    checkValue("", interactionVal, interactionPval, newVal, newPval);  
+    #pragma omp critical
+    {
+      if(saveRuninfoFlag) {
+        RunRecord runRecord;
+        copy(thisModel->label.begin(), thisModel->label.end(),
+             back_inserter(runRecord.vars));
+        copy(betaCoefs.begin(), betaCoefs.end(),
+             back_inserter(runRecord.coefs));
+        copy(betaCoefPVals.begin(), betaCoefPVals.end(),
+             back_inserter(runRecord.pvals));
+        copy(interactionModelSE.begin(), interactionModelSE.end(),
+             back_inserter(runRecord.stders));
+        runinfo.models.push_back(runRecord);
+      }
+    }
+    checkValue(attributeNames[varIndex1] + " x " + attributeNames[varIndex2], 
+               interactionVal, interactionPval, newVal, newPval);  
   } 
-
 #pragma omp critical
   {
+    printFittedModel(thisModel);
     if(outputTransform == REGAIN_MINIMAL_OUTPUT_TRANSFORM_ABS) {
       newVal = fabs(newVal);
     }
@@ -507,6 +592,33 @@ void RegainMinimal::writeWarnings() {
     }
     failureFile.close();
   }
+}
+
+void RegainMinimal::printFittedModel(Model* thisModel) {
+  vector_t betaCoefs;
+  vector_t betaCoefPVals;
+  double modelVal = failureValue;
+  double modelPval = 1.0;
+  vector_t betaCoefsSEs;
+  betaCoefs = thisModel->getCoefs();
+  modelVal = betaCoefs[betaCoefs.size() - 1];
+  betaCoefPVals = thisModel->getPVals();
+  modelPval = 
+          betaCoefPVals[betaCoefPVals.size() - 1];
+  betaCoefsSEs = thisModel->getSE();
+  // calculate statistical test value from beta/SE (t-test or z-test)
+  if(par::regainUseBetaValues) {
+    modelVal = betaCoefs[thisModel->testParameter];
+  } else {
+    modelVal = betaCoefs[thisModel->testParameter] /
+      betaCoefsSEs[thisModel->testParameter];
+  }
+//  cout << "Beta Coefficients" << endl;
+//  display(betaCoefs);
+//  cout << "Beta Coefficients - p-values" << endl;
+//  display(betaCoefPVals);
+//  cout << "Beta Coefficients - Standard Errors" << endl;
+//  display(betaCoefsSEs);
 }
 
 bool RegainMinimal::readRegainMinimalFromFile(string regainFilename) {
