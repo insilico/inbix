@@ -96,6 +96,7 @@ bool ReliefFSeq::ComputeAttributeScores() {
 	// changed to use Brett's email (7/21/12) equations - 7/23/12
 	/// run this loop on as many cores as possible through OpenMP
   PP->printLOG(Timestamp() + "Running ReliefFSeq algorithm\n");
+  // TODO: add SNPs is present like in standard ReliefF
 	W.resize(dataset->NumNumerics(), 0.0);
   dataset->MaskIncludeAllAttributes(NUMERIC_TYPE);
 	vector<unsigned int> numericIndices = dataset->MaskGetAttributeIndices(NUMERIC_TYPE);
@@ -216,6 +217,7 @@ bool ReliefFSeq::ComputeAttributeScores() {
 
 AttributeScores ReliefFSeq::GetScores() {
 	AttributeScores returnScores;
+  // TODO: use snp and numeric
 	vector<string> numNames;
 	numNames = dataset->GetNumericsNames();
 	for(unsigned int alpha = 0; alpha < dataset->NumNumerics(); ++alpha) {
@@ -240,6 +242,7 @@ pair<double, double> ReliefFSeq::MuDeltaAlphas(unsigned int alpha) {
 		misses = allMisses.begin()->second;
 
 		// sum over all nearest hits and misses neighbors
+    // TODO: use snp diff and numeric diff function pointers
 		for(unsigned int j = 0; j < k; ++j) {
 			hitSum += diffManhattan(alpha, S_i, dataset->GetInstance(hits[j]));
 			missSum += diffManhattan(alpha, S_i, dataset->GetInstance(misses[j]));
@@ -269,6 +272,7 @@ pair<double, double> ReliefFSeq::SigmaDeltaAlphas(unsigned int alpha,
 		map<ClassLevel, vector<unsigned int> > allMisses;
 		S_i->GetNNearestInstances(k, hits, allMisses);
 		// for all nearest neighbor hits
+    // TODO: use snp diff and numeric diff function pointers
 		for(unsigned int j = 0; j < k; ++j) {
 			hitSum +=
 					pow(
