@@ -286,7 +286,6 @@ double par::numeric_lowvar_percentile = 0.1;
 
 // added for reGAIN support - bcw - 4/22/13, 4/24/13
 bool par::do_regain = false;
-bool par::do_regain_minimal = false;
 bool par::do_regain_post = false;
 bool par::do_regain_pvalue_threshold = false;
 string par::regainFile = "no file";

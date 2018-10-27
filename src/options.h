@@ -383,7 +383,6 @@ public:
  
   // added for reGAIN support - bcw - 4/22/13
   static bool do_regain;
-  static bool do_regain_minimal;
   static bool do_regain_post;
   static bool do_regain_pvalue_threshold;
   static string regainFile;

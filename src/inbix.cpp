@@ -1797,7 +1797,7 @@ int main(int argc, char* argv[]) {
 
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 10/4/18
-	if(par::do_regain_minimal) {
+	if(par::do_regain) {
 		P.printLOG(Timestamp() + "Performing MINIMAL reGAIN analysis\n");
 		P.SNP2Ind();
     // from command line parameter
@@ -1815,9 +1815,9 @@ int main(int argc, char* argv[]) {
 		regain.run();
 		regain.logOutputOptions();
 		regain.logMatrixStats();
-		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.min.tab");
-		regain.writeRegainMinimalPvalsToFile(par::output_file_name + ".regain.min.pvals.tab");
-    regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.min.sif");
+		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.tab");
+		regain.writeRegainMinimalPvalsToFile(par::output_file_name + ".regain.pvals.tab");
+    regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.sif");
     regain.writeRegainMinimalRunInfo(par::output_file_name + ".runinfo.tab");
 		// stop inbix processing
 		shutdown();
@@ -1825,74 +1825,74 @@ int main(int argc, char* argv[]) {
 
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
-	if(par::do_regain) {
-		P.printLOG(Timestamp() + "Performing reGAIN analysis\n");
-		P.SNP2Ind();
-    // from command line parameter
-    if(par::do_numeric_standardize) {
-      P.printLOG(Timestamp() + "Standardizing numeric variables.\n");
-      if(!numericMeanCenter()) {
-        error("Mean centering numerics failed.");
-      }
-      if(!numericStandardize()) {
-        error("Standardizing numerics failed.");
-      }
-    }
-		Regain* regain = new Regain(
-						par::regainCompress,
-						par::regainSifThreshold,
-						par::have_numerics,
-						par::regainComponents,
-						par::regainFdrPrune,
-						true);
-		// reGAIN output options - bcw - 4/30/13
-		if(par::regainMatrixThreshold) {
-			regain->setOutputThreshold(par::regainMatrixThresholdValue);
-			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-		}
-		if(par::regainMatrixFormat == "upper") {
-			regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
-		} else {
-			if(par::regainMatrixFormat == "full") {
-				regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
-			} else {
-				error("reGAIN output format allowed options: {upper, full}");
-			}
-		}
-		if(par::regainMatrixTransform == "none") {
-			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-		} else {
-			if(par::regainMatrixTransform == "threshold") {
-				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-			} else {
-				if(par::regainMatrixTransform == "abs") {
-					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
-				} else {
-					error("reGAIN output transform allowed options: {none, threshold, abs}");
-				}
-			}
-		}
-		if(par::regainPureInteractions) {
-			regain->performPureInteraction(true);
-		} else {
-			regain->performPureInteraction(false);
-		}
-    // end pre-processing
-		regain->run();
-    // begin post-processing
-		if(par::regainFdrPrune) {
-			regain->writeRegain(false);
-			regain->fdrPrune(par::regainFdr);
-		}
-		// write output options to stdout and log file - bcw - 5/1/13
-		regain->logOutputOptions();
-		regain->logMatrixStats();
-		regain->writeRegain(false, par::regainFdrPrune);
-		regain->writeRegain(true);
-		delete regain;
-		// stop inbix processing
-		shutdown();
-	}
+//	if(par::do_regain) {
+//		P.printLOG(Timestamp() + "Performing reGAIN analysis\n");
+//		P.SNP2Ind();
+//    // from command line parameter
+//    if(par::do_numeric_standardize) {
+//      P.printLOG(Timestamp() + "Standardizing numeric variables.\n");
+//      if(!numericMeanCenter()) {
+//        error("Mean centering numerics failed.");
+//      }
+//      if(!numericStandardize()) {
+//        error("Standardizing numerics failed.");
+//      }
+//    }
+//		Regain* regain = new Regain(
+//						par::regainCompress,
+//						par::regainSifThreshold,
+//						par::have_numerics,
+//						par::regainComponents,
+//						par::regainFdrPrune,
+//						true);
+//		// reGAIN output options - bcw - 4/30/13
+//		if(par::regainMatrixThreshold) {
+//			regain->setOutputThreshold(par::regainMatrixThresholdValue);
+//			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+//		}
+//		if(par::regainMatrixFormat == "upper") {
+//			regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_UPPER);
+//		} else {
+//			if(par::regainMatrixFormat == "full") {
+//				regain->setOutputFormat(REGAIN_OUTPUT_FORMAT_FULL);
+//			} else {
+//				error("reGAIN output format allowed options: {upper, full}");
+//			}
+//		}
+//		if(par::regainMatrixTransform == "none") {
+//			regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
+//		} else {
+//			if(par::regainMatrixTransform == "threshold") {
+//				regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
+//			} else {
+//				if(par::regainMatrixTransform == "abs") {
+//					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
+//				} else {
+//					error("reGAIN output transform allowed options: {none, threshold, abs}");
+//				}
+//			}
+//		}
+//		if(par::regainPureInteractions) {
+//			regain->performPureInteraction(true);
+//		} else {
+//			regain->performPureInteraction(false);
+//		}
+//    // end pre-processing
+//		regain->run();
+//    // begin post-processing
+//		if(par::regainFdrPrune) {
+//			regain->writeRegain(false);
+//			regain->fdrPrune(par::regainFdr);
+//		}
+//		// write output options to stdout and log file - bcw - 5/1/13
+//		regain->logOutputOptions();
+//		regain->logMatrixStats();
+//		regain->writeRegain(false, par::regainFdrPrune);
+//		regain->writeRegain(true);
+//		delete regain;
+//		// stop inbix processing
+//		shutdown();
+//	}
 
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN post processing requested - bcw - 5/3/13

@@ -2870,9 +2870,9 @@ void setOptions(CArgs & a) {
     par::do_regain = true;
   }
 
-  if(a.find("--regain-minimal")) {
-    par::do_regain_minimal = true;
-  }
+//  if(a.find("--regain-minimal")) {
+//    par::do_regain_minimal = true;
+//  }
 
   if(a.find("--regain-use-beta-values")) {
     par::regainUseBetaValues = true;
@@ -4469,16 +4469,15 @@ void setOptions(CArgs & a) {
             << "      --numeric-standardize                       Subtract the numeric variable means and divide by standard deviations before analysis\n"            
             << "\n"
             << "      --regain                                    Perform a reGAIN analysis\n"
-            << "      --regain-minimal                            Perform a reGAIN analysis (minimal)\n"
             << "      --regain-file {regain file}                 Postprocess an existing reGAIN file\n"
             << "      --regain-use-beta-values                    Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions                  Exclude main effects from interactions\n"
             << "      --regain-fail-value {value}                 Value to use if regression failure\n"
             << "      --regain-pvalue-threshold {value}           P-value threshold for writing reGAIN values\n"
-            << "      --regain-compress                           Compress reGAIN output      \n"
-            << "      --regain-components                         Write reGAIN components     \n"
-            << "      --regain-fdr {rate}                         Set reGAIN FDR              \n"
-            << "      --regain-fdr-prune                          Perform reGAIN FDR pruning  \n"
+//            << "      --regain-compress                           Compress reGAIN output      \n"
+//            << "      --regain-components                         Write reGAIN components     \n"
+//            << "      --regain-fdr {rate}                         Set reGAIN FDR              \n"
+//            << "      --regain-fdr-prune                          Perform reGAIN FDR pruning  \n"
             << "      --regain-sif-threshold {threshold}          Filter reGAIN SIF \n"
             << "      --regain-matrix-threshold-value {threshold} Filter reGAIN output\n"
             << "      --regain-matrix-format {format}             reGAIN output format \n"
