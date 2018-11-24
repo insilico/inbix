@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <iterator>
 #include <sstream>
+#include <cassert>
 
 #include <omp.h>
 
@@ -206,6 +207,7 @@ Model* RegainMinimal::createUnivariateModel(uint varIndex, bool varIsNumeric) {
     LinearModel* m = new LinearModel(PP);
     thisModel = m;
   }
+  assert(thisModel);
   // Set missing data
   thisModel->setMissing();
   // label for regression model
@@ -242,6 +244,7 @@ Model* RegainMinimal::createInteractionModel(uint varIndex1, bool var1IsNumeric,
     LinearModel* m = new LinearModel(PP);
     thisModel = m;
   }
+  assert(thisModel);
   // Set missing data
   thisModel->setMissing();
   // labels in regression model
@@ -284,6 +287,7 @@ Model* RegainMinimal::createInteractionModel(uint varIndex1, bool var1IsNumeric,
 }
 
 bool RegainMinimal::fitModelParameters(Model* thisModel, uint thisCoefIdx) {
+  assert(thisModel);
   bool success = true;
   // build design matrix and fit the model parameters
   thisModel->buildDesignMatrix();
@@ -376,6 +380,8 @@ void RegainMinimal::mainEffect(uint varIndex, bool varIsNumeric) {
   vector_t betaMainEffectCoefPvals;
   double mainEffectPval = 1.0;
   vector_t mainEffectModelSE;
+  #pragma omp critical
+  {
   if(fitModelParameters(thisModel, 1)) {
     // Obtain estimates and statistics
     betaMainEffectCoefs = thisModel->getCoefs();
@@ -389,40 +395,33 @@ void RegainMinimal::mainEffect(uint varIndex, bool varIsNumeric) {
       mainEffectValue = betaMainEffectCoefs[thisModel->testParameter] /
         mainEffectModelSE[thisModel->testParameter];
     }
-    #pragma omp critical
-    {
-      if(saveRuninfoFlag) {
-        RunRecord runRecord;
-        copy(thisModel->label.begin(), thisModel->label.end(),
-             back_inserter(runRecord.vars));
-        copy(betaMainEffectCoefs.begin(), betaMainEffectCoefs.end(),
-             back_inserter(runRecord.coefs));
-        copy(betaMainEffectCoefPvals.begin(), betaMainEffectCoefPvals.end(),
-             back_inserter(runRecord.pvals));
-        copy(mainEffectModelSE.begin(), mainEffectModelSE.end(),
-             back_inserter(runRecord.stders));
-        runinfo.models.push_back(runRecord);
-      }
+    if(saveRuninfoFlag) {
+      RunRecord runRecord;
+      copy(thisModel->label.begin(), thisModel->label.end(),
+           back_inserter(runRecord.vars));
+      copy(betaMainEffectCoefs.begin(), betaMainEffectCoefs.end(),
+           back_inserter(runRecord.coefs));
+      copy(betaMainEffectCoefPvals.begin(), betaMainEffectCoefPvals.end(),
+           back_inserter(runRecord.pvals));
+      copy(mainEffectModelSE.begin(), mainEffectModelSE.end(),
+           back_inserter(runRecord.stders));
+      runinfo.models.push_back(runRecord);
     }
     checkValue(attributeNames[varIndex], mainEffectValue, mainEffectPval, newVal, newPval);
-  }
-  #pragma omp critical
-  {
     printFittedModel(thisModel);
-    // update the matrices
     if(outputTransform == REGAIN_MINIMAL_OUTPUT_TRANSFORM_ABS) {
       newVal = fabs(newVal);
     }
-    regainMatrix[varIndex][varIndex] = newVal;
-    regainPMatrix[varIndex][varIndex] = newPval;
-    if(par::do_regain_pvalue_threshold) {
-      if(newPval > par::regainPvalueThreshold) {
-        regainMatrix[varIndex][varIndex] = 0;
-        regainPMatrix[varIndex][varIndex] = 1;
-      }
+  }
+  regainMatrix[varIndex][varIndex] = newVal;
+  regainPMatrix[varIndex][varIndex] = newPval;
+  if(par::do_regain_pvalue_threshold) {
+    if(newPval > par::regainPvalueThreshold) {
+      regainMatrix[varIndex][varIndex] = 0;
+      regainPMatrix[varIndex][varIndex] = 1;
     }
   }
-
+  }
   // free model memory
   delete thisModel;
 }
@@ -452,6 +451,7 @@ void RegainMinimal::interactionEffect(uint varIndex1, bool var1IsNumeric,
   }
   Model *thisModel = createInteractionModel(varIndex1, var1IsNumeric,
                                             varIndex2, var2IsNumeric);
+  assert(thisModel);
   // fit the model and get the estimated parameters
   vector_t betaCoefs;
   vector_t betaCoefPVals;
@@ -462,6 +462,8 @@ void RegainMinimal::interactionEffect(uint varIndex1, bool var1IsNumeric,
   vector_t::const_iterator sIt;
   double newVal = 0;
   double newPval = 1.0;
+  #pragma omp critical
+  {
   if(fitModelParameters(thisModel, 3)) {
     // model converged, so get the estimated parameters and statistics
     betaCoefs = thisModel->getCoefs();
@@ -477,40 +479,35 @@ void RegainMinimal::interactionEffect(uint varIndex1, bool var1IsNumeric,
       interactionVal = betaCoefs[thisModel->testParameter] /
         interactionModelSE[thisModel->testParameter];
     }
-    #pragma omp critical
-    {
-      if(saveRuninfoFlag) {
-        RunRecord runRecord;
-        copy(thisModel->label.begin(), thisModel->label.end(),
-             back_inserter(runRecord.vars));
-        copy(betaCoefs.begin(), betaCoefs.end(),
-             back_inserter(runRecord.coefs));
-        copy(betaCoefPVals.begin(), betaCoefPVals.end(),
-             back_inserter(runRecord.pvals));
-        copy(interactionModelSE.begin(), interactionModelSE.end(),
-             back_inserter(runRecord.stders));
-        runinfo.models.push_back(runRecord);
-      }
+    if(saveRuninfoFlag) {
+      RunRecord runRecord;
+      copy(thisModel->label.begin(), thisModel->label.end(),
+           back_inserter(runRecord.vars));
+      copy(betaCoefs.begin(), betaCoefs.end(),
+           back_inserter(runRecord.coefs));
+      copy(betaCoefPVals.begin(), betaCoefPVals.end(),
+           back_inserter(runRecord.pvals));
+      copy(interactionModelSE.begin(), interactionModelSE.end(),
+           back_inserter(runRecord.stders));
+      runinfo.models.push_back(runRecord);
     }
     checkValue(attributeNames[varIndex1] + " x " + attributeNames[varIndex2], 
                interactionVal, interactionPval, newVal, newPval);  
-  } 
-#pragma omp critical
-  {
-    printFittedModel(thisModel);
-    if(outputTransform == REGAIN_MINIMAL_OUTPUT_TRANSFORM_ABS) {
-      newVal = fabs(newVal);
+  }
+  printFittedModel(thisModel);
+  if(outputTransform == REGAIN_MINIMAL_OUTPUT_TRANSFORM_ABS) {
+    newVal = fabs(newVal);
+  }
+  regainMatrix[varIndex1][varIndex2] = newVal;
+  regainMatrix[varIndex2][varIndex1] = newVal;
+  if(par::do_regain_pvalue_threshold) {
+    if(newPval > par::regainPvalueThreshold) {
+      regainMatrix[varIndex1][varIndex2] = 0;
+      regainMatrix[varIndex2][varIndex1] = 0;
     }
-    regainMatrix[varIndex1][varIndex2] = newVal;
-    regainMatrix[varIndex2][varIndex1] = newVal;
-    if(par::do_regain_pvalue_threshold) {
-      if(newPval > par::regainPvalueThreshold) {
-        regainMatrix[varIndex1][varIndex2] = 0;
-        regainMatrix[varIndex2][varIndex1] = 0;
-      }
-    }
-    regainPMatrix[varIndex1][varIndex2] = newPval;
-    regainPMatrix[varIndex2][varIndex1] = newPval;
+  }
+  regainPMatrix[varIndex1][varIndex2] = newPval;
+  regainPMatrix[varIndex2][varIndex1] = newPval;
   }
   
   // free model memory
@@ -557,9 +554,9 @@ bool RegainMinimal::logMatrixStats() {
 
 void RegainMinimal::writeFailures() {
   if(failures.size()) {
-    double numCombinations = static_cast<double>(numAttributes * numAttributes);
+    double numCombinations = (numAttributes * (numAttributes - 1)) / 2.0;
     double numFailures = (double) failures.size();
-    double percentFailures = (numFailures / numCombinations) * 100.0;
+    double percentFailures = (numFailures / (numCombinations + numAttributes)) * 100.0;
     PP->printLOG(dbl2str(numFailures) + " failures in " + 
       dbl2str(numCombinations)+ " regression models "
       + dbl2str(percentFailures) + "%\n");
@@ -581,7 +578,7 @@ void RegainMinimal::writeWarnings() {
     double numFailures = (double) warnings.size();
     double percentFailures = (numFailures / (numCombinations + numAttributes)) * 100.0;
     PP->printLOG(dbl2str(numFailures) + " warnings in " + 
-      dbl2str(numCombinations + numAttributes)+ " regression models "
+      dbl2str(numCombinations)+ " regression models "
       + dbl2str(percentFailures) + "%\n");
     string failureFilename = par::output_file_name + ".regression.warnings";
     PP->printLOG("Writing warning messages to [ " + failureFilename + " ]\n");
@@ -595,6 +592,7 @@ void RegainMinimal::writeWarnings() {
 }
 
 void RegainMinimal::printFittedModel(Model* thisModel) {
+  assert(thisModel);
   vector_t betaCoefs;
   vector_t betaCoefPVals;
   double modelVal = failureValue;

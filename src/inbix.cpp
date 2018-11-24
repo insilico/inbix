@@ -1013,6 +1013,8 @@ int main(int argc, char* argv[]) {
 		mat permResults(par::rankerPermNum, M);
 		int numPerms = par::rankerPermNum;
 		for(int perm = 0; perm < numPerms; ++perm)	{
+  		P.printLOG("\n" + Timestamp() + "permutation: " + int2str(perm + 1) + 
+        "/" + int2str(numPerms) + "\n");
 
 			// permute phenotype labels - careful!
 			int n1 = 0, n2 = 0;
@@ -1039,33 +1041,13 @@ int main(int argc, char* argv[]) {
 			CentralityRanker* cr = 0;
 			if(par::rankerPermMethod == "regain") {
 				// run reGAIN 
-				Regain* regain = new Regain(
-								par::regainCompress,
-								par::regainSifThreshold,
-								par::have_numerics,
-								par::regainComponents,
-								par::regainFdrPrune,
-								true);
-				// reGAIN transform options
-				if(par::regainMatrixTransform == "none") {
-					regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_NONE);
-				} else {
-					if(par::regainMatrixTransform == "threshold") {
-						regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_THRESH);
-					} else {
-						if(par::regainMatrixTransform == "abs") {
-							regain->setOutputTransform(REGAIN_OUTPUT_TRANSFORM_ABS);
-						} else {
-							error("reGAIN output transform allowed options: {none, threshold, abs}");
-						}
-					}
-				}
-				regain->performPureInteraction(false);
-				regain->run();
-				// SNPrank
-				cr = new CentralityRanker(regain->getRawMatrix(), M, P.nlistname);
-
-				delete regain;
+        RegainMinimal regain;
+        regain.saveRunInfo(false);
+        regain.run();
+        matrix_t regainResult;
+        sizeMatrix(regainResult, M, M);
+        regain.getRawMatrix(regainResult);
+				cr = new CentralityRanker(regainResult, M, P.nlistname);
 			}
 			
 			if(par::rankerPermMethod == "dcgain") {
@@ -1081,7 +1063,7 @@ int main(int argc, char* argv[]) {
 		        }
 		      }
 		    }
-				cr = new CentralityRanker(dcgain , P.nlistname);
+				cr = new CentralityRanker(dcgain, P.nlistname);
 			}			
 
 			// run snprank
@@ -1091,7 +1073,7 @@ int main(int argc, char* argv[]) {
 				error("SNPrank failed");
 			}
 			
-			// save scores to dcgain matrix
+			// save scores to matrix
 			vec snprankResults = cr->GetResultsByVariable();
 			//cout << snprankResults << endl;
 			permResults.row(perm) = snprankResults.t();
@@ -1110,7 +1092,7 @@ int main(int argc, char* argv[]) {
 		// 	<< " perm: " << perm
 		// 	<< " threshold index: " << thresholdIndex 
 		// 	<< endl;
-	 	string saveFilename = par::output_file_name + "_thresholds.txt";
+	 	string saveFilename = par::output_file_name + ".thresholds.tab";
 	 	P.printLOG(Timestamp() + "Writing permutation thresholds to [" + saveFilename + "]\n");
 		ofstream outputFileHandle(saveFilename);
 		for(int col=0; col < M; ++col) {
@@ -1122,7 +1104,7 @@ int main(int argc, char* argv[]) {
 		}
 		outputFileHandle.close();
 
-	 	saveFilename = par::output_file_name + ".perm";
+	 	saveFilename = par::output_file_name + ".perm.tab";
 		armaWriteMatrix(permResults, saveFilename, P.nlistname);
 
 		shutdown();

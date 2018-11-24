@@ -63,7 +63,7 @@ public:
 	// iterate over all SNPs and numeric attributes (if present), calculating
 	// regression for main effect and interaction terms
 	void run();
-  matrix_t getRawMatrix() { return regainMatrix; }
+  void getRawMatrix(matrix_t& matrixRef) { matrixRef = regainMatrix; }
   // read a reGAIN file
   bool readRegainMinimalFromFile(std::string regainFilename);
   // write reGAIN matrix to a new file
