@@ -12,5 +12,4 @@ bu/*
 archive/*
 archive_makefiles/*
 .vscode/*
-build/*
 docs/*
