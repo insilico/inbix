@@ -1780,7 +1780,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 10/4/18
 	if(par::do_regain) {
-		P.printLOG(Timestamp() + "Performing MINIMAL reGAIN analysis\n");
+		P.printLOG(Timestamp() + "Performing REGAIN analysis\n");
 		P.SNP2Ind();
     // from command line parameter
     if(par::do_numeric_standardize) {
@@ -1808,7 +1808,7 @@ int main(int argc, char* argv[]) {
 	/////////////////////////////////////////////////////////////////////////////
 	// reGAIN analysis requested - bcw - 4/22/13
 //	if(par::do_regain) {
-//		P.printLOG(Timestamp() + "Performing reGAIN analysis\n");
+//		P.printLOG(Timestamp() + "Performing REGAIN analysis\n");
 //		P.SNP2Ind();
 //    // from command line parameter
 //    if(par::do_numeric_standardize) {

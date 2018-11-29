@@ -157,7 +157,7 @@ bool RegainMinimal::saveRunInfo(bool paramSaveRunInfo) {
 }
 
 bool RegainMinimal::writeRegainMinimalRunInfo(std::string newRunInfoFilename) {
-  PP->printLOG("Writing REGAIN_MINIMAL run info [ " + newRunInfoFilename + " ]\n");
+  PP->printLOG("Writing REGAIN run info [ " + newRunInfoFilename + " ]\n");
   runinfo.Print(newRunInfoFilename);
   return true;
 }
@@ -670,7 +670,7 @@ bool RegainMinimal::readRegainMinimalFromFile(string regainFilename) {
 }
 
 bool RegainMinimal::writeRegainMinimalToFile(string newRegainMinimalFilename) {
-  PP->printLOG("Writing REGAIN_MINIMAL matrix [ " + newRegainMinimalFilename + " ]\n");
+  PP->printLOG("Writing REGAIN matrix [ " + newRegainMinimalFilename + " ]\n");
   ofstream outFile(newRegainMinimalFilename);
   if(outFile.fail()) {
     return false;
@@ -702,7 +702,7 @@ bool RegainMinimal::writeRegainMinimalToFile(string newRegainMinimalFilename) {
 }
 
 bool RegainMinimal::writeRegainMinimalPvalsToFile(string newRegainMinimalPvalsFilename) {
-  PP->printLOG("Writing REGAIN_MINIMAL p-values matrix [ " + newRegainMinimalPvalsFilename + " ]\n");
+  PP->printLOG("Writing REGAIN p-values matrix [ " + newRegainMinimalPvalsFilename + " ]\n");
   ofstream outFile(newRegainMinimalPvalsFilename);
   if(outFile.fail()) {
     return false;
@@ -734,7 +734,7 @@ bool RegainMinimal::writeRegainMinimalPvalsToFile(string newRegainMinimalPvalsFi
 }
 
 bool RegainMinimal::writeRegainMinimalToSifFile(string newSifFilename) {
-  PP->printLOG("Writing REGAIN_MINIMAL matrix to SIF [ " + newSifFilename + " ]\n");
+  PP->printLOG("Writing REGAIN matrix to SIF [ " + newSifFilename + " ]\n");
   ofstream outFile(newSifFilename);
   if(outFile.fail()) {
     return false;
