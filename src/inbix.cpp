@@ -1793,14 +1793,14 @@ int main(int argc, char* argv[]) {
       }
     }
     RegainMinimal regain;
-    regain.saveRunInfo(true);
+    regain.saveRunInfo(false);
 		regain.run();
 		regain.logOutputOptions();
 		regain.logMatrixStats();
 		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.tab");
 		regain.writeRegainMinimalPvalsToFile(par::output_file_name + ".regain.pvals.tab");
-    regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.sif");
-    regain.writeRegainMinimalRunInfo(par::output_file_name + ".runinfo.tab");
+//regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.sif");
+ //   regain.writeRegainMinimalRunInfo(par::output_file_name + ".runinfo.tab");
 		// stop inbix processing
 		shutdown();
   }
