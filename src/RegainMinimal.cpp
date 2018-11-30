@@ -152,7 +152,10 @@ void RegainMinimal::logOutputOptions() {
 }
 
 bool RegainMinimal::saveRunInfo(bool paramSaveRunInfo) {
-  saveRuninfoFlag = paramSaveRunInfo;
+  if(paramSaveRunInfo) {
+    PP->printLOG("NOTE: Saving all model info. This will require more RAM.\n");
+    saveRuninfoFlag = paramSaveRunInfo;
+  }
   return true;
 }
 

@@ -2870,9 +2870,13 @@ void setOptions(CArgs & a) {
     par::do_regain = true;
   }
 
-//  if(a.find("--regain-minimal")) {
-//    par::do_regain_minimal = true;
-//  }
+  if(a.find("--regain-write-sif")) {
+    par::do_regain_write_sif = true;
+  }
+
+  if(a.find("--regain-write-model-details")) {
+    par::do_regain_write_model_details = true;
+  }
 
   if(a.find("--regain-use-beta-values")) {
     par::regainUseBetaValues = true;
@@ -4469,7 +4473,8 @@ void setOptions(CArgs & a) {
             << "      --numeric-standardize                       Subtract the numeric variable means and divide by standard deviations before analysis\n"            
             << "\n"
             << "      --regain                                    Perform a reGAIN analysis\n"
-            << "      --regain-file {regain file}                 Postprocess an existing reGAIN file\n"
+            << "      --regain-write-sif                          Write reGAIN analysis as SIF\n"
+            << "      --regain-write-model-details                Write reGAIN model details as TSV\n"
             << "      --regain-use-beta-values                    Use betas in reGAIN output  \n"
             << "      --regain-pure-interactions                  Exclude main effects from interactions\n"
             << "      --regain-fail-value {value}                 Value to use if regression failure\n"
@@ -4482,6 +4487,7 @@ void setOptions(CArgs & a) {
             << "      --regain-matrix-threshold-value {threshold} Filter reGAIN output\n"
             << "      --regain-matrix-format {format}             reGAIN output format \n"
             << "      --regain-matrix-transform {transform}       reGAIN output transform\n"
+            << "      --regain-file {regain file}                 Postprocess an existing reGAIN file\n"
             << "      --regain-to-sif {regain}                    Convert reGAIN matrix to SIF file\n"
             << "\n"
             << "      --dcgain                                    Perform a differential coexpression analysis\n"

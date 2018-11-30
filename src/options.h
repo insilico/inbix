@@ -385,6 +385,8 @@ public:
   static bool do_regain;
   static bool do_regain_post;
   static bool do_regain_pvalue_threshold;
+  static bool do_regain_write_sif;
+  static bool do_regain_write_model_details;
   static string regainFile;
   static const double regainLargeCoefPvalue;
   static const double regainLargeCoefTvalue;

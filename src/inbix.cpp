@@ -1793,14 +1793,18 @@ int main(int argc, char* argv[]) {
       }
     }
     RegainMinimal regain;
-    regain.saveRunInfo(false);
+    regain.saveRunInfo(par::do_regain_write_model_details);
 		regain.run();
 		regain.logOutputOptions();
 		regain.logMatrixStats();
 		regain.writeRegainMinimalToFile(par::output_file_name + ".regain.tab");
 		regain.writeRegainMinimalPvalsToFile(par::output_file_name + ".regain.pvals.tab");
-//regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.sif");
- //   regain.writeRegainMinimalRunInfo(par::output_file_name + ".runinfo.tab");
+    if(par::do_regain_write_model_details) {
+     regain.writeRegainMinimalRunInfo(par::output_file_name + ".runinfo.tab");
+    }
+    if(par::do_regain_write_sif) {
+      regain.writeRegainMinimalToSifFile(par::output_file_name + ".regain.sif");
+    }
 		// stop inbix processing
 		shutdown();
   }
